@@ -9,3 +9,8 @@ And then, one day, along came a crab.
 The boy tried to ignore the crab,
 But it just stayed behind him.
 Singing..
+
+
+cmake -S . -B build
+cmake --build build -t clean
+cmake --build build
