@@ -5,4 +5,6 @@ target_compile_options( ${PROJECT_NAME}
 
 target_sources( ${PROJECT_NAME}
     PRIVATE Init.s
-    PRIVATE Input.s )
+    PRIVATE Input.s 
+    PRIVATE Enemy.s 
+    PRIVATE Hero.s)

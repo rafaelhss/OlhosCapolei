@@ -21,6 +21,8 @@
 .include "Registers.inc"
 ;-------------------------------------------------------------------------------
 
+.import Hero, InimigoGrande
+
 .segment "CODE"
 ;-------------------------------------------------------------------------------
 ;   This initializes the demo
@@ -50,341 +52,47 @@
         jsr LoadCGRAM                   ; transfer color data into CGRAM
         txs                             ; restore old stack pointer
 
+
+
         ; initialize OAMRAM mirror
         ldx #$00
-        ; upper-left sprite
-        lda #(SCREEN_RIGHT/2 - SPRITE_SIZE) ; sprite 1, horizontal position
-        sta OAMMIRROR, X
-        inx                                 ; increment index
-        lda #(SCREEN_BOTTOM/2 - SPRITE_SIZE); sprite 1, vertical position
-        sta OAMMIRROR, X
-        inx
-        lda #$00                            ; sprite 1, name
-        sta OAMMIRROR, X
-        inx
-        lda #$00                            ; no flip, palette 0
-        sta OAMMIRROR, X
-        inx
-        ; upper-right sprite
-        lda #(SCREEN_RIGHT/2)               ; sprite 3, horizontal position
-        sta OAMMIRROR, X
-        inx                                 ; increment index
-        lda #(SCREEN_BOTTOM/2 - SPRITE_SIZE); sprite 3, vertical position
-        sta OAMMIRROR, X
-        inx
-        lda #$01                            ; sprite 3, name
-        sta OAMMIRROR, X
-        inx
-        lda #$00                            ; no flip, palette 0
-        sta OAMMIRROR, X
-        inx
-        ; lower-left sprite
-        lda #(SCREEN_RIGHT/2 - SPRITE_SIZE) ; sprite 2, horizontal position
-        sta OAMMIRROR, X
-        inx                                 ; increment index
-        lda #(SCREEN_BOTTOM/2)              ; sprite 2, vertical position
-        sta OAMMIRROR, X
-        inx
-        lda #$10                            ; sprite 2, name
-        sta OAMMIRROR, X
-        inx
-        lda #$00                            ; no flip, palette 0
-        sta OAMMIRROR, X
-        inx
-        ; lower-right sprite
-        lda #(SCREEN_RIGHT/2)                ; sprite 4, horizontal position
-        sta OAMMIRROR, X
-        inx                                 ; increment index
-        lda #(SCREEN_BOTTOM/2)              ; sprite 4, vertical position
-        sta OAMMIRROR, X
-        inx
-        lda #$11                            ; sprite 4, name
-        sta OAMMIRROR, X
-        inx
-        lda #$00                            ; no flip, palette 0
-        sta OAMMIRROR, X
-        inx
-
-
+;----------- HÉROI (Alinhamento perfeito entre Montador e CPU)
+        rep #$20                        ; CPU em modo 16-bits
+        .a16                            ; ◄ AVISO AO CA65: Monte os números em 16-bits agora!
         
-
-; === CONFIGURAÇÃO DO corpo ===
-        ; Novo Sprite Superior Esquerdo
-        lda #(SCREEN_RIGHT/2 - SPRITE_SIZE)                             ; Uma coordenada X qualquer para ele aparecer do lado
-        sta OAMMIRROR, X
-        inx
-        lda #(SCREEN_BOTTOM/2 + SPRITE_SIZE)                            ; Uma coordenada Y qualquer
-        sta OAMMIRROR, X
-        inx
-        lda #$02                            ; ◄ O SEU NOVO TILE 4 DO YY-CHR!
-        sta OAMMIRROR, X
-        inx
-        lda #$00                            ; Paleta 0
-        sta OAMMIRROR, X
-        inx
-                lda #(SCREEN_RIGHT/2)                            ; Uma coordenada X qualquer para ele aparecer do lado
-        sta OAMMIRROR, X
-        inx
-        lda #(SCREEN_BOTTOM/2 + SPRITE_SIZE)                            ; Uma coordenada Y qualquer
-        sta OAMMIRROR, X
-        inx
-        lda #$03                            ; ◄ O SEU NOVO TILE 4 DO YY-CHR!
-        sta OAMMIRROR, X
-        inx
-        lda #$00                            ; Paleta 0
-        sta OAMMIRROR, X
-        inx
-                lda #(SCREEN_RIGHT/2 - SPRITE_SIZE)                            ; Uma coordenada X qualquer para ele aparecer do lado
-        sta OAMMIRROR, X
-        inx
-        lda #(SCREEN_BOTTOM/2 + SPRITE_SIZE + SPRITE_SIZE)                            ; Uma coordenada Y qualquer
-        sta OAMMIRROR, X
-        inx
-        lda #$12                            ; ◄ O SEU NOVO TILE 4 DO YY-CHR!
-        sta OAMMIRROR, X
-        inx
-        lda #$00                            ; Paleta 0
-        sta OAMMIRROR, X
-        inx
-                lda #$80                            ; Uma coordenada X qualquer para ele aparecer do lado
-        sta OAMMIRROR, X
-        inx
-        lda #(SCREEN_BOTTOM/2 + SPRITE_SIZE + SPRITE_SIZE)                            ; Uma coordenada Y qualquer
-        sta OAMMIRROR, X
-        inx
-        lda #$13                           ; ◄ O SEU NOVO TILE 4 DO YY-CHR!
-        sta OAMMIRROR, X
-        inx
-        lda #$00                            ; Paleta 0
-        sta OAMMIRROR, X
-        inx
-
-
-;============= inimigo 1
-
-; === CONFIGURAÇÃO DO corpo ===
-        ; Novo Sprite Superior Esquerdo
-        lda #(SCREEN_RIGHT/2 - (SPRITE_SIZE  * 5))                            ; Uma coordenada X qualquer para ele aparecer do lado
-        sta OAMMIRROR, X
-        inx
-        lda #(SCREEN_BOTTOM/2 + SPRITE_SIZE)                            ; Uma coordenada Y qualquer
-        sta OAMMIRROR, X
-        inx
-        lda #$04                            ; ◄ O SEU NOVO TILE 4 DO YY-CHR!
-        sta OAMMIRROR, X
-        inx
-        lda #$00                            ; Paleta 0
-        sta OAMMIRROR, X
-        inx
-                lda #(SCREEN_RIGHT/2 - (SPRITE_SIZE  * 4))                            ; Uma coordenada X qualquer para ele aparecer do lado
-        sta OAMMIRROR, X
-        inx
-        lda #(SCREEN_BOTTOM/2 + SPRITE_SIZE)                            ; Uma coordenada Y qualquer
-        sta OAMMIRROR, X
-        inx
-        lda #$05                            ; ◄ O SEU NOVO TILE 4 DO YY-CHR!
-        sta OAMMIRROR, X
-        inx
-        lda #$00                            ; Paleta 0
-        sta OAMMIRROR, X
-        inx
-                lda #(SCREEN_RIGHT/2 - (SPRITE_SIZE  * 5))                            ; Uma coordenada X qualquer para ele aparecer do lado
-        sta OAMMIRROR, X
-        inx
-        lda #(SCREEN_BOTTOM/2 + SPRITE_SIZE + SPRITE_SIZE)                            ; Uma coordenada Y qualquer
-        sta OAMMIRROR, X
-        inx
-        lda #$14                            ; ◄ O SEU NOVO TILE 4 DO YY-CHR!
-        sta OAMMIRROR, X
-        inx
-        lda #$15                            ; Paleta 0
-        sta OAMMIRROR, X
-        inx
-                lda #(SCREEN_RIGHT/2 - (SPRITE_SIZE  * 4))                            ; Uma coordenada X qualquer para ele aparecer do lado
-        sta OAMMIRROR, X
-        inx
-        lda #(SCREEN_BOTTOM/2 + SPRITE_SIZE + SPRITE_SIZE)                            ; Uma coordenada Y qualquer
-        sta OAMMIRROR, X
-        inx
-        lda #$0b                            ; ◄ O SEU NOVO TILE 4 DO YY-CHR!
-        sta OAMMIRROR, X
-        inx
-        lda #$00                            ; Paleta 0
-        sta OAMMIRROR, X
-        inx
-
-
-;--===========fim inimogo 1
-
-;---- inimogo grande 1
-;==== cabeca 
-;==== pedaco 1-1
-        lda #(SCREEN_RIGHT/4)                
-        sta OAMMIRROR, X
-        inx
-        lda #(SCREEN_BOTTOM/4)               
-        sta OAMMIRROR, X
-        inx
-        lda #$06                           
-        sta OAMMIRROR, X
-        inx
-        lda #$00                            ; Paleta 0
-        sta OAMMIRROR, X
-        inx
-
-;==== pedaco 1-2
-        lda #(SCREEN_RIGHT/4 + SPRITE_SIZE)                
-        sta OAMMIRROR, X
-        inx
-        lda #(SCREEN_BOTTOM/4)               
-        sta OAMMIRROR, X
-        inx
-        lda #$07                            
-        sta OAMMIRROR, X
-        inx
-        lda #$00                            ; Paleta 0
-        sta OAMMIRROR, X
-        inx   
-;==== pedaco 2-1
-        lda #(SCREEN_RIGHT/4 )                
-        sta OAMMIRROR, X
-        inx
-        lda #(SCREEN_BOTTOM/4 + SPRITE_SIZE)               
-        sta OAMMIRROR, X
-        inx
-        lda #$16                            
-        sta OAMMIRROR, X
-        inx
-        lda #$00                            ; Paleta 0
-        sta OAMMIRROR, X
-        inx  
-;==== pedaco 2-2
-        lda #(SCREEN_RIGHT/4 + SPRITE_SIZE )                
-        sta OAMMIRROR, X
-        inx
-        lda #(SCREEN_BOTTOM/4 + SPRITE_SIZE)               
-        sta OAMMIRROR, X
-        inx
-        lda #$17                            
-        sta OAMMIRROR, X
-        inx
-        lda #$00                            ; Paleta 0
-        sta OAMMIRROR, X
-        inx   
-
-;=== corpo
-
-;==== pedaco 1-1
-        lda #(SCREEN_RIGHT/4 - SPRITE_SIZE )                
-        sta OAMMIRROR, X
-        inx
-        lda #(SCREEN_BOTTOM/4 + SPRITE_SIZE+ SPRITE_SIZE)               
-        sta OAMMIRROR, X
-        inx
-        lda #$08                            
-        sta OAMMIRROR, X
-        inx
-        lda #$00                            ; Paleta 0
-        sta OAMMIRROR, X
-        inx 
-;==== pedaco 1-2
-        lda #(SCREEN_RIGHT/4)                
-        sta OAMMIRROR, X
-        inx
-        lda #(SCREEN_BOTTOM/4 + SPRITE_SIZE+ SPRITE_SIZE)               
-        sta OAMMIRROR, X
-        inx
-        lda #$09                            
-        sta OAMMIRROR, X
-        inx
-        lda #$00                            ; Paleta 0
-        sta OAMMIRROR, X
-        inx 
-;==== pedaco 1-3
-        lda #(SCREEN_RIGHT/4 + SPRITE_SIZE )                
-        sta OAMMIRROR, X
-        inx
-        lda #(SCREEN_BOTTOM/4 + SPRITE_SIZE+ SPRITE_SIZE)              
-        sta OAMMIRROR, X
-        inx
-        lda #$0a                            
-        sta OAMMIRROR, X
-        inx
-        lda #$00                            ; Paleta 0
-        sta OAMMIRROR, X
-        inx 
-;==== pedaco 1-4
-        lda #(SCREEN_RIGHT/4 + SPRITE_SIZE+ SPRITE_SIZE )                
-        sta OAMMIRROR, X
-        inx
-        lda #(SCREEN_BOTTOM/4 + SPRITE_SIZE+ SPRITE_SIZE)               
-        sta OAMMIRROR, X
-        inx
-        lda #$0b                            
-        sta OAMMIRROR, X
-        inx
-        lda #$00                            ; Paleta 0
-        sta OAMMIRROR, X
-        inx 
+        lda #$70         ; Agora o ca65 gera os bytes $80 e $00 na ROM!
+        sta Hero + HeroStruct::X_Pos    ; Grava os 16-bits perfeitamente na RAM
         
-;==== pedaco 2-1
-        lda #(SCREEN_RIGHT/4 - SPRITE_SIZE )                
-        sta OAMMIRROR, X
-        inx
-        lda #(SCREEN_BOTTOM/4 + SPRITE_SIZE+ SPRITE_SIZE+ SPRITE_SIZE)               
-        sta OAMMIRROR, X
-        inx
-        lda #$18                            
-        sta OAMMIRROR, X
-        inx
-        lda #$00                            ; Paleta 0
-        sta OAMMIRROR, X
-        inx 
-;==== pedaco 2-2
-        lda #(SCREEN_RIGHT/4)                
-        sta OAMMIRROR, X
-        inx
-        lda #(SCREEN_BOTTOM/4 + SPRITE_SIZE+ SPRITE_SIZE+ SPRITE_SIZE)               
-        sta OAMMIRROR, X
-        inx
-        lda #$19                            
-        sta OAMMIRROR, X
-        inx
-        lda #$00                            ; Paleta 0
-        sta OAMMIRROR, X
-        inx 
-;==== pedaco 2-3
-        lda #(SCREEN_RIGHT/4 + SPRITE_SIZE )                
-        sta OAMMIRROR, X
-        inx
-        lda #(SCREEN_BOTTOM/4 + SPRITE_SIZE+ SPRITE_SIZE+ SPRITE_SIZE)               
-        sta OAMMIRROR, X
-        inx
-        lda #$1a                            
-        sta OAMMIRROR, X
-        inx
-        lda #$00                            ; Paleta 0
-        sta OAMMIRROR, X
-        inx 
-;==== pedaco 2-4
-        lda #(SCREEN_RIGHT/4 + SPRITE_SIZE+ SPRITE_SIZE )                
-        sta OAMMIRROR, X
-        inx
-        lda #(SCREEN_BOTTOM/4 + SPRITE_SIZE+ SPRITE_SIZE+ SPRITE_SIZE)               
-        sta OAMMIRROR, X
-        inx
-        lda #$1b                            
-        sta OAMMIRROR, X
-        inx
-        lda #$00                            ; Paleta 0
-        sta OAMMIRROR, X
-        inx 
-          
+        sep #$20                        ; CPU volta para 8-bits
+        .a8                             ; ◄ AVISO AO CA65: Volte a montar em 8-bits!
+        
+        lda #(SCREEN_BOTTOM / 4)        
+        sta Hero + HeroStruct::Y_Pos
+
+        lda #8                          
+        sta Hero + HeroStruct::Tile_Count ; (ou HeroStruct::Tile_Count dependendo do nome da sua variável)
+;=========== FIM HERÓI
+
+
+;----------- INIMIGO GRANDE 1
+        rep #$20                        ; CPU em modo 16-bits
+        .a16                            ; ◄ AVISO AO CA65!
+        
+        lda #40                         ; Carrega 40 completo ($0028)
+        sta InimigoGrande + EnemyStruct::X_Pos 
+        
+        sep #$20                        ; CPU volta para 8-bits
+        .a8                             ; ◄ AVISO AO CA65!
+        
+        lda #(SCREEN_BOTTOM / 3)        
+        sta InimigoGrande + EnemyStruct::Y_Pos
+
+        lda #12                         
+        sta InimigoGrande + EnemyStruct::Tile_Count          
+;----------- FIM INIMIGO
 
 
 
-
-;---- fim inimogo grande 1
 
 
         ; move the other sprites off screen

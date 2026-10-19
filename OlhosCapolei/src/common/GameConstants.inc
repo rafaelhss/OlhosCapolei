@@ -26,4 +26,22 @@ LEFT_BUTTON     = $0200
 RIGHT_BUTTON    = $0100
 ;-------------------------------------------------------------------------------
 
+; ======== Hero padrao
+.struct HeroStruct
+    X_Pos       .word   ; 16 bits (0-65535) para suportar coordenadas fora da tela
+    Y_Pos       .byte   ; 8 bits (0-255) para posição vertical
+    Tile_Count  .byte   ; Guarda quantos blocos compõem esse Hero
+.endstruct
+
+
+
+; ======== InimigoGrande padrao
+.struct EnemyStruct
+    X_Pos       .word   ; 16 bits (0-65535) para suportar coordenadas fora da tela
+    Y_Pos       .byte   ; 8 bits (0-255) para posição vertical
+    Tile_Count  .byte   ; Guarda quantos blocos compõem esse inimigo
+.endstruct
+
+
+
 .endif
