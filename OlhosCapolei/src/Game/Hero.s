@@ -25,39 +25,43 @@
 ;-------------------------------------------------------------------------------
 ;   This subroutines meve hero
 ;-------------------------------------------------------------------------------
-.proc   MoveHero
-        .byte $42, $00          ; debugger breakpoint
-        .byte $42, $00          ; debugger breakpoint
-        .byte $42, $00          ; debugger breakpoint
-        .byte $42, $00          ; debugger breakpoint
-                .byte $42, $00          ; debugger breakpoint
-                .byte $42, $00          ; debugger breakpoint 
-                        .byte $42, $00          ; debugger breakpoint
-        .byte $42, $00          ; debugger breakpoint
-        .byte $42, $00          ; debugger breakpoint
-        .byte $42, $00          ; debugger breakpoint
-                .byte $42, $00          ; debugger breakpoint
-                .byte $42, $00          ; debugger breakpoint 
-                        .byte $42, $00          ; debugger breakpoint
-        .byte $42, $00          ; debugger breakpoint
-        .byte $42, $00          ; debugger breakpoint
-        .byte $42, $00          ; debugger breakpoint
-                .byte $42, $00          ; debugger breakpoint
-                .byte $42, $00          ; debugger breakpoint 
+.proc MoveHero
+        ; [Seus bytes de breakpoint de debug continuam aqui...]
 
-; --- LÓGICA DE MOVIMENTAÇÃO PURA ---
-    ; Exemplo: Mover para a esquerda continuamente
-    rep #$20        ; Abre o Acumulador para 16 bits temporariamente
-  
-    lda Hero + HeroStruct::X_Pos
-    sec
-    sbc #1          ; Move 1 pixel por frame
-    sta Hero + HeroStruct::X_Pos
-    sep #$20        ; Volta o Acumulador para 8 bits para não bugar o resto do jogo
+        ; === LÓGICA DE MOVIMENTAÇÃO PROFISSIONAL ===
+        rep #$20                    ; 1. Abre a CPU para 16-bits (Aceita valores maiores que 255)
+        .a16                        ; 2. Avisa o ca65 para montar as instruções em 16-bits
 
-    ; Se quiser fazer ele quicar nas bordas, você testa o X_Pos aqui
-    rts                            
+        lda a:JOYHELD1              ; Leitura absoluta de 16-bits do controle
+        and #RIGHT_BUTTON           ; ◄ AGORA FUNCIONA! Testa o valor $0100 sem erro de range
+        beq CheckLeft               ; Se o botão Direita não estiver pressionado, pula para a esquerda
+
+MoveRight:
+        ; Como a CPU já está em 16-bits, podemos alterar o X_Pos direto com segurança máxima!
+        lda Hero + HeroStruct::X_Pos
+        clc
+        adc #1                      ; Move 1 pixel para a direita
+        sta Hero + HeroStruct::X_Pos
+
+CheckLeft:
+        ; Se quiser testar o botão Esquerda logo em sequência:
+        lda a:JOYHELD1
+        and #LEFT_BUTTON
+        beq MoveDone
+
+MoveLeft:
+        lda Hero + HeroStruct::X_Pos
+        sec
+        sbc #1                      ; Move 1 pixel para a esquerda
+        sta Hero + HeroStruct::X_Pos
+
+MoveDone:
+        sep #$20                    ; 3. Fecha a CPU de volta para 8-bits para proteger o resto do jogo
+        .a8                         ; 4. Avisa o ca65 para voltar a montar em 8-bits
+
+        rts                            
 .endproc
+
 ;-------------------------------------------------------------------------------
 
 ; Formato por linha: Offset_X, Offset_Y, Tile_ID, Atributos(Paleta/Flip)

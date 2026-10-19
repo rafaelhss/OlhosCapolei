@@ -81,7 +81,7 @@
         phx
         ldx #JOYRAW1
         phx
-        ;jsr MoveHero
+        jsr MoveHero
         ; stack clean up
         plx
         plx
@@ -93,16 +93,7 @@
 
         jsr MoveEnemy1
 
-        ; ... [Sua rotina de leitura de Joypad continua aqui] ...
-        ; ... [Sua rotina de HandleInput do jogador continua aqui] ...
-
-        ; 1. LÓGICA DO INIMIGO (Exemplo: Mover o Inimigo para a Direita)
-        ;inc InimigoGrande + EnemyStruct::X_Pos   ; Apenas incrementa a variável central!
-        
-        ; 2. SISTEMA DE DESENHO (RENDER)
-        ; Precisamos dizer em qual posição da OAM o inimigo vai começar a ser desenhado.
-        ; O jogador usou os primeiros sprites, então vamos colocar o inimigo a partir do índice X = 32
-        ldx #32                 
+        ;ldx #32                 
         jsr DrawEnemy1          ; Monta os 12 sprites na tela usando IA!
 
 
