@@ -21,7 +21,7 @@
 .include "Registers.inc"
 ;-------------------------------------------------------------------------------
 
-.import Hero, InimigoGrande
+.import Hero, InimigoGrande, InimigoGrande2
 
 .segment "CODE"
 ;-------------------------------------------------------------------------------
@@ -49,6 +49,8 @@
         pea ColorData                   ; color data source address
         lda #$20                        ; number of bytes (32/$20) to transfer
         pha
+
+        
         jsr LoadCGRAM                   ; transfer color data into CGRAM
         txs                             ; restore old stack pointer
 
@@ -98,6 +100,33 @@
         STA InimigoGrande + EnemyStruct::Anim_Timer
         LDA #$00                        ; comeca do tile 0
         STA InimigoGrande + EnemyStruct::Anim_Frame    
+
+
+
+;----------- FIM INIMIGO
+ 
+
+;----------- INIMIGO GRANDE 2
+        rep #$20                        ; CPU em modo 16-bits
+        .a16                            ; ◄ AVISO AO CA65!
+        
+        lda #90                         ; Carrega 40 completo ($0028)
+        sta InimigoGrande2 + EnemyStruct::X_Pos 
+        
+        sep #$20                        ; CPU volta para 8-bits
+        .a8                             ; ◄ AVISO AO CA65!
+        
+        lda #(SCREEN_BOTTOM / 2)        
+        sta InimigoGrande2 + EnemyStruct::Y_Pos
+
+        lda #12                         
+        sta InimigoGrande2 + EnemyStruct::Tile_Count    
+
+
+        LDA #$04                        ;atualiza a cada 8 frames na tela
+        STA InimigoGrande2 + EnemyStruct::Anim_Timer
+        LDA #$00                        ; comeca do tile 0
+        STA InimigoGrande2 + EnemyStruct::Anim_Frame    
 
 
 

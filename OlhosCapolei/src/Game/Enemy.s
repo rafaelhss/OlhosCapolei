@@ -6,6 +6,7 @@
 ;----- Export ------------------------------------------------------------------
 .export     MoveEnemy1
 .export     DrawEnemy1
+.export     DrawEnemy2
 ;-------------------------------------------------------------------------------
 
 ;----- Assembler Directives ----------------------------------------------------
@@ -19,6 +20,7 @@
 .include "MemoryMapWRAM.inc"
 ;-------------------------------------------------------------------------------
 
+.import InimigoGrande2
 .import InimigoGrande
 .import Hero
 
@@ -147,6 +149,56 @@ DrawLoop:
 
         ; --- CALCULO DINAMICO DO TILE BASEADO NO FRAME ---
         lda InimigoGrande + EnemyStruct::Anim_Frame
+        beq Frame0
+    
+Frame1:
+        lda InimigoGrande_Layout_Frame1, Y        ; Le o Tile ID do Layout 1 (Y + 2)
+        bra WriteTile
+
+Frame0:
+        lda InimigoGrande_Layout, Y               ; Le o Tile ID do Layout 0 (Y + 2)
+
+WriteTile:
+        sta OAMMIRROR, X
+        inx
+        iny                                       ; Aponta para os Atributos
+
+        ; 4. Copiar os Atributos (Paleta, Flip, Prioridade) diretamente
+        lda InimigoGrande_Layout, Y               ; Le o Atributo (Y + 3)
+        sta OAMMIRROR, X
+        inx
+        iny                                       ; Avanca para o proximo bloco (X do proximo sprite)
+
+        ; Checa se ja desenhou todos os 12 blocos do inimigo (12 * 4 = 48 bytes lidos)
+        cpy #48                 
+        bne DrawLoop
+
+        rts
+.endproc
+
+
+.proc DrawEnemy2
+        ldy #$0000              ; Indice Y vai caminhar pela tabela de Layout
+
+DrawLoop:
+        ; 1. Processar Posicao X (Posicao Central + Offset do Bloco)
+        clc
+        lda InimigoGrande2 + EnemyStruct::X_Pos    
+        adc InimigoGrande_Layout, Y               ; Le o Offset X (Y + 0)
+        sta OAMMIRROR, X                          
+        inx                                       
+        iny                                       ; Aponta para o Offset Y
+
+        ; 2. Processar Posicao Y (Posicao Central + Offset do Bloco)
+        clc
+        lda InimigoGrande2 + EnemyStruct::Y_Pos    
+        adc InimigoGrande_Layout, Y               ; Le o Offset Y (Y + 1)
+        sta OAMMIRROR, X                          
+        inx
+        iny                                       ; Aponta para o Tile ID
+
+        ; --- CALCULO DINAMICO DO TILE BASEADO NO FRAME ---
+        lda InimigoGrande2 + EnemyStruct::Anim_Frame
         beq Frame0
     
 Frame1:

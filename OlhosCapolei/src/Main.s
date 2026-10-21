@@ -89,15 +89,28 @@
 
         ; 3. FILTRO DE COLISAO (Mantem todo mundo dentro da tela antes de desenhar)
         jsr ApplyEdgeCollisions
+        jsr ApplyDamageToHero
 
         ; 4. RENDERIZACAO FINAL (Le a RAM tratada e joga na OAM)
         ldx #$00 
         jsr DrawHero
         jsr DrawEnemy1
+        jsr DrawEnemy2
 
         jmp GameLoop
 .endproc
 ;-------------------------------------------------------------------------------
+
+
+
+.proc ApplyDamageToHero
+
+        ; fazer depois de colocar mais um inimigo
+
+        rts
+.endproc
+
+
 
 ;-------------------------------------------------------------------------------
 ;   Rotina de Colisao com as Bordas da Tela (Constantes de Tela Limpas)
@@ -215,9 +228,11 @@ CollisionDone:
 
 
 .segment "BSS"
-.export Hero, InimigoGrande
+.export Hero, InimigoGrande, InimigoGrande2
 
 Hero:          .tag HeroStruct
 InimigoGrande: .tag EnemyStruct
+
+InimigoGrande2: .tag EnemyStruct
 
 
