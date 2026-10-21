@@ -10,8 +10,8 @@
 
 ;----- Assembler Directives ----------------------------------------------------
 .p816                           ; tell the assembler this is 65816 code
-.a8
-.i16
+.a8                             ; Fixado em 8-bit por padrao
+.i16                            ; Indices em 16-bit
 ;-------------------------------------------------------------------------------
 
 ;----- Includes ----------------------------------------------------------------
@@ -23,69 +23,82 @@
 
 .segment "CODE"
 ;-------------------------------------------------------------------------------
-;   This subroutines meve hero
-;-------------------------------------------------------------------------------
+;   This subroutines move hero
+; -----------------------------------------------------------------------------
 .proc MoveHero
 
+        ; Inicializacao de velocidade sempre em 8-bit
         lda #SPRITE_SPEED
         sta HOR_SPEED
         sta VER_SPEED
 
-
-        ; === LÓGICA DE MOVIMENTAÇÃO PROFISSIONAL ===
-        rep #$20                    ; 1. Abre a CPU para 16-bits (Aceita valores maiores que 255)
-        .a16                        ; 2. Avisa o ca65 para montar as instruções em 16-bits
-                
-
-
-;==  ve se apertou turbo
-        lda a:JOYHELD1
+        ; === LOGICA DE TURBO (A_BUTTON) ===
+        rep #$20                    ; Abre 16-bit apenas para ler o controle
+        .a16
+        lda JOYHELD1
         and #A_BUTTON
         beq CheckRight
+        
+        sep #$20                    ; Fecha para 8-bit para aplicar a velocidade
+        .a8
         lda #(SPRITE_SPEED + SPRITE_SPEED)
         sta HOR_SPEED
         sta VER_SPEED
 
 CheckRight:
-        lda a:JOYHELD1              ; Leitura absoluta de 16-bits do controle
-        and #RIGHT_BUTTON           ; ◄ AGORA FUNCIONA! Testa o valor $0100 sem erro de range
-        beq CheckLeft               ; Se o botão Direita não estiver pressionado, pula para a esquerda
+        rep #$20                    ; Abre 16-bit apenas para testar o botao
+        .a16
+        lda JOYHELD1
+        and #RIGHT_BUTTON
+        beq CheckLeft
 
+        sep #$20                    ; === FECHA PARA 8-BIT ANTES DE MEXER NA RAM ===
+        .a8
 MoveRight:
-        ; Como a CPU já está em 16-bits, podemos alterar o X_Pos direto com segurança máxima!
         lda Hero + HeroStruct::X_Pos
         clc
-        adc HOR_SPEED                  ; Move 1 pixel para a direita
-        sta Hero + HeroStruct::X_Pos
+        adc HOR_SPEED               ; Matematica limpa de 1 byte
+        sta Hero + HeroStruct::X_Pos ; Grava apenas 1 byte, protegendo o Y_Pos!
 
 CheckLeft:
-        ; Se quiser testar o botão Esquerda logo em sequência:
-        lda a:JOYHELD1
+        rep #$20                    ; Abre 16-bit apenas para testar o botao
+        .a16
+        lda JOYHELD1
         and #LEFT_BUTTON
         beq CheckUp
 
+        sep #$20                    ; === FECHA PARA 8-BIT ===
+        .a8
 MoveLeft:
         lda Hero + HeroStruct::X_Pos
         sec
-        sbc VER_SPEED                     ; Move 1 pixel para a esquerda
+        sbc HOR_SPEED               ; CORRIGIDO: Era VER_SPEED no arquivo original!
         sta Hero + HeroStruct::X_Pos
 
 CheckUp:
-        lda a:JOYHELD1
+        rep #$20                    ; Abre 16-bit apenas para testar o botao
+        .a16
+        lda JOYHELD1
         and #UP_BUTTON
         beq CheckDown
 
+        sep #$20                    ; === FECHA PARA 8-BIT ===
+        .a8
 MoveUp:
         lda Hero + HeroStruct::Y_Pos
         sec
-        sbc HOR_SPEED                      ; Move 1 pixel para a cima
+        sbc VER_SPEED               ; CORRIGIDO: Movimento vertical usa VER_SPEED
         sta Hero + HeroStruct::Y_Pos
 
 CheckDown:
-        lda a:JOYHELD1
+        rep #$20                    ; Abre 16-bit apenas para testar o botao
+        .a16
+        lda JOYHELD1
         and #DOWN_BUTTON
         beq MoveDone
 
+        sep #$20                    ; === FECHA PARA 8-BIT ===
+        .a8
 MoveDown:
         lda Hero + HeroStruct::Y_Pos
         clc
@@ -93,55 +106,45 @@ MoveDown:
         sta Hero + HeroStruct::Y_Pos
 
 MoveDone:
-        sep #$20                    ; 3. Fecha a CPU de volta para 8-bits para proteger o resto do jogo
-        .a8                         ; 4. Avisa o ca65 para voltar a montar em 8-bits
-
+        sep #$20                    ; Garante que a CPU saia da rotina em 8-bit
+        .a8
         rts                            
 .endproc
 
 ;-------------------------------------------------------------------------------
-
-; Formato por linha: Offset_X, Offset_Y, Tile_ID, Atributos(Paleta/Flip)
 Hero_Layout:
-    ; === CABEÇA (2x2) ===
-    .byte 0,  0,  $00, $00     ; pedaco 1-1
-    .byte 8,  0,  $01, $00     ; pedaco 1-2
-    .byte 0,  8,  $10, $00     ; pedaco 2-1
-    .byte 8,  8,  $11, $00     ; pedaco 2-2
+    ; === CABECA (2x2) ===
+    .byte 0,  0,  $00, $00     
+    .byte 8,  0,  $01, $00     
+    .byte 0,  8,  $10, $00     
+    .byte 8,  8,  $11, $00     
 
     ; === CORPO LINHA 1 (2x2) ===
-    .byte 0, 16, $02, $00    ; pedaco 1-1 
-    .byte 8, 16, $03, $00    ; pedaco 1-2
-    .byte 0, 24, $12, $00    ; pedaco 1-3
-    .byte 8, 24, $13, $00    ; pedaco 1-4
+    .byte 0, 16, $02, $00    
+    .byte 8, 16, $03, $00    
+    .byte 0, 24, $12, $00    
+    .byte 8, 24, $13, $00    
 
-
-
-
-
-
+;-------------------------------------------------------------------------------
 .proc DrawHero
-        ; ATENÇÃO: Essa rotina assume que o registrador X já aponta para a posição
-        ; livre atual da OAMMIRROR (você gerencia o índice X globalmente para os sprites)
-        
-        ldy #$0000              ; Índice Y vai caminhar pela tabela de Layout (4 bytes por bloco)
+        ldy #$0000              
 
 DrawLoop:
-        ; 1. Processar Posição X (Posição Central + Offset do Bloco)
+        ; 1. Processar Posicao X (Posicao Central + Offset do Bloco)
         clc
-        lda Hero + HeroStruct::X_Pos    ; Pega o X real (8 bits inferiores)
-        adc Hero_Layout + 0, Y           ; Soma o Offset X do layout
-        sta OAMMIRROR, X                          ; Grava na OAMMIRROR
-        inx                                       ; Próximo byte da OAM
+        lda Hero + HeroStruct::X_Pos    
+        adc Hero_Layout + 0, Y           
+        sta OAMMIRROR, X                          
+        inx                                       
 
-        ; 2. Processar Posição Y (Posição Central + Offset do Bloco)
+        ; 2. Processar Posicao Y (Posicao Central + Offset do Bloco)
         clc
-        lda Hero + HeroStruct::Y_Pos    ; Pega o Y real
-        adc Hero_Layout + 1, Y           ; Soma o Offset Y do layout
-        sta OAMMIRROR, X                          ; Grava na OAMMIRROR
+        lda Hero + HeroStruct::Y_Pos    
+        adc Hero_Layout + 1, Y           
+        sta OAMMIRROR, X                          
         inx
 
-        ; 3. Copiar o Número do Tile diretamente
+        ; 3. Copiar o Numero do Tile diretamente
         lda Hero_Layout + 2, Y
         sta OAMMIRROR, X
         inx
@@ -151,14 +154,12 @@ DrawLoop:
         sta OAMMIRROR, X
         inx
 
-        ; Avança 4 bytes na tabela de Layout para ir para o próximo bloco
         iny
         iny
         iny
         iny
 
-        ; Checa se já desenhou todos os blocos do inimigo
-        cpy #32                 ; 8 blocos * 4 bytes cada = 48 bytes lidos no total
+        cpy #32                 ; 8 blocos * 4 bytes cada = 32 bytes
         bne DrawLoop
 
         rts

@@ -74,6 +74,9 @@
 ;=========== FIM HERÓI
 
 
+
+    
+
 ;----------- INIMIGO GRANDE 1
         rep #$20                        ; CPU em modo 16-bits
         .a16                            ; ◄ AVISO AO CA65!
@@ -94,7 +97,10 @@
         LDA #$08                        ;atualiza a cada 8 frames na tela
         STA InimigoGrande + EnemyStruct::Anim_Timer
         LDA #$00                        ; comeca do tile 0
-        STA InimigoGrande + EnemyStruct::Anim_Frame      
+        STA InimigoGrande + EnemyStruct::Anim_Frame    
+
+
+
 ;----------- FIM INIMIGO
 
 

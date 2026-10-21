@@ -1,0 +1,12 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/cmake_install.cmake",
+		"/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/assets/cmake_install.cmake",
+		"/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/src/cmake_install.cmake",
+		"/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/src/common/cmake_install.cmake",
+		"/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/src/Game/cmake_install.cmake",
+		"/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/src/PPU/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

@@ -11,6 +11,6 @@
 
 ;----- Assset Data -------------------------------------------------------------
 .segment "SPRITEDATA"
-SpriteData: .incbin "Sprites6.vra"
-ColorData:  .incbin "Sprites6.pal"
+SpriteData: .incbin "Sprites7.vra"
+ColorData:  .incbin "Sprites7.pal"
 ;-------------------------------------------------------------------------------

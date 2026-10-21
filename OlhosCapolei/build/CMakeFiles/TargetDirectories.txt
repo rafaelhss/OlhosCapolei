@@ -1,0 +1,13 @@
+/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/CMakeFiles/OlhosCapolei.dir
+/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/CMakeFiles/edit_cache.dir
+/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/CMakeFiles/rebuild_cache.dir
+/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/assets/CMakeFiles/edit_cache.dir
+/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/assets/CMakeFiles/rebuild_cache.dir
+/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/src/CMakeFiles/edit_cache.dir
+/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/src/CMakeFiles/rebuild_cache.dir
+/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/src/common/CMakeFiles/edit_cache.dir
+/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/src/common/CMakeFiles/rebuild_cache.dir
+/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/src/Game/CMakeFiles/edit_cache.dir
+/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/src/Game/CMakeFiles/rebuild_cache.dir
+/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/src/PPU/CMakeFiles/edit_cache.dir
+/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/src/PPU/CMakeFiles/rebuild_cache.dir

@@ -60,8 +60,8 @@
 .proc   GameLoop
         wai                                 ; wait for NMI / V-Blank
 
-        ; read joypad 1
-        ; push addresses of joy pad data to stack
+
+        ; 1. INPUTS (Puxando dados do Joypad)
         ldx #JOYHELD1
         phx
         ldx #JOYTRIGGER1
@@ -69,12 +69,11 @@
         ldx #JOYRAW1
         phx
         jsr ReadJoypad1
-        ; stack clean up
         plx
         plx
         plx
 
-        ; push addresses of joypad 1 data to stack
+        ; 2. MOVIMENTACAO BRUTA (Apenas altera posicoes na RAM)
         ldx #JOYHELD1
         phx
         ldx #JOYTRIGGER1
@@ -82,24 +81,113 @@
         ldx #JOYRAW1
         phx
         jsr MoveHero
-        ; stack clean up
         plx
         plx
         plx
-
-        ldx #$00 
-        jsr DrawHero
-
 
         jsr MoveEnemy1
 
-        ;ldx #32                 
-        jsr DrawEnemy1          ; Monta os 12 sprites na tela usando IA!
+        ; 3. FILTRO DE COLISAO (Mantem todo mundo dentro da tela antes de desenhar)
+        jsr ApplyEdgeCollisions
 
+        ; 4. RENDERIZACAO FINAL (Le a RAM tratada e joga na OAM)
+        ldx #$00 
+        jsr DrawHero
+        jsr DrawEnemy1
 
         jmp GameLoop
 .endproc
 ;-------------------------------------------------------------------------------
+
+;-------------------------------------------------------------------------------
+;   Rotina de Colisao com as Bordas da Tela (Constantes de Tela Limpas)
+;-------------------------------------------------------------------------------
+.proc ApplyEdgeCollisions
+        ; === TRAVAS DO HEROI ===
+        
+CheckHeroLeft:
+        ; Se X_Pos passou do limite seguro automatizado, houve underflow
+        lda Hero + HeroStruct::X_Pos
+        cmp #HERO_SCREEN_SAFE_LIMIT                    
+        bcc CheckHeroRight          ; Se X for menor, nao eh underflow, pula pro proximo
+        
+        lda #SCREEN_LEFT            ; Se deu underflow, trava no zero
+        sta Hero + HeroStruct::X_Pos
+        bra CheckHeroTop            ; Evita o teste conflitante da direita
+
+CheckHeroRight:
+        ; Limite Direito: Tela (255) menos a largura fisica do heroi (16 pixels)
+        lda Hero + HeroStruct::X_Pos
+        cmp #(SCREEN_RIGHT - 16)
+        bcc CheckHeroTop            
+        
+        lda #(SCREEN_RIGHT - 16)    
+        sta Hero + HeroStruct::X_Pos
+
+CheckHeroTop:
+        ; Usa a mesma constante de tela para pegar o underflow do eixo Y
+        lda Hero + HeroStruct::Y_Pos
+        cmp #HERO_SCREEN_SAFE_LIMIT                    
+        bcc CheckHeroBottom         
+        
+        lda #SCREEN_TOP             
+        sta Hero + HeroStruct::Y_Pos
+        bra CheckEnemyLeft          ; Evita o teste conflitante de baixo
+
+CheckHeroBottom:
+        ; Limite Inferior: Fundo do cenario (223) menos a altura fisica do heroi (32 pixels)
+        lda Hero + HeroStruct::Y_Pos
+        cmp #(SCREEN_BOTTOM - 32)
+        bcc CheckEnemyLeft          
+        
+        lda #(SCREEN_BOTTOM - 32)    
+        sta Hero + HeroStruct::Y_Pos
+
+
+        ; === TRAVAS DO INIMIGO GRANDE ===
+        
+CheckEnemyLeft:
+        ; Aplica o limite seguro de tela calculado para o inimigo
+        lda InimigoGrande + EnemyStruct::X_Pos
+        cmp #ENEMY_SCREEN_SAFE_LIMIT                    
+        bcc CheckEnemyRight         
+        
+        lda #SCREEN_LEFT            
+        sta InimigoGrande + EnemyStruct::X_Pos
+        bra CheckEnemyTop
+
+CheckEnemyRight:
+        ; Limite Direito do Inimigo: Tela (255) menos a largura fisica dele (32 pixels)
+        lda InimigoGrande + EnemyStruct::X_Pos
+        cmp #(SCREEN_RIGHT - 32)
+        bcc CheckEnemyTop
+        
+        lda #(SCREEN_RIGHT - 32)    
+        sta InimigoGrande + EnemyStruct::X_Pos
+
+CheckEnemyTop:
+        lda InimigoGrande + EnemyStruct::Y_Pos
+        cmp #ENEMY_SCREEN_SAFE_LIMIT                    
+        bcc CheckEnemyBottom        
+        
+        lda #SCREEN_TOP             
+        sta InimigoGrande + EnemyStruct::Y_Pos
+        bra CollisionDone
+
+CheckEnemyBottom:
+        ; Limite Inferior do Inimigo: Fundo (223) menos a altura fisica dele (32 pixels)
+        lda InimigoGrande + EnemyStruct::Y_Pos
+        cmp #(SCREEN_BOTTOM - 32)
+        bcc CollisionDone
+        
+        lda #(SCREEN_BOTTOM - 32)
+        sta InimigoGrande + EnemyStruct::Y_Pos
+
+CollisionDone:
+        rts
+.endproc
+;-------------------------------------------------------------------------------
+
 
 ;-------------------------------------------------------------------------------
 ;   Will be called during V-Blank every frame
@@ -131,3 +219,5 @@
 
 Hero:          .tag HeroStruct
 InimigoGrande: .tag EnemyStruct
+
+
