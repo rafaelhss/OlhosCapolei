@@ -24,6 +24,7 @@ UP_BUTTON       = $0800
 DOWN_BUTTON     = $0400
 LEFT_BUTTON     = $0200
 RIGHT_BUTTON    = $0100
+A_BUTTON        = $0080
 ;-------------------------------------------------------------------------------
 
 ; ======== Hero padrao
@@ -40,6 +41,8 @@ RIGHT_BUTTON    = $0100
     X_Pos       .word   ; 16 bits (0-65535) para suportar coordenadas fora da tela
     Y_Pos       .byte   ; 8 bits (0-255) para posição vertical
     Tile_Count  .byte   ; Guarda quantos blocos compõem esse inimigo
+    Anim_Timer  .byte   ; Contador para velocidade da animação  (isso ainda nao funciona)
+    Anim_Frame  .byte   ; Frame atual (0, 1, 2...)
 .endstruct
 
 

@@ -26,12 +26,27 @@
 ;   This subroutines meve hero
 ;-------------------------------------------------------------------------------
 .proc MoveHero
-        ; [Seus bytes de breakpoint de debug continuam aqui...]
+
+        lda #SPRITE_SPEED
+        sta HOR_SPEED
+        sta VER_SPEED
+
 
         ; === LÓGICA DE MOVIMENTAÇÃO PROFISSIONAL ===
         rep #$20                    ; 1. Abre a CPU para 16-bits (Aceita valores maiores que 255)
         .a16                        ; 2. Avisa o ca65 para montar as instruções em 16-bits
+                
 
+
+;==  ve se apertou turbo
+        lda a:JOYHELD1
+        and #A_BUTTON
+        beq CheckRight
+        lda #(SPRITE_SPEED + SPRITE_SPEED)
+        sta HOR_SPEED
+        sta VER_SPEED
+
+CheckRight:
         lda a:JOYHELD1              ; Leitura absoluta de 16-bits do controle
         and #RIGHT_BUTTON           ; ◄ AGORA FUNCIONA! Testa o valor $0100 sem erro de range
         beq CheckLeft               ; Se o botão Direita não estiver pressionado, pula para a esquerda
@@ -40,20 +55,42 @@ MoveRight:
         ; Como a CPU já está em 16-bits, podemos alterar o X_Pos direto com segurança máxima!
         lda Hero + HeroStruct::X_Pos
         clc
-        adc #1                      ; Move 1 pixel para a direita
+        adc HOR_SPEED                  ; Move 1 pixel para a direita
         sta Hero + HeroStruct::X_Pos
 
 CheckLeft:
         ; Se quiser testar o botão Esquerda logo em sequência:
         lda a:JOYHELD1
         and #LEFT_BUTTON
-        beq MoveDone
+        beq CheckUp
 
 MoveLeft:
         lda Hero + HeroStruct::X_Pos
         sec
-        sbc #1                      ; Move 1 pixel para a esquerda
+        sbc VER_SPEED                     ; Move 1 pixel para a esquerda
         sta Hero + HeroStruct::X_Pos
+
+CheckUp:
+        lda a:JOYHELD1
+        and #UP_BUTTON
+        beq CheckDown
+
+MoveUp:
+        lda Hero + HeroStruct::Y_Pos
+        sec
+        sbc HOR_SPEED                      ; Move 1 pixel para a cima
+        sta Hero + HeroStruct::Y_Pos
+
+CheckDown:
+        lda a:JOYHELD1
+        and #DOWN_BUTTON
+        beq MoveDone
+
+MoveDown:
+        lda Hero + HeroStruct::Y_Pos
+        clc
+        adc VER_SPEED                       
+        sta Hero + HeroStruct::Y_Pos
 
 MoveDone:
         sep #$20                    ; 3. Fecha a CPU de volta para 8-bits para proteger o resto do jogo

@@ -60,7 +60,7 @@
         rep #$20                        ; CPU em modo 16-bits
         .a16                            ; ◄ AVISO AO CA65: Monte os números em 16-bits agora!
         
-        lda #$70         ; Agora o ca65 gera os bytes $80 e $00 na ROM!
+        lda #$40         ; Agora o ca65 gera os bytes $80 e $00 na ROM!
         sta Hero + HeroStruct::X_Pos    ; Grava os 16-bits perfeitamente na RAM
         
         sep #$20                        ; CPU volta para 8-bits
@@ -78,7 +78,7 @@
         rep #$20                        ; CPU em modo 16-bits
         .a16                            ; ◄ AVISO AO CA65!
         
-        lda #40                         ; Carrega 40 completo ($0028)
+        lda #90                         ; Carrega 40 completo ($0028)
         sta InimigoGrande + EnemyStruct::X_Pos 
         
         sep #$20                        ; CPU volta para 8-bits
@@ -88,7 +88,13 @@
         sta InimigoGrande + EnemyStruct::Y_Pos
 
         lda #12                         
-        sta InimigoGrande + EnemyStruct::Tile_Count          
+        sta InimigoGrande + EnemyStruct::Tile_Count    
+
+
+        LDA #$08                        ;atualiza a cada 8 frames na tela
+        STA InimigoGrande + EnemyStruct::Anim_Timer
+        LDA #$00                        ; comeca do tile 0
+        STA InimigoGrande + EnemyStruct::Anim_Frame      
 ;----------- FIM INIMIGO
 
 

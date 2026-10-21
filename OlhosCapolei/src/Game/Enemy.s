@@ -20,6 +20,7 @@
 ;-------------------------------------------------------------------------------
 
 .import InimigoGrande
+.import Hero
 
 .segment "CODE"
 ;-------------------------------------------------------------------------------
@@ -28,17 +29,66 @@
 .proc   MoveEnemy1
 
 
+
+
+
 ; --- LÓGICA DE MOVIMENTAÇÃO PURA ---
     ; Exemplo: Mover para a esquerda continuamente
-   rep #$20        ; Abre o Acumulador para 16 bits temporariamente
+   ;rep #$20        ; Abre o Acumulador para 16 bits temporariamente
+   ; .a16
+
+    ; 1. Reduz o timer de animação
+    DEC InimigoGrande + EnemyStruct::Anim_Timer
+    BNE Move ; Se não chegou a zero, não faz nada ainda
     
+    ; 2. O timer zerou! Reseta o timer para o valor padrão
+    LDA #$08 ; Ajuste este valor para mais rápido ou mais lento
+    STA InimigoGrande + EnemyStruct::Anim_Timer
+    
+    ; 3. Alterna o Frame (Se era 0 vira 1, se era 1 vira 0)
+    LDA InimigoGrande + EnemyStruct::Anim_Frame
+    EOR #$01 ; Lógica XOR inverte o bit 0 perfeitamente (0 <-> 1)
+    STA InimigoGrande + EnemyStruct::Anim_Frame
+
+
+;=== logica para mover
+Move:
     lda InimigoGrande + EnemyStruct::X_Pos
+    cmp Hero + HeroStruct::X_Pos    ;== compara com o hero
+    beq NoEnemyHMove_CheckV ; mantem
+    bcc MoveEnemyRight
+MoveEnemyLeft:
     sec
     sbc #1          ; Move 1 pixel por frame
     sta InimigoGrande + EnemyStruct::X_Pos
-
-    sep #$20        ; Volta o Acumulador para 8 bits para não bugar o resto do jogo
-
+    bra NoEnemyHMove_CheckV
+    
+MoveEnemyRight:
+    clc
+    adc #1                  ; Move 1 pixel para a direita
+    sta InimigoGrande + EnemyStruct::X_Pos
+    bra NoEnemyHMove_CheckV ;nao precisava, mas eh bom
+    
+NoEnemyHMove_CheckV:
+    lda InimigoGrande + EnemyStruct::Y_Pos
+    cmp Hero + HeroStruct::Y_Pos    ;== compara com o hero
+    beq NoEnemyYMove ; mantem
+    bcc MoveEnemyUp
+MoveEnemyDown:
+    sec
+    sbc #1          ; Move 1 pixel por frame
+    sta InimigoGrande + EnemyStruct::Y_Pos
+    bra NoEnemyYMove
+    
+MoveEnemyUp:
+    clc
+    adc #1                  ; Move 1 pixel para a direita
+    sta InimigoGrande + EnemyStruct::Y_Pos
+    bra NoEnemyYMove ;nao precisava, mas eh bom
+    
+NoEnemyYMove:
+    ;sep #$20        ; Volta o Acumulador para 8 bits para não bugar o resto do jogo
+    ;.a8
     ; Se quiser fazer ele quicar nas bordas, você testa o X_Pos aqui
     rts
                                
@@ -90,9 +140,25 @@ DrawLoop:
         sta OAMMIRROR, X                          ; Grava na OAMMIRROR
         inx
 
+
+        ; --- CÁLCULO DINÂMICO DO TILE BASEADO NO FRAME --- Isso ainda nao funciona
+        LDA InimigoGrande + EnemyStruct::Anim_Frame
+        BEQ Frame0
+    
+        Frame1:
+            lda InimigoGrande_Layout + 2, Y ; ID do Tile do Frame de Caminhada B
+            BRA WriteTile
+
+        Frame0:
+            lda InimigoGrande_Layout + 2, Y ; ID do Tile do Frame de Caminhada A
+
+        WriteTile:
+            sta OAMMIRROR, X
+
         ; 3. Copiar o Número do Tile diretamente
-        lda InimigoGrande_Layout + 2, Y
-        sta OAMMIRROR, X
+        ;lda InimigoGrande_Layout + 2, Y
+        ;sta OAMMIRROR, X
+        
         inx
 
         ; 4. Copiar os Atributos (Paleta, Flip, Prioridade) diretamente
