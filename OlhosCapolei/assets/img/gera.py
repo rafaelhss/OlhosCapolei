@@ -5,7 +5,7 @@ import struct
 cores_rgb = [
     (0, 0, 0),         # Cor 00: Transparente (Preto)
     (255, 255, 255), # Cor 01: Branco
-    (255, 0, 0),     # Cor 02: Vermelho
+    (255, 100, 200),     # Cor 02: Vermelho
     (0, 0, 255),     # Cor 03: Azul
     (0, 255, 0),     # Cor 04: Verde
     (255, 255, 0),   # Cor 05: Amarelo
@@ -36,7 +36,7 @@ for r, g, b in cores_rgb:
     bytes_finais.extend(struct.pack('<H', snes_color))
 
 # Salva o arquivo final de exatamente 32 bytes para o seu Assets.s
-with open("Sprites7.pal", "wb") as f:
+with open("Sprites9.pal", "wb") as f:
     f.write(bytes_finais)
 
 print("Arquivo Sprites7.pal gerado com sucesso!")
