@@ -1,15 +1,15 @@
 ; -----------------------------------------------------------------------------
-;   File: Main.s
+;   File: Main.s (Edição Elegante & Otimizada - Pipeline de Auto-polling)
 ;   Description: Displays a sprite movable with the dpad
 ; -----------------------------------------------------------------------------
 
 ;----- Export ------------------------------------------------------------------
-.export     ResetHandler        ; export the entry point of the demo
+.export     ResetHandler        
 .export     NMIHandler
 ;-------------------------------------------------------------------------------
 
 ;----- Assembler Directives ----------------------------------------------------
-.p816                           ; tell the assembler this is 65816 code
+.p816                           ; Habilita o conjunto de instruções do 65816
 ;-------------------------------------------------------------------------------
 
 ;----- Includes ----------------------------------------------------------------
@@ -28,108 +28,89 @@
 
 .segment "CODE"
 ;-------------------------------------------------------------------------------
-;   This is the entry point of the demo
+;   PONTO DE ENTRADA DO SISTEMA (Boot seguro em Hardware Real)
 ;-------------------------------------------------------------------------------
 .proc   ResetHandler
-        sei                     ; disable interrupts
-        clc                     ; clear the carry flag
-        xce                     ; switch the 65816 to native (16-bit mode)
-        rep #$10                ; set X and Y to 16-bit
-        sep #$20                ; set A to 8-bit
-        lda #$8f                ; force v-blanking
-        sta INIDISP
-        stz NMITIMEN            ; disable NMI
-        ; set the stack pointer to $1fff
-        ldx #$1fff              ; load X with $1fff
-        txs                     ; copy X to stack pointer
+        sei                     ; Desabilita interrupções de hardware
+        cld                     ; Desativa modo decimal binário (Crítico para Everdrive)
+        clc
+        xce                     ; Transiciona o 65816 para Modo Nativo
 
-        ; initialize SNES
+        jmp   _ResetAlign       ; Sincroniza o Program Bank Register (K) para $00
+        
+_ResetAlign:
+        rep #$10                ; Índices X/Y travados em 16-bit (.i16)
+        sep #$20                ; Acumulador A travado em 8-bit (.a8)
+        
+        lda #$8f                ; Força V-Blank imediato (Desliga a tela)
+        sta INIDISP
+        stz NMITIMEN            ; Garante NMI desligado durante limpezas
+        
+        ldx #$1fff              ; Aponta a Pilha para o topo da página espelho
+        txs
+
         jsr ClearRegisters
         jsr ClearVRAM
         jsr ClearCGRAM
         jsr ClearOAMRAM
+        jsr InitDemo            ; Executa inicialização customizada e ativa PPU
 
-        jsr InitDemo            ; initialize the demo
-        jmp GameLoop            ; enter main game loop
+        ; --- ENTRADA EM AMBIENTE DE EXECUÇÃO REAL ---
+        lda #$81                ; ◄ AUTO-POLLING LIGADO: Habilita NMI ($80) + Auto-read ($01)
+        sta NMITIMEN
+        cli                     ; Corta a trava global de interrupções da CPU
+
+        jmp GameLoop            
 .endproc
 ;-------------------------------------------------------------------------------
 
 ;-------------------------------------------------------------------------------
-;   Executed during V-Blank
+;   ENGINE GAME LOOP (Pipeline Limpo de Alta Performance)
 ;-------------------------------------------------------------------------------
 .proc   GameLoop
-        wai                                 ; wait for NMI / V-Blank
+        wai                     ; Dorme eficientemente até o próximo V-Blank / NMI
 
-
-        ; 1. INPUTS (Puxando dados do Joypad)
-        ldx #JOYHELD1
-        phx
-        ldx #JOYTRIGGER1
-        phx
-        ldx #JOYRAW1
-        phx
+        ; 1. INPUT PIPELINE (Direto via Registradores de Hardware - Sem sujeira na Pilha)
         jsr ReadJoypad1
-        plx
-        plx
-        plx
 
-        ; 2. MOVIMENTACAO BRUTA (Apenas altera posicoes na RAM)
-        ldx #JOYHELD1
-        phx
-        ldx #JOYTRIGGER1
-        phx
-        ldx #JOYRAW1
-        phx
+        ; 2. SESSÃO DE FÍSICA E MOVIMENTAÇÃO (Leitura direta dos buffers de RAM)
         jsr MoveHero
-        plx
-        plx
-        plx
-
         jsr MoveEnemy1
 
-        ; 3. FILTRO DE COLISAO (Mantem todo mundo dentro da tela antes de desenhar)
+        ; 3. FILTRO DE COLISÕES & REGRAS DE GAMEPLAY
         jsr ApplyEdgeCollisions
         jsr ApplyDamageToHero
 
-        ; 4. RENDERIZACAO FINAL (Le a RAM tratada e joga na OAM)
-        ldx #$00 
-        jsr DrawHero
-        jsr DrawEnemy1
-        jsr DrawEnemy2
+        ; 4. SISTEMA DE RENDERIZAÇÃO FINAL (Injeção na OAMMIRROR)
+        ldx #$00                ; X inicia em 0 como offset do primeiro Sprite na OAM
+        jsr DrawHero            ; Desenha o Heroi e devolve o X avançado
+        jsr DrawEnemy1          ; Desenha o Inimigo 1 a partir do ponto que o Heroi parou
+        jsr DrawEnemy2          ; Desenha o Inimigo 2 dinamicamente
 
         jmp GameLoop
 .endproc
 ;-------------------------------------------------------------------------------
 
-
-
 .proc ApplyDamageToHero
-
-        ; fazer depois de colocar mais um inimigo
-
+        ; Implementar lógica de colisão por bounding-box entre Hero e Enemy posteriormente
         rts
 .endproc
 
-
-
 ;-------------------------------------------------------------------------------
-;   Rotina de Colisao com as Bordas da Tela (Constantes de Tela Limpas)
+;   ROTINA CENTRALIZADA DE COLISÃO COM AS BORDAS (Aritmética de Underflow)
 ;-------------------------------------------------------------------------------
 .proc ApplyEdgeCollisions
         ; === TRAVAS DO HEROI ===
-        
 CheckHeroLeft:
-        ; Se X_Pos passou do limite seguro automatizado, houve underflow
         lda Hero + HeroStruct::X_Pos
         cmp #HERO_SCREEN_SAFE_LIMIT                    
-        bcc CheckHeroRight          ; Se X for menor, nao eh underflow, pula pro proximo
+        bcc CheckHeroRight          
         
-        lda #SCREEN_LEFT            ; Se deu underflow, trava no zero
+        lda #SCREEN_LEFT            
         sta Hero + HeroStruct::X_Pos
-        bra CheckHeroTop            ; Evita o teste conflitante da direita
+        bra CheckHeroTop            
 
 CheckHeroRight:
-        ; Limite Direito: Tela (255) menos a largura fisica do heroi (16 pixels)
         lda Hero + HeroStruct::X_Pos
         cmp #(SCREEN_RIGHT - 16)
         bcc CheckHeroTop            
@@ -138,17 +119,15 @@ CheckHeroRight:
         sta Hero + HeroStruct::X_Pos
 
 CheckHeroTop:
-        ; Usa a mesma constante de tela para pegar o underflow do eixo Y
         lda Hero + HeroStruct::Y_Pos
         cmp #HERO_SCREEN_SAFE_LIMIT                    
         bcc CheckHeroBottom         
         
         lda #SCREEN_TOP             
         sta Hero + HeroStruct::Y_Pos
-        bra CheckEnemyLeft          ; Evita o teste conflitante de baixo
+        bra CheckEnemyLeft          
 
 CheckHeroBottom:
-        ; Limite Inferior: Fundo do cenario (223) menos a altura fisica do heroi (32 pixels)
         lda Hero + HeroStruct::Y_Pos
         cmp #(SCREEN_BOTTOM - 32)
         bcc CheckEnemyLeft          
@@ -156,11 +135,8 @@ CheckHeroBottom:
         lda #(SCREEN_BOTTOM - 32)    
         sta Hero + HeroStruct::Y_Pos
 
-
         ; === TRAVAS DO INIMIGO GRANDE ===
-        
 CheckEnemyLeft:
-        ; Aplica o limite seguro de tela calculado para o inimigo
         lda InimigoGrande + EnemyStruct::X_Pos
         cmp #ENEMY_SCREEN_SAFE_LIMIT                    
         bcc CheckEnemyRight         
@@ -170,7 +146,6 @@ CheckEnemyLeft:
         bra CheckEnemyTop
 
 CheckEnemyRight:
-        ; Limite Direito do Inimigo: Tela (255) menos a largura fisica dele (32 pixels)
         lda InimigoGrande + EnemyStruct::X_Pos
         cmp #(SCREEN_RIGHT - 32)
         bcc CheckEnemyTop
@@ -188,7 +163,6 @@ CheckEnemyTop:
         bra CollisionDone
 
 CheckEnemyBottom:
-        ; Limite Inferior do Inimigo: Fundo (223) menos a altura fisica dele (32 pixels)
         lda InimigoGrande + EnemyStruct::Y_Pos
         cmp #(SCREEN_BOTTOM - 32)
         bcc CollisionDone
@@ -199,40 +173,34 @@ CheckEnemyBottom:
 CollisionDone:
         rts
 .endproc
-;-------------------------------------------------------------------------------
-
 
 ;-------------------------------------------------------------------------------
-;   Will be called during V-Blank every frame
+;   EXECUÇÃO AUTOMÁTICA EM V-BLANK (Hardware real manipula OAM aqui)
 ;-------------------------------------------------------------------------------
 .proc   NMIHandler
-        lda RDNMI               ; read NMI status, acknowledge NMI
+        lda RDNMI               ; Lê e limpa o flag indicador de interrupção de NMI
 
-        tsx                     ; save old stack pointer
-        pea OAMMIRROR           ; push mirror address to stack
-        jsr UpdateOAMRAM        ; update OAMRAM
-        txs                     ; restore old stack pointer
+        tsx                     ; Preserva o ponteiro de pilha atual
+        pea OAMMIRROR           ; Injeta o endereço do espelho da RAM
+        jsr UpdateOAMRAM        ; Envia os dados para a OAM real via DMA
+        txs                     ; Restaura a pilha instantaneamente
 
         rti
 .endproc
-;-------------------------------------------------------------------------------
 
 ;-------------------------------------------------------------------------------
-;   Is not used in this program
+;   VETOR DE PROSPECÇÃO DE HARDWARE
 ;-------------------------------------------------------------------------------
 .proc   IRQHandler
-        ; code
         rti
 .endproc
+
 ;-------------------------------------------------------------------------------
-
-
+;   ALOCAÇÃO DE VARIÁVEIS NA WRAM 
+;-------------------------------------------------------------------------------
 .segment "BSS"
 .export Hero, InimigoGrande, InimigoGrande2
 
 Hero:          .tag HeroStruct
 InimigoGrande: .tag EnemyStruct
-
 InimigoGrande2: .tag EnemyStruct
-
-

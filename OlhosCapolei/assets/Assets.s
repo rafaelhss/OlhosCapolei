@@ -7,10 +7,13 @@
 ;----- Export ------------------------------------------------------------------
 .export     SpriteData
 .export     ColorData
+.export     BackgroundData
 ;-------------------------------------------------------------------------------
 
 ;----- Assset Data -------------------------------------------------------------
 .segment "SPRITEDATA"
 SpriteData: .incbin "Sprites10.vra"
-ColorData:  .incbin "Sprites10.pal"
+ColorData:  .incbin "Sprites11.pal"
+BackgroundData: .incbin "Background.pal"
+
 ;-------------------------------------------------------------------------------

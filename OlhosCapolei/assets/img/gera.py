@@ -3,7 +3,7 @@ import struct
 # Insira aqui a lista com as suas 16 cores no formato (R, G, B) de 0 a 255
 # Lembre-se: a primeira cor da lista sempre sera a transparente no SNES
 cores_rgb = [
-    (0, 0, 0),         # Cor 00: Transparente (Preto)
+    (100, 100, 100),         # Cor 00: Transparente (Preto)
     (255, 255, 255), # Cor 01: Branco
     (255, 100, 200),     # Cor 02: Vermelho
     (0, 0, 255),     # Cor 03: Azul

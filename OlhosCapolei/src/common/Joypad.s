@@ -1,5 +1,5 @@
 ; -----------------------------------------------------------------------------
-;   File: Joypad.s
+;   File: Joypad.s (Corrigido - Variáveis do Controle 2 Removidas)
 ;   Description: Subroutines to read the current state of the joypads
 ; -----------------------------------------------------------------------------
 
@@ -10,8 +10,8 @@
 
 ;----- Assembler Directives ----------------------------------------------------
 .p816                           ; tell the assembler this is 65816 code
-.a8
-.i16
+.a8                             ; Registrador A em 8-bit padrão
+.i16                            ; Registradores X e Y fixos em 16-bit
 ;-------------------------------------------------------------------------------
 
 ;----- Includes ----------------------------------------------------------------
@@ -22,93 +22,43 @@
 .segment "CODE"
 ;-------------------------------------------------------------------------------
 ;   Read and update the state of joypad 1
-;   Parameters: Raw: .addr, Trigger: .addr, Held: .addr
-;-------------------------------------------------------------------------------
+;   Acessa diretamente as globais de WRAM sem poluir a pilha (Stack-less pipeline)
+; -----------------------------------------------------------------------------
 .proc   ReadJoypad1
-        phx                                 ; save old stack pointer
-        ; create frame pointer
-        phd                                 ; push Direct Register to stack
-        tsc                                 ; transfer Stack to... (via Accumulator)
-        tcd                                 ; ...Direct Register.
-        ; use constants to access arguments on stack with Direct Addressing
-        Raw         = $07                   ; address to store raw input data
-        Trigger     = $09                   ; address to store triggered buttons
-        Held        = $0b                   ; address to store held buttons
-
-        ; check whether joypad is ready
+        ; 1. Garante que o hardware do SNES terminou a leitura automática dos pinos
 WaitForJoypad:
-        lda HVBJOY                          ; get joypad status
+        lda HVBJOY                          ; get joypad status da PPU
         and #$01                            ; check whether joypad done reading...
-        beq WaitForJoypad                   ; ...if not, wait a bit more
+        bne WaitForJoypad                   ; Se bit 0 for 1, o SNES ainda está varrendo elétricamente. Espera zerar.
 
-        ; first, check for newly pressed buttons since last frame
-        ; A - current frame
-        ; Y - auxiliar
-        rep #$20                            ; set A to 16-bit
-        lda (Raw)                           ; get last frame's input...
-        tay                                 ; ...and store in Y
-        lda JOY1L                           ; get new input from this frame
-        sta (Raw)                           ; store new input from this frame
-        tya                                 ; check for newly pressed buttons...
-        eor (Raw)                           ; filter buttons that were not pressed last frame
-        and (Raw)                           ; filter held buttons from last frame
-        sta (Trigger)                       ; ...and store them
-        ; second, check for buttons held from last frame
-        tya                                 ; get input from last frame
-        and (Raw)                           ; filter held buttons from last frame...
-        sta (Held)                          ; ...store them
+        ; 2. Calcula as transições de estado usando registros de 16-bit
+        rep #$20                            ; Abre o acumulador A para 16-bit completo
+        
+        lda JOYRAW1                         ; Pega os botões armazenados no FRAME ANTERIOR
+        tay                                 ; Transfere temporariamente para Y para usarmos de máscara histórica
+        
+        lda JOY1L                           ; Pega a leitura elétrica atualizada (Bruta) que o SNES acabou de cuspir
+        sta JOYRAW1                         ; Atualiza o buffer global RAW atual
+        sta JOYHELD1                        ; O estado bruto atual É o estado de botões sendo segurados (Held)
 
-        ; done
-        sep #$20                            ; set A back to 8-bit
-        pld                                 ; restore D...
-        plx                                 ; ...and X registers
+        ; 3. EQUAÇÃO DE COMPUTAÇÃO DO TRIGGER (Botão clicado JUSTAMENTE neste frame)
+        ; Fórmula estável: Trigger = Raw_Atual AND (NOT Held_Anterior)
+        tya                                 ; Resgata o frame anterior (armazenado em Y)
+        eor #$FFFF                          ; Aplica operador NOT em todos os 16-bits invertendo o estado anterior
+        and JOYRAW1                         ; Compara com o Raw atual (AND)
+        sta JOYTRIGGER1                     ; Salva o resultado no buffer global de clicks de botão
+
+        sep #$20                            ; RETORNA OBRIGATORIAMENTE o acumulador para 8-bit (.a8)
         rts
 .endproc
 ;-------------------------------------------------------------------------------
 
 ;-------------------------------------------------------------------------------
-;   Read and update the state of joypad 2
-;   Parameters: Raw: .addr, Trigger: .addr, Held: .addr
-;-------------------------------------------------------------------------------
+;   Read and update the state of joypad 2 (Vazia/Segura para 1-Player)
+; -----------------------------------------------------------------------------
 .proc   ReadJoypad2
-        phx                                 ; save old stack pointer
-        ; create frame pointer
-        phd                                 ; push Direct Register to stack
-        tsc                                 ; transfer Stack to... (via Accumulator)
-        tcd                                 ; ...Direct Register.
-        ; use constants to access arguments on stack with Direct Addressing
-        Raw         = $07                   ; address to store raw input data
-        Trigger     = $09                   ; address to store triggered buttons
-        Held        = $0b                   ; address to store held buttons
-
-        ; check whether joypad is ready
-WaitForJoypad:
-        lda HVBJOY                          ; get joypad status
-        and #$01                            ; check whether joypad done reading...
-        beq WaitForJoypad                   ; ...if not, wait a bit more
-
-        ; first, check for newly pressed buttons since last frame
-        ; A - current frame
-        ; Y - auxiliar
-        rep #$20                            ; set A to 16-bit
-        lda (Raw)                           ; get last frame's input...
-        tay                                 ; ...and store in Y
-        lda JOY2L                           ; get new input from this frame
-        sta (Raw)                           ; store new input from this frame
-        tya                                 ; check for newly pressed buttons...
-        eor (Raw)                           ; filter buttons that were not pressed last frame
-        and (Raw)                           ; filter held buttons from last frame
-        sta (Trigger)                       ; ...and store them
-        ; second, check for buttons held from last frame
-        tya                                 ; get input from last frame
-        and (Raw)                           ; filter held buttons from last frame...
-        sta (Held)                          ; ...store them
-
-        ; done
-        sep #$20                            ; set A back to 8-bit
-        pld                                 ; restore D...
-        plx                                 ; ...and X registers
-
+        ; Deixada vazia e segura por enquanto para evitar erros de símbolos indefindos 
+        ; de variáveis do player 2 que não estão declaradas no seu MemoryMapWRAM.inc
         rts
 .endproc
 ;-------------------------------------------------------------------------------
