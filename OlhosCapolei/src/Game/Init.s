@@ -91,59 +91,20 @@
 
         ; --- 4. INICIALIZAÇÃO DAS STRUCTS (8-BIT PURO E SEGURO) ---
 
-;----------- HÉROI 
-        lda #$40                        ; X = 64
-        sta Hero + HeroStruct::X_Pos   
-        
-        lda #(SCREEN_BOTTOM / 4)        ; Y
-        sta Hero + HeroStruct::Y_Pos   
-
-        lda #8                         
-        sta Hero + HeroStruct::Tile_Count
-;=========== FIM HERÓI
-
-;----------- INIMIGO GRANDE 1
-        lda #90                         ; X = 90
-        sta InimigoGrande + EnemyStruct::X_Pos
-        
-        lda #(SCREEN_BOTTOM / 3)        ; Y
-        sta InimigoGrande + EnemyStruct::Y_Pos
-
-        lda #12                        
-        sta InimigoGrande + EnemyStruct::Tile_Count   
-
-        lda #$08                       
-        sta InimigoGrande + EnemyStruct::Anim_Timer
-        lda #$00                       
-        sta InimigoGrande + EnemyStruct::Anim_Frame   
-;=========== FIM INIMIGO 1
- 
-;----------- INIMIGO GRANDE 2
-        lda #90                         ; X = 90
-        sta InimigoGrande2 + EnemyStruct::X_Pos
-        
-        lda #(SCREEN_BOTTOM / 2)        ; Y
-        sta InimigoGrande2 + EnemyStruct::Y_Pos
-
-        lda #12                        
-        sta InimigoGrande2 + EnemyStruct::Tile_Count   
-
-        lda #$04                       
-        sta InimigoGrande2 + EnemyStruct::Anim_Timer
-        lda #$00                       
-        sta InimigoGrande2 + EnemyStruct::Anim_Frame   
-;=========== FIM INIMIGO 2
 
 
 ;----------- PennyCrab
-        lda #50                         ; 
+        lda #$AA                         ; 
         sta PennyCrab + PennyCrabStruct::X_Pos
         
         lda #(SCREEN_BOTTOM / 2)        ; Y
         sta PennyCrab + PennyCrabStruct::Y_Pos
 
         lda #12                        
-        sta PennyCrab + PennyCrabStruct::Tile_Count   
+        sta PennyCrab + PennyCrabStruct::Tile_Count  
+
+        lda #$09
+        sta PennyCrab + PennyCrabStruct::Walk_Anim_Speed 
 
         lda #$04                       
         sta PennyCrab + PennyCrabStruct::Anim_Timer
