@@ -137,6 +137,14 @@ assets/Assets.s.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/OlhosCapolei.dir/build.make CMakeFiles/OlhosCapolei.dir/assets/Assets.s.o
 .PHONY : assets/Assets.s.o
 
+src/Game/BigHero.o: src/Game/BigHero.s.o
+.PHONY : src/Game/BigHero.o
+
+# target to build an object file
+src/Game/BigHero.s.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/OlhosCapolei.dir/build.make CMakeFiles/OlhosCapolei.dir/src/Game/BigHero.s.o
+.PHONY : src/Game/BigHero.s.o
+
 src/Game/Enemy.o: src/Game/Enemy.s.o
 .PHONY : src/Game/Enemy.o
 
@@ -168,6 +176,14 @@ src/Game/Input.o: src/Game/Input.s.o
 src/Game/Input.s.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/OlhosCapolei.dir/build.make CMakeFiles/OlhosCapolei.dir/src/Game/Input.s.o
 .PHONY : src/Game/Input.s.o
+
+src/Game/PennyCrab.o: src/Game/PennyCrab.s.o
+.PHONY : src/Game/PennyCrab.o
+
+# target to build an object file
+src/Game/PennyCrab.s.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/OlhosCapolei.dir/build.make CMakeFiles/OlhosCapolei.dir/src/Game/PennyCrab.s.o
+.PHONY : src/Game/PennyCrab.s.o
 
 src/Main.o: src/Main.s.o
 .PHONY : src/Main.o
@@ -219,10 +235,12 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... OlhosCapolei"
 	@echo "... assets/Assets.o"
+	@echo "... src/Game/BigHero.o"
 	@echo "... src/Game/Enemy.o"
 	@echo "... src/Game/Hero.o"
 	@echo "... src/Game/Init.o"
 	@echo "... src/Game/Input.o"
+	@echo "... src/Game/PennyCrab.o"
 	@echo "... src/Main.o"
 	@echo "... src/PPU/PPU.o"
 	@echo "... src/common/InitSNES.o"

@@ -9,10 +9,12 @@ set(CMAKE_DEPENDS_LANGUAGES
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CA65816
   "/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/assets/Assets.s" "/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/CMakeFiles/OlhosCapolei.dir/assets/Assets.s.o"
+  "/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/BigHero.s" "/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/CMakeFiles/OlhosCapolei.dir/src/Game/BigHero.s.o"
   "/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Enemy.s" "/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/CMakeFiles/OlhosCapolei.dir/src/Game/Enemy.s.o"
   "/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Hero.s" "/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/CMakeFiles/OlhosCapolei.dir/src/Game/Hero.s.o"
   "/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.s" "/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/CMakeFiles/OlhosCapolei.dir/src/Game/Init.s.o"
   "/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Input.s" "/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/CMakeFiles/OlhosCapolei.dir/src/Game/Input.s.o"
+  "/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/PennyCrab.s" "/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/CMakeFiles/OlhosCapolei.dir/src/Game/PennyCrab.s.o"
   "/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Main.s" "/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/CMakeFiles/OlhosCapolei.dir/src/Main.s.o"
   "/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/PPU/PPU.s" "/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/CMakeFiles/OlhosCapolei.dir/src/PPU/PPU.s.o"
   "/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/common/InitSNES.s" "/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/CMakeFiles/OlhosCapolei.dir/src/common/InitSNES.s.o"

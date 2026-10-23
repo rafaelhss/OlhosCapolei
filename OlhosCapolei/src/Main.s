@@ -24,6 +24,8 @@
 .include "Registers.inc"
 .include "Enemy.inc"
 .include "Hero.inc"
+.include "BigHero.inc"
+.include "PennyCrab.inc"
 ;-------------------------------------------------------------------------------
 
 .segment "CODE"
@@ -76,6 +78,8 @@ _ResetAlign:
         ; 2. SESSÃO DE FÍSICA E MOVIMENTAÇÃO (Leitura direta dos buffers de RAM)
         jsr MoveHero
         jsr MoveEnemy1
+        jsr MoveBigHero
+        jsr MovePennyCrab
 
         ; 3. FILTRO DE COLISÕES & REGRAS DE GAMEPLAY
         jsr ApplyEdgeCollisions
@@ -86,6 +90,8 @@ _ResetAlign:
         jsr DrawHero            ; Desenha o Heroi e devolve o X avançado
         jsr DrawEnemy1          ; Desenha o Inimigo 1 a partir do ponto que o Heroi parou
         jsr DrawEnemy2          ; Desenha o Inimigo 2 dinamicamente
+        jsr DrawBigHero 
+        jsr DrawPennyCrab
 
         jmp GameLoop
 .endproc
@@ -102,38 +108,38 @@ _ResetAlign:
 .proc ApplyEdgeCollisions
         ; === TRAVAS DO HEROI ===
 CheckHeroLeft:
-        lda Hero + HeroStruct::X_Pos
+        lda BigHero + BigHeroStruct::X_Pos
         cmp #HERO_SCREEN_SAFE_LIMIT                    
         bcc CheckHeroRight          
         
         lda #SCREEN_LEFT            
-        sta Hero + HeroStruct::X_Pos
+        sta BigHero + BigHeroStruct::X_Pos
         bra CheckHeroTop            
 
 CheckHeroRight:
-        lda Hero + HeroStruct::X_Pos
+        lda BigHero + BigHeroStruct::X_Pos
         cmp #(SCREEN_RIGHT - 16)
         bcc CheckHeroTop            
         
         lda #(SCREEN_RIGHT - 16)    
-        sta Hero + HeroStruct::X_Pos
+        sta BigHero + BigHeroStruct::X_Pos
 
 CheckHeroTop:
-        lda Hero + HeroStruct::Y_Pos
+        lda BigHero + BigHeroStruct::Y_Pos
         cmp #HERO_SCREEN_SAFE_LIMIT                    
         bcc CheckHeroBottom         
         
         lda #SCREEN_TOP             
-        sta Hero + HeroStruct::Y_Pos
+        sta BigHero + BigHeroStruct::Y_Pos
         bra CheckEnemyLeft          
 
 CheckHeroBottom:
-        lda Hero + HeroStruct::Y_Pos
+        lda BigHero + BigHeroStruct::Y_Pos
         cmp #(SCREEN_BOTTOM - 32)
         bcc CheckEnemyLeft          
         
         lda #(SCREEN_BOTTOM - 32)    
-        sta Hero + HeroStruct::Y_Pos
+        sta BigHero + BigHeroStruct::Y_Pos
 
         ; === TRAVAS DO INIMIGO GRANDE ===
 CheckEnemyLeft:
@@ -200,7 +206,11 @@ CollisionDone:
 ;-------------------------------------------------------------------------------
 .segment "BSS"
 .export Hero, InimigoGrande, InimigoGrande2
+.export BigHero 
+.export PennyCrab
 
 Hero:          .tag HeroStruct
 InimigoGrande: .tag EnemyStruct
 InimigoGrande2: .tag EnemyStruct
+BigHero:        .tag BigHeroStruct
+PennyCrab:       .tag PennyCrabStruct

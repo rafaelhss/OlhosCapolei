@@ -51,6 +51,17 @@ A_BUTTON        = $0080
     Tile_Count  .byte   ; Guarda quantos blocos compoem esse Hero
 .endstruct
 
+; ======== NOVO: BigHero padrão (Estilo Beat 'em Up 32x64)
+.struct BigHeroStruct
+    X_Pos       .byte   ; Posição X âncora (0-255)
+    Y_Pos       .byte   ; Posição Y âncora (0-255)
+    Tile_Count  .byte   ; Quantidade de sprites na OAM (Serão 6 para este arranjo)
+    Anim_Timer  .byte   ; Contador de frames da caminhada
+    Anim_Frame  .byte   ; Frame atual dos pés (0 ou 1)
+.endstruct
+
+
+
 ; ======== InimigoGrande padrao (Corrigido para 8-bit)
 .struct EnemyStruct
     X_Pos       .byte   ; 8-bit horizontal position (0-255)
@@ -61,6 +72,15 @@ A_BUTTON        = $0080
     Anim_Ptr    .res 2  ; Reserva 2 bytes para armazenar o ponteiro de animacao
 .endstruct
 
+
+.struct PennyCrabStruct
+    X_Pos       .byte   ; 8-bit horizontal position (0-255)
+    Y_Pos       .byte   ; 8-bit vertical position
+    Tile_Count  .byte   ; Guarda quantos blocos compoem esse inimigo
+    Anim_Timer  .byte   ; Contador para velocidade da animacao
+    Anim_Frame  .byte   ; Frame atual (0, 1, 2...)
+    Anim_Ptr    .res 2  ; Reserva 2 bytes para armazenar o ponteiro de animacao
+.endstruct
 
 
 .endif

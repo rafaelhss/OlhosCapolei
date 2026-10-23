@@ -7,4 +7,6 @@ target_sources( ${PROJECT_NAME}
     PRIVATE Init.s
     PRIVATE Input.s 
     PRIVATE Enemy.s 
-    PRIVATE Hero.s)
+    PRIVATE Hero.s
+    PRIVATE BigHero.s
+    PRIVATE PennyCrab.s)

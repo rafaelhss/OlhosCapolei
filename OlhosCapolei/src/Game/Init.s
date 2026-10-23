@@ -21,7 +21,7 @@
 .include "Registers.inc"
 ;-------------------------------------------------------------------------------
 
-.import Hero, InimigoGrande, InimigoGrande2
+.import Hero, InimigoGrande, InimigoGrande2, BigHero, PennyCrab
 
 .segment "CODE"
 ;-------------------------------------------------------------------------------
@@ -61,8 +61,9 @@
         pea $0000                       ; Endereço de destino na VRAM
         pea SpriteData                  ; Endereço de origem na ROM
         
+        
         rep #$20                        ; Abre 16-bit APENAS para empilhar o tamanho do DMA
-        lda #$0400                      ; Tamanho: 1024 bytes
+        lda #$2000                      ; Tamanho: 1024 bytes
         pha                             
         sep #$20                        ; Volta IMEDIATAMENTE para 8-bit
         
@@ -133,15 +134,59 @@
         sta InimigoGrande2 + EnemyStruct::Anim_Frame   
 ;=========== FIM INIMIGO 2
 
+
+;----------- PennyCrab
+        lda #50                         ; 
+        sta PennyCrab + PennyCrabStruct::X_Pos
+        
+        lda #(SCREEN_BOTTOM / 2)        ; Y
+        sta PennyCrab + PennyCrabStruct::Y_Pos
+
+        lda #12                        
+        sta PennyCrab + PennyCrabStruct::Tile_Count   
+
+        lda #$04                       
+        sta PennyCrab + PennyCrabStruct::Anim_Timer
+        lda #$00                       
+        sta PennyCrab + PennyCrabStruct::Anim_Frame   
+;=========== FIM Penny
+
+
+
+
+; -----------------------------------------------------------------------------
+; ----------- NOVO: INICIALIZAÇÃO DO BIGHERO (32x64)
+; -----------------------------------------------------------------------------
+        lda #20                        ; Nasce perto do meio horizontal da tela
+        sta BigHero + BigHeroStruct::X_Pos
+        
+        lda #100                        ; Nasce em uma altura boa de chão (eixo Z)
+        sta BigHero + BigHeroStruct::Y_Pos
+
+        lda #6                          ; Gasta 6 blocos na OAMMIRROR
+        sta BigHero + BigHeroStruct::Tile_Count
+
+        lda #8                          ; Velocidade do relógio de passos (8 frames por passada)
+        sta BigHero + BigHeroStruct::Anim_Timer
+        
+        lda #0                          ; Começa com o frame de pé parado (guarda)
+        sta BigHero + BigHeroStruct::Anim_Frame
+; =========== FIM BIGHERO
+
+
+       
+
         ; --- 5. CONFIGURAÇÃO DE VELOCIDADE E REGISTRADORES PPU ---
         lda #SPRITE_SPEED
         sta HOR_SPEED
         sta VER_SPEED
 
-        ; Configura o tamanho e local dos Sprites na VRAM
-        lda #%00000000                  
+        ; ARQUITETURA BEAT 'EM UP: Configura tamanho base de sprites
+        ; %01100000 ($60) -> Bits 7-5 = 011 significa: 16x16 (Pequeno) e 32x32 (Grande)
+        ; Name Selection continua em $0000 na VRAM
+        lda #%01100000                  
         sta OBJSEL
-
+        
         ; Ativa a camada de Sprites (Main Screen Objs)
         lda #$10
         sta TM
