@@ -35,6 +35,11 @@ $ python3 gera.py<p>
 Converter a paleta gerada pelo yychr:<br>
 $ python3 convertey.py<p>
 <hr>
+ps<br>
+Para fazer o sdcard sair do read only:<br>
+  $ sudo mount -o remount,rw /dev/sda1<br>
+  $ sudo hdparm -r0 /dev/sda<br>
+
 
 
 
