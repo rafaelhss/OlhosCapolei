@@ -6,6 +6,8 @@
 ;----- Export ------------------------------------------------------------------
 .export     MoveVaderCrab
 .export     DrawVaderCrab
+.export     DrawVaderHitboxDebug
+
 ;-------------------------------------------------------------------------------
 
 ;----- Assembler Directives ----------------------------------------------------
@@ -24,7 +26,7 @@
 .import BigHero
 
 
-WALK_SPEED = $02
+WALK_SPEED = $01
 WALK_ANIM_SPEED = $08 ; quanto menor mais rapido
 
 PREPARING_ANIM_SPEED = 40
@@ -50,12 +52,22 @@ REST_TIME = 30 ;
 AttackFrameUpdate:
     lda VaderCrab + VaderCrabStruct::State
     cmp #STATE_ATACKING
-    bne PreparingFrameUpdate ; se nao esta atacando, vai ver a animacao de prepare
-     
+    beq @ProcessandoAtaque
+    brl PreparingFrameUpdate ; se nao esta atacando, vai ver a animacao de prepare
+
+@ProcessandoAtaque:  
     inc VaderCrab + VaderCrabStruct::Attacking_Timer
     lda VaderCrab + VaderCrabStruct::Attacking_Timer
     cmp #ATTACKING_DURATION_FRAMES
     bne AttackingAnim
+
+    ; --- ACABOU O ATAQUE: Limpa e Desativa a Hitbox de Dano ---
+    stz VaderCrab + VaderCrabStruct::Hitbox_Active
+    ;stz VaderCrab + VaderCrabStruct::Hitbox_X1
+    ;stz VaderCrab + VaderCrabStruct::Hitbox_X2
+    ;stz VaderCrab + VaderCrabStruct::Hitbox_Y1
+    ;stz VaderCrab + VaderCrabStruct::Hitbox_Y2
+
     ;Acabou o ataque. Volta pro prepare
     lda #STATE_PREPARING
     sta VaderCrab + VaderCrabStruct::State
@@ -64,8 +76,9 @@ AttackFrameUpdate:
 
 AttackingAnim:
     dec VaderCrab + VaderCrabStruct::Attacking_Anim_Timer
-    bne Move ; Se nao chegou a zero, nao faz nada ainda
-
+    beq ContinueAttackAnim ;gambiarra para erro de range
+    brl Move ; Se nao chegou a zero, nao faz nada ainda.
+ContinueAttackAnim:
     ; 2. O timer zerou! Reseta o timer para o valor padrao
     lda #ATTACKING_ANIM_SPEED ; Ajuste este valor para mais rapido ou mais lento
     sta VaderCrab + VaderCrabStruct::Attacking_Anim_Timer
@@ -84,7 +97,61 @@ AttackingAnim:
 @SaveFrame:
     sta VaderCrab + VaderCrabStruct::Attacking_Anim_Frame
 
-    brl Move ;Ataquei Pulo o prepare e vejo se o hero fugiu
+@AtualizarHitbox:
+    ; =========================================================================
+    ; 🦀 GERADOR DINÂMICO DE HITBOX (CONCEITO DE CAIXA DE COLISÃO)
+    ; =========================================================================
+    ; Só queremos ativar o rastro de dano no Frame 1 (quando ele realmente estica a garra)
+    lda VaderCrab + VaderCrabStruct::Attacking_Anim_Frame
+    cmp #1
+    beq @AtivarHitbox
+    
+    ; Se for Frame 0 (recolhendo a garra), desativa a hitbox temporariamente
+    stz VaderCrab + VaderCrabStruct::Hitbox_Active
+    brl Move
+
+
+    ;brl Move ;Ataquei Pulo o prepare e vejo se o hero fugiu
+
+@AtivarHitbox:
+    lda #1
+    sta VaderCrab + VaderCrabStruct::Hitbox_Active
+
+    ; --- 1. Definir os limites Verticais (Eixo Y) ---
+    ; A garra atinge a altura do corpo dele. Vamos pegar o Y dele e dar uma altura de 16 pixels
+    lda VaderCrab + VaderCrabStruct::Y_Pos
+    clc
+    adc #16                             ; Margem superior da garra
+    sta VaderCrab + VaderCrabStruct::Hitbox_Y1
+    clc
+    adc #16                             ; Caixa com 16 pixels de altura vertical
+    sta VaderCrab + VaderCrabStruct::Hitbox_Y2
+
+    ; --- 2. Definir os limites Horizontais (Eixo X) com base no Lado (Facing) ---
+    lda VaderCrab + VaderCrabStruct::Facing
+    bne @HitboxDireita                  ; Se Facing != 0 (Olhando para a Direita)
+
+@HitboxEsquerda:
+    ; Se está olhando para a esquerda, a garra projeta-se à esquerda do X_Pos dele
+    lda VaderCrab + VaderCrabStruct::X_Pos
+    sec
+    sbc #32                            ; A garra estica 16 pixels para fora do corpo dele
+    sta VaderCrab + VaderCrabStruct::Hitbox_X1
+    
+    lda VaderCrab + VaderCrabStruct::X_Pos ; O limite direito da garra morre no próprio corpo
+    sta VaderCrab + VaderCrabStruct::Hitbox_X2
+    brl Move
+
+@HitboxDireita:
+    ; Se está olhando para a direita, a garra projeta-se à direita do corpo de 64px de largura
+    lda VaderCrab + VaderCrabStruct::X_Pos
+    clc
+    adc #64                             ; Começa perto do fim do corpo
+    sta VaderCrab + VaderCrabStruct::Hitbox_X1
+    clc
+    adc #32                             ; Estica mais 24 pixels para a direita
+    sta VaderCrab + VaderCrabStruct::Hitbox_X2
+    brl Move
 
 PreparingFrameUpdate:
     lda VaderCrab + VaderCrabStruct::State
@@ -322,15 +389,15 @@ Done:
 ; Formato por linha: Offset_X, Offset_Y, Tile_ID, Atributos(Paleta/Flip)
 VaderCrab_Layout:
     ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $A0, $01     ; pedaco 1-1
+    .byte 0,  0,  $EE, $01     ; pedaco 1-1
     .byte 16,  0,  $00, $01     ; pedaco 1-2
     .byte 32,  0,  $02, $01     ; pedaco 1-3
-    .byte 48,  0,  $A0, $01     ; pedaco 1-4
+    .byte 48,  0,  $EE, $01     ; pedaco 1-4
     
-    .byte 0,  16,  $A0, $01     ; pedaco 2-1
+    .byte 0,  16,  $EE, $01     ; pedaco 2-1
     .byte 16,  16,  $20, $01     ; pedaco 2-2
     .byte 32,  16,  $22, $01     ; pedaco 2-3
-    .byte 48,  16,  $A0, $01     ; pedaco 2-4
+    .byte 48,  16,  $EE, $01     ; pedaco 2-4
 
     ; === CORPO (4x2 de 16) ===
     .byte 0,  32,  $64, $00     ; pedaco 1-1
@@ -348,15 +415,15 @@ VaderCrab_Layout:
 ; =============================================================================
 VaderCrab_Layout_Frame1:
     ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $A0, $01     ; pedaco 1-1
+    .byte 0,  0,  $EE, $01     ; pedaco 1-1
     .byte 16,  0,  $00, $01     ; pedaco 1-2
     .byte 32,  0,  $02, $01     ; pedaco 1-3
-    .byte 48,  0,  $A0, $01     ; pedaco 1-4
+    .byte 48,  0,  $EE, $01     ; pedaco 1-4
     
-    .byte 0,  16,  $A0, $01     ; pedaco 2-1
+    .byte 0,  16,  $EE, $01     ; pedaco 2-1
     .byte 16,  16,  $20, $01     ; pedaco 2-2
     .byte 32,  16,  $22, $01     ; pedaco 2-3
-    .byte 48,  16,  $A0, $01     ; pedaco 2-4
+    .byte 48,  16,  $EE, $01     ; pedaco 2-4
 
     ; === CORPO (4x2 de 16) ===
     .byte 0,  32,  $A5, $00     ; pedaco 1-1
@@ -670,3 +737,63 @@ WriteTile:
 @Finish:
         rts
 .endproc
+
+
+
+;---------------- DEBUG ---------------
+.proc DrawVaderHitboxDebug
+    ; Primeiro, checa se a hitbox está ativa. Se não estiver, não desenha nada!
+    ;lda VaderCrab + VaderCrabStruct::Hitbox_Active
+    ;bne @Desenhar
+    ;rts
+
+@Desenhar:
+    ; --- SPRITE 1 (Lado Esquerdo da Hitbox) ---
+    ; Posição X
+    lda VaderCrab + VaderCrabStruct::Hitbox_X1
+    sta a:OAMMIRROR, X
+    inx
+    
+    ; Posição Y
+    lda VaderCrab + VaderCrabStruct::Hitbox_Y1
+    sta a:OAMMIRROR, X
+    inx
+    
+    ; Tile ID (Substitua por um ID de tile quadrado do seu jogo)
+    lda #$A0            ; Exemplo: tile $FE é um quadrado vermelho/branco
+    sta a:OAMMIRROR, X
+    inx
+    
+    ; Atributos (Paleta de debug para ficar visível)
+    lda #$31      ; Escolha uma paleta com cor forte (ex: Paleta 4, prioridade alta)
+    sta a:OAMMIRROR, X
+    inx
+
+    ; --- SPRITE 2 --
+    ; Posição X
+    lda VaderCrab + VaderCrabStruct::Hitbox_X2
+    ;sec
+    ;sbc #16
+    sta a:OAMMIRROR, X
+    inx
+    
+    ; Posição Y (Mesmo Y)
+    lda VaderCrab + VaderCrabStruct::Hitbox_Y2
+    sta a:OAMMIRROR, X
+    inx
+    
+    ; Mesmo Tile ID
+    lda #$A2            
+    sta a:OAMMIRROR, X
+    inx
+    
+    ; Mesmo Atributo
+    lda #$31      
+    sta OAMMIRROR, X    
+    inx
+
+    rts
+.endproc
+
+
+;------------FIM DEBUG -------------

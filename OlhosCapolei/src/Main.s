@@ -89,13 +89,18 @@ _ResetAlign:
 
         ; 4. SISTEMA DE RENDERIZAÇÃO FINAL (Injeção na OAMMIRROR)
         ldx #$00                ; X inicia em 0 como offset do primeiro Sprite na OAM
-        jsr DrawHero            ; Desenha o Heroi e devolve o X avançado
-        jsr DrawEnemy1          ; Desenha o Inimigo 1 a partir do ponto que o Heroi parou
-        jsr DrawEnemy2          ; Desenha o Inimigo 2 dinamicamente
+       
+        jsr DrawVaderHitboxDebug   ; Usa o mesmo registrador X para colar o quadrado por cima!
+       
+       
+        ;jsr DrawHero            ; Desenha o Heroi e devolve o X avançado
+        ;jsr DrawEnemy1          ; Desenha o Inimigo 1 a partir do ponto que o Heroi parou
+        ;jsr DrawEnemy2          ; Desenha o Inimigo 2 dinamicamente
         jsr DrawBigHero 
-        jsr DrawPennyCrab
+        ;jsr DrawPennyCrab
+        
         jsr DrawVaderCrab
-
+        
         jmp GameLoop
 .endproc
 ;-------------------------------------------------------------------------------

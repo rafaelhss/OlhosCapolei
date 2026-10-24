@@ -8,6 +8,7 @@ VADERCRAB_INC = 1
 ;----- Import ------------------------------------------------------------------
 .import     MoveVaderCrab
 .import     DrawVaderCrab
+.import     DrawVaderHitboxDebug
 ;-------------------------------------------------------------------------------
 
 .endif
