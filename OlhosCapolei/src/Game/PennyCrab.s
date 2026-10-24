@@ -27,6 +27,9 @@
 WALK_ANIM_SPEED = $08 ; quanto menor mais rapido
 PREPARING_ANIM_SPEED = $08
 PREPARING_DURATION_FRAMES = 120
+
+;attackin speed e frames. Se for iguais o ataque tem 1 frame. Se forem um metade do outro, dois frames. e assim vai
+ATTACKING_ANIM_SPEED = 7   
 ATTACKING_DURATION_FRAMES = 60
 
 
@@ -59,7 +62,7 @@ AttackingAnim:
     bne Move ; Se nao chegou a zero, nao faz nada ainda
 
     ; 2. O timer zerou! Reseta o timer para o valor padrao
-    lda #PREPARING_ANIM_SPEED ; Ajuste este valor para mais rapido ou mais lento
+    lda #ATTACKING_ANIM_SPEED ; Ajuste este valor para mais rapido ou mais lento
     sta PennyCrab + PennyCrabStruct::Attacking_Anim_Timer
     
     ; 3. Alterna o Frame (Se era 0 vira 1, se era 1 vira 0)
