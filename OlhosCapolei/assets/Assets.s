@@ -6,13 +6,15 @@
 
 ;----- Export ------------------------------------------------------------------
 .export     SpriteData
+.export     VaderData
 .export     ColorData
 .export     BackgroundData
 ;-------------------------------------------------------------------------------
 
 ;----- Assset Data -------------------------------------------------------------
 .segment "SPRITEDATA"
-SpriteData: .incbin "SpritesBig3.vra"
+SpriteData: .incbin "SpritesBig4.vra"
+VaderData: .incbin "VaderSprites.vra"
 ColorData:  .incbin "Sprites11.pal"
 BackgroundData: .incbin "Background.pal"
 

@@ -185,6 +185,14 @@ src/Game/PennyCrab.s.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/OlhosCapolei.dir/build.make CMakeFiles/OlhosCapolei.dir/src/Game/PennyCrab.s.o
 .PHONY : src/Game/PennyCrab.s.o
 
+src/Game/VaderCrab.o: src/Game/VaderCrab.s.o
+.PHONY : src/Game/VaderCrab.o
+
+# target to build an object file
+src/Game/VaderCrab.s.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/OlhosCapolei.dir/build.make CMakeFiles/OlhosCapolei.dir/src/Game/VaderCrab.s.o
+.PHONY : src/Game/VaderCrab.s.o
+
 src/Main.o: src/Main.s.o
 .PHONY : src/Main.o
 
@@ -217,6 +225,14 @@ src/common/Joypad.s.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/OlhosCapolei.dir/build.make CMakeFiles/OlhosCapolei.dir/src/common/Joypad.s.o
 .PHONY : src/common/Joypad.s.o
 
+src/common/Util.o: src/common/Util.s.o
+.PHONY : src/common/Util.o
+
+# target to build an object file
+src/common/Util.s.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/OlhosCapolei.dir/build.make CMakeFiles/OlhosCapolei.dir/src/common/Util.s.o
+.PHONY : src/common/Util.s.o
+
 src/common/Vector.o: src/common/Vector.s.o
 .PHONY : src/common/Vector.o
 
@@ -241,10 +257,12 @@ help:
 	@echo "... src/Game/Init.o"
 	@echo "... src/Game/Input.o"
 	@echo "... src/Game/PennyCrab.o"
+	@echo "... src/Game/VaderCrab.o"
 	@echo "... src/Main.o"
 	@echo "... src/PPU/PPU.o"
 	@echo "... src/common/InitSNES.o"
 	@echo "... src/common/Joypad.o"
+	@echo "... src/common/Util.o"
 	@echo "... src/common/Vector.o"
 .PHONY : help
 

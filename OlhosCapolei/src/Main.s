@@ -26,6 +26,7 @@
 .include "Hero.inc"
 .include "BigHero.inc"
 .include "PennyCrab.inc"
+.include "VaderCrab.inc"
 ;-------------------------------------------------------------------------------
 
 .segment "CODE"
@@ -80,6 +81,7 @@ _ResetAlign:
         jsr MoveEnemy1
         jsr MoveBigHero
         jsr MovePennyCrab
+        jsr MoveVaderCrab
 
         ; 3. FILTRO DE COLISÕES & REGRAS DE GAMEPLAY
         jsr ApplyEdgeCollisions
@@ -92,6 +94,7 @@ _ResetAlign:
         jsr DrawEnemy2          ; Desenha o Inimigo 2 dinamicamente
         jsr DrawBigHero 
         jsr DrawPennyCrab
+        jsr DrawVaderCrab
 
         jmp GameLoop
 .endproc
@@ -131,50 +134,15 @@ CheckHeroTop:
         
         lda #SCREEN_TOP             
         sta BigHero + BigHeroStruct::Y_Pos
-        bra CheckEnemyLeft          
+        bra CollisionDone          
 
 CheckHeroBottom:
         lda BigHero + BigHeroStruct::Y_Pos
         cmp #(SCREEN_BOTTOM - 32)
-        bcc CheckEnemyLeft          
+        bcc CollisionDone          
         
         lda #(SCREEN_BOTTOM - 32)    
         sta BigHero + BigHeroStruct::Y_Pos
-
-        ; === TRAVAS DO INIMIGO GRANDE ===
-CheckEnemyLeft:
-        lda InimigoGrande + EnemyStruct::X_Pos
-        cmp #ENEMY_SCREEN_SAFE_LIMIT                    
-        bcc CheckEnemyRight         
-        
-        lda #SCREEN_LEFT            
-        sta InimigoGrande + EnemyStruct::X_Pos
-        bra CheckEnemyTop
-
-CheckEnemyRight:
-        lda InimigoGrande + EnemyStruct::X_Pos
-        cmp #(SCREEN_RIGHT - 32)
-        bcc CheckEnemyTop
-        
-        lda #(SCREEN_RIGHT - 32)    
-        sta InimigoGrande + EnemyStruct::X_Pos
-
-CheckEnemyTop:
-        lda InimigoGrande + EnemyStruct::Y_Pos
-        cmp #ENEMY_SCREEN_SAFE_LIMIT                    
-        bcc CheckEnemyBottom        
-        
-        lda #SCREEN_TOP             
-        sta InimigoGrande + EnemyStruct::Y_Pos
-        bra CollisionDone
-
-CheckEnemyBottom:
-        lda InimigoGrande + EnemyStruct::Y_Pos
-        cmp #(SCREEN_BOTTOM - 32)
-        bcc CollisionDone
-        
-        lda #(SCREEN_BOTTOM - 32)
-        sta InimigoGrande + EnemyStruct::Y_Pos
 
 CollisionDone:
         rts
@@ -208,9 +176,11 @@ CollisionDone:
 .export Hero, InimigoGrande, InimigoGrande2
 .export BigHero 
 .export PennyCrab
+.export VaderCrab
 
 Hero:          .tag HeroStruct
 InimigoGrande: .tag EnemyStruct
 InimigoGrande2: .tag EnemyStruct
 BigHero:        .tag BigHeroStruct
 PennyCrab:       .tag PennyCrabStruct
+VaderCrab:       .tag VaderCrabStruct

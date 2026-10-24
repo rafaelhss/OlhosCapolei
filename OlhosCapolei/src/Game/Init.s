@@ -21,7 +21,8 @@
 .include "Registers.inc"
 ;-------------------------------------------------------------------------------
 
-.import Hero, InimigoGrande, InimigoGrande2, BigHero, PennyCrab
+.import Hero, InimigoGrande, InimigoGrande2, BigHero, PennyCrab, VaderCrab
+.import InitRNG
 
 .segment "CODE"
 ;-------------------------------------------------------------------------------
@@ -57,18 +58,27 @@
         bcc :-
 
         ; --- 2. CARGA DE GRÁFICOS PARA VRAM ---
-        tsx                             ; Salva o Stack Pointer
-        pea $0000                       ; Endereço de destino na VRAM
-        pea SpriteData                  ; Endereço de origem na ROM
-        
-        
-        rep #$20                        ; Abre 16-bit APENAS para empilhar o tamanho do DMA
-        lda #$2000                      ; Tamanho: 1024 bytes
+        ; ◄ PLANILHA 1: HEROI + PENNYCRAB (Envia para o offset $0000)
+        tsx                             
+        pea $0000                       ; Endereço de destino na VRAM (Página 0)
+        pea SpriteData                  ; Origem na ROM
+        rep #$20                        
+        lda #$2000                      ; Tamanho: 8 KB
         pha                             
-        sep #$20                        ; Volta IMEDIATAMENTE para 8-bit
-        
+        sep #$20                        
         jsr LoadVRAM                   
-        txs                             ; Restaura o Stack
+        txs                             
+
+        ; ◄ PLANILHA 2: VADERCRAB (Envia para o offset $1000)
+        tsx                             
+        pea $1000                       ; Endereço de destino na VRAM (Página 1)
+        pea VaderData                   ; Origem na ROM (Seu novo rótulo!)
+        rep #$20                        
+        lda #$2000                      ; Tamanho: 8 KB
+        pha                             
+        sep #$20                        
+        jsr LoadVRAM                   
+        txs                             ; Restaura o Stack perfeitamente
 
         ; --- 3. CARGA DE CORES PARA CGRAM ---
         ; Altera a Cor 00 diretamente via hardware para manter a TELA AZUL
@@ -125,6 +135,37 @@
 
 
 
+;----------- VaderCrab
+        lda #$CC                        ; 
+        sta VaderCrab + VaderCrabStruct::X_Pos
+        
+        lda #(SCREEN_BOTTOM / 2)        ; Y
+        sta VaderCrab + VaderCrabStruct::Y_Pos
+
+        lda #12                        
+        sta VaderCrab + VaderCrabStruct::Tile_Count  
+
+        lda #$09
+        sta VaderCrab + VaderCrabStruct::Walk_Anim_Speed 
+
+        lda #$04                       
+        sta VaderCrab + VaderCrabStruct::Anim_Timer
+        lda #$00                       
+        sta VaderCrab + VaderCrabStruct::Anim_Frame   
+
+        ; ◄ CRÍTICO: INICIALIZAÇÃO CONTRA O BUG DOS 5 SEGUNDOS
+        lda #$08                       
+        sta VaderCrab + VaderCrabStruct::Preparing_Anim_Timer
+        stz VaderCrab + VaderCrabStruct::Preparing_Anim_Frame
+        sta VaderCrab + VaderCrabStruct::Attacking_Anim_Timer
+        sta VaderCrab + VaderCrabStruct::Attacking_Timer
+        stz VaderCrab + VaderCrabStruct::Attacking_Anim_Frame
+        
+        lda #STATE_WALKING
+        sta VaderCrab + VaderCrabStruct::State
+;=========== FIM Vader
+
+
 
 ; -----------------------------------------------------------------------------
 ; ----------- NOVO: INICIALIZAÇÃO DO BIGHERO (32x64)
@@ -146,7 +187,8 @@
 ; =========== FIM BIGHERO
 
 
-       
+         JSR InitRNG    ; Define a semente inicial do gerador de números aleatórios
+
 
         ; --- 5. CONFIGURAÇÃO DE VELOCIDADE E REGISTRADORES PPU ---
         lda #SPRITE_SPEED

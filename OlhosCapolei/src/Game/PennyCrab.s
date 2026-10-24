@@ -1,6 +1,6 @@
-; ---------------- -------------------------------------------------------------
+; -----------------------------------------------------------------------------
 ;   File: PennyCrab.s
-;   Description: Subroutines to move PennyCrab
+;   Description: Subroutines to move PennyCrab (Com Inteligência de Rest)
 ; -----------------------------------------------------------------------------
 
 ;----- Export ------------------------------------------------------------------
@@ -17,18 +17,18 @@
 ;----- Includes ----------------------------------------------------------------
 .include "GameConstants.inc"
 .include "MemoryMapWRAM.inc"
+.include "Util.inc"
 ;-------------------------------------------------------------------------------
 
 .import PennyCrab
 .import BigHero
 
-
-
+WALK_SPEED = $01
 WALK_ANIM_SPEED = $08 ; quanto menor mais rapido
 
-PREPARING_ANIM_SPEED = 60
-PREPARING_DURATION_FRAMES = 240
-PREPARING_MAX_FRAMES = 2
+PREPARING_ANIM_SPEED = 40
+PREPARING_DURATION_FRAMES = 120
+PREPARING_MAX_FRAMES = 4
 
 ;attackin speed e frames. Se for iguais o ataque tem 1 frame. Se forem um metade do outro, dois frames. e assim vai
 ATTACKING_ANIM_SPEED = 30   
@@ -125,6 +125,17 @@ PreparingAnim:
 
 
  WalkFrameUpdate:
+    ; =========================================================================
+    ; 💤 ADICIONADO: INTELIGÊNCIA DE DESCANSO AUTOMÁTICO (UNDERFLOW LOGIC)
+    ; =========================================================================
+    ; 1. Decrementa o timer do descanso direto na memória RAM do PennyCrab
+    dec PennyCrab + PennyCrabStruct::Resting_Timer
+    
+    ; 2. Checa o resultado usando a Negative Flag (N) que o DEC acabou de afetar
+    bmi ContinueWalkFrameUpdate     ; Se N=1 (Valores de 255 a 128), continua para andar
+    brl RestFrameUpdate            ; Se N=0 (Valores de 127 a 0), pula para o descanso
+    
+ContinueWalkFrameUpdate:
      ; Se a velocidade atual for zero, pula o decremento e congela a animação no frame atual
     lda PennyCrab + PennyCrabStruct::State
     cmp #STATE_WALKING
@@ -171,11 +182,9 @@ CalculateAbsoluteDistance:
 
 WalkLeft:
     sec
-    sbc #1                  ; Move 1 pixel por frame para a esquerda
+    sbc #WALK_SPEED                 ; Move usando a constante de velocidade para a esquerda
     sta PennyCrab + PennyCrabStruct::X_Pos
     
-    ;lda #WALK_ANIM_SPEED
-    ;sta PennyCrab + PennyCrabStruct::Walk_Anim_Speed
     stz PennyCrab + PennyCrabStruct::Facing ;Olhando para a esquerda
 
     lda #STATE_WALKING
@@ -186,11 +195,9 @@ WalkLeft:
     
 WalkRight:
     clc
-    adc #1                  ; Move 1 pixel por frame para a direita
+    adc #WALK_SPEED                  ; Move usando a constante de velocidade para a direita
     sta PennyCrab + PennyCrabStruct::X_Pos
     
-    ;lda #WALK_ANIM_SPEED
-    ;sta PennyCrab + PennyCrabStruct::Walk_Anim_Speed
     lda #1
     sta PennyCrab + PennyCrabStruct::Facing ;Olhando para a direita
     
@@ -201,9 +208,6 @@ WalkRight:
     bra CheckVerticalMove
 
 StopHorizontalMove:
-    ; Espaço reservado: Aqui você poderá setar o State de ataque no futuro
-    ;stz PennyCrab + PennyCrabStruct::Walk_Anim_Speed
-    
     lda #STATE_ATACKING
     cmp PennyCrab + PennyCrabStruct::State
     beq CheckVerticalMove
@@ -213,8 +217,6 @@ StopHorizontalMove:
 
 CheckVerticalMove:
     ; === Alinhamento no Eixo Y com tolerancia===
-
-
      ; === 1. Calcular a distância absoluta em Y: |PennyCrab_Y - BigHero_Y|
     lda PennyCrab + PennyCrabStruct::Y_Pos
     sec
@@ -245,7 +247,7 @@ CalculateAbsoluteY:
 
 MoveUp:
     sec
-    sbc #1                  ; Está abaixo, então SOBE (-1) em direção ao herói
+    sbc #WALK_SPEED                  ; Está abaixo, então SOBE em direção ao herói
     sta PennyCrab + PennyCrabStruct::Y_Pos
     
     lda #STATE_WALKING
@@ -255,326 +257,319 @@ MoveUp:
     
 MoveDown:
     clc
-    adc #1                  ; Está acima, então DESCE (+1) em direção ao herói
+    adc #WALK_SPEED                  ; Está acima, então DESCE em direção ao herói
     sta PennyCrab + PennyCrabStruct::Y_Pos
     
     lda #STATE_WALKING
     sta PennyCrab + PennyCrabStruct::State
-    stz PennyCrab + PennyCrabStruct::Preparing_Timer
-    bra ExitMovement
-    
+stz PennyCrab + PennyCrabStruct::Preparing_Timer
+bra ExitMovement
 StopVerticalMove:
-    ; O Y está perfeitamente dentro da janela de ataque! 
-    ; Não altera a posição Y neste frame, mantendo o inimigo estável na linha.
-    
-
-
-    lda #STATE_ATACKING
-    cmp PennyCrab + PennyCrabStruct::State
-    beq Done
-
-    lda PennyCrab + PennyCrabStruct::State
-    cmp #STATE_WALKING
-    beq ExitMovement
-
-    lda #STATE_PREPARING
-    sta PennyCrab + PennyCrabStruct::State
-
+; O Y está perfeitamente dentro da janela de ataque!
+lda #STATE_ATACKING
+cmp PennyCrab + PennyCrabStruct::State
+beq Done
+lda PennyCrab + PennyCrabStruct::State
+cmp #STATE_WALKING
+beq ExitMovement
+lda #STATE_PREPARING
+sta PennyCrab + PennyCrabStruct::State
 ExitMovement:
-    lda PennyCrab + PennyCrabStruct::State
-    cmp #STATE_WALKING
-    bne Preparing
-    lda #WALK_ANIM_SPEED
-    sta PennyCrab + PennyCrabStruct::Walk_Anim_Speed
-    bra Done
-
+lda PennyCrab + PennyCrabStruct::State
+cmp #STATE_WALKING
+bne Done
+lda #WALK_ANIM_SPEED
+sta PennyCrab + PennyCrabStruct::Walk_Anim_Speed
+bra Done
 Preparing:
-    stz PennyCrab + PennyCrabStruct::Walk_Anim_Speed
-    
-
+stz PennyCrab + PennyCrabStruct::Walk_Anim_Speed
+; =========================================================================
+; 💤 BLOCO DE ATUALIZAÇÃO DO DESCANSO (IGUAL AO DO VADERCRAB)
+; =========================================================================
+RestFrameUpdate:
+    lda #STATE_RESTING
+    sta PennyCrab + PennyCrabStruct::State
+    bra Done
 Done:
-    rts
-               
-                               
+rts
 .endproc
 ;-------------------------------------------------------------------------------
-
 ; Formato por linha: Offset_X, Offset_Y, Tile_ID, Atributos(Paleta/Flip)
 PennyCrab_Layout:
-    ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $24, $00     ; pedaco 1-1
-    .byte 16,  0,  $26, $00     ; pedaco 1-2
-    .byte 32,  0,  $28, $00     ; pedaco 1-3
-    .byte 48,  0,  $2A, $00     ; pedaco 1-4
-    
-    .byte 0,  16,  $44, $00     ; pedaco 2-1
-    .byte 16,  16,  $46, $00     ; pedaco 2-2
-    .byte 32,  16,  $48, $00     ; pedaco 2-3
-    .byte 48,  16,  $4A, $00     ; pedaco 2-4
-
-    ; === CORPO (4x2 de 16) ===
-    .byte 0,  32,  $64, $00     ; pedaco 1-1
-    .byte 16,  32,  $66, $00     ; pedaco 1-2
-    .byte 32,  32,  $68, $00     ; pedaco 1-3
-    .byte 48,  32,  $6A, $00     ; pedaco 1-4
-    
-    .byte 0,  48,  $84, $00     ; pedaco 2-1
-    .byte 16,  48,  $86, $00     ; pedaco 2-2
-    .byte 32,  48,  $88, $00     ; pedaco 2-3
-    .byte 48,  48,  $8A, $00     ; pedaco 2-4
-
+; === CABECA (4x2 de 16) ===
+.byte 0,  0,  $24, $00     ; pedaco 1-1
+.byte 16,  0,  $26, $00     ; pedaco 1-2
+.byte 32,  0,  $28, $00     ; pedaco 1-3
+.byte 48,  0,  $2A, $00     ; pedaco 1-4
+.byte 0,  16,  $44, $00     ; pedaco 2-1
+.byte 16,  16,  $46, $00     ; pedaco 2-2
+.byte 32,  16,  $48, $00     ; pedaco 2-3
+.byte 48,  16,  $4A, $00     ; pedaco 2-4
+; === CORPO (4x2 de 16) ===
+.byte 0,  32,  $64, $00     ; pedaco 1-1
+.byte 16,  32,  $66, $00     ; pedaco 1-2
+.byte 32,  32,  $68, $00     ; pedaco 1-3
+.byte 48,  32,  $6A, $00     ; pedaco 1-4
+.byte 0,  48,  $84, $00     ; pedaco 2-1
+.byte 16,  48,  $86, $00     ; pedaco 2-2
+.byte 32,  48,  $88, $00     ; pedaco 2-3
+.byte 48,  48,  $8A, $00     ; pedaco 2-4
 ; =============================================================================
 ; FRAME 1: INIMIGO ANDANDO (Proximas posicoes livres de Tile)
 ; =============================================================================
 PennyCrab_Layout_Frame1:
-    ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $24, $00     ; pedaco 1-1
-    .byte 16,  0,  $26, $00     ; pedaco 1-2
-    .byte 32,  0,  $28, $00     ; pedaco 1-3
-    .byte 48,  0,  $2A, $00     ; pedaco 1-4
-    
-    .byte 0,  16,  $44, $00     ; pedaco 2-1
-    .byte 16,  16,  $46, $00     ; pedaco 2-2
-    .byte 32,  16,  $48, $00     ; pedaco 2-3
-    .byte 48,  16,  $4A, $00     ; pedaco 2-4
-
-    ; === CORPO (4x2 de 16) ===
-    .byte 0,  32,  $A5, $00     ; pedaco 1-1
-    .byte 16,  32,  $A7, $00     ; pedaco 1-2
-    .byte 32,  32,  $A9, $00     ; pedaco 1-3
-    .byte 48,  32,  $AB, $00     ; pedaco 1-4
-    
-    .byte 0,  48,  $C5, $00     ; pedaco 2-1
-    .byte 16,  48,  $C7, $00     ; pedaco 2-2
-    .byte 32,  48,  $C9, $00     ; pedaco 2-3
-    .byte 48,  48,  $CB, $00     ; pedaco 2-4
-
+; === CABECA (4x2 de 16) ===
+.byte 0,  0,  $24, $00     ; pedaco 1-1
+.byte 16,  0,  $26, $00     ; pedaco 1-2
+.byte 32,  0,  $28, $00     ; pedaco 1-3
+.byte 48,  0,  $2A, $00     ; pedaco 1-4
+.byte 0,  16,  $44, $00     ; pedaco 2-1
+.byte 16,  16,  $46, $00     ; pedaco 2-2
+.byte 32,  16,  $48, $00     ; pedaco 2-3
+.byte 48,  16,  $4A, $00     ; pedaco 2-4
+; === CORPO (4x2 de 16) ===
+.byte 0,  32,  $A5, $00     ; pedaco 1-1
+.byte 16,  32,  $A7, $00     ; pedaco 1-2
+.byte 32,  32,  $A9, $00     ; pedaco 1-3
+.byte 48,  32,  $AB, $00     ; pedaco 1-4
+.byte 0,  48,  $C5, $00     ; pedaco 2-1
+.byte 16,  48,  $C7, $00     ; pedaco 2-2
+.byte 32,  48,  $C9, $00     ; pedaco 2-3
+.byte 48,  48,  $CB, $00     ; pedaco 2-4
 ; =============================================================================
-; FRAME 0: INIMIGO Preparing 
+; FRAME 0: INIMIGO Preparing
 ; =============================================================================
 PennyCrab_Layout_FramePreparing0:
-    ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $24, $00     ; pedaco 1-1
-    .byte 16,  0,  $28, $00     ; pedaco 1-2
-    .byte 32,  0,  $26, $00     ; pedaco 1-3
-    .byte 48,  0,  $2A, $00     ; pedaco 1-4
-    
-    .byte 0,  16,  $44, $00     ; pedaco 2-1
-    .byte 16,  16,  $48, $00     ; pedaco 2-2
-    .byte 32,  16,  $46, $00     ; pedaco 2-3
-    .byte 48,  16,  $4A, $00     ; pedaco 2-4
-
-    ; === CORPO (4x2 de 16) ===
-    .byte 0,  32,  $A5, $00     ; pedaco 1-1
-    .byte 16,  32,  $A9, $00     ; pedaco 1-2
-    .byte 32,  32,  $A7, $00     ; pedaco 1-3
-    .byte 48,  32,  $AB, $00     ; pedaco 1-4
-    
-    .byte 0,  48,  $C5, $00     ; pedaco 2-1
-    .byte 16,  48,  $C9, $00     ; pedaco 2-2
-    .byte 32,  48,  $C7, $00     ; pedaco 2-3
-    .byte 48,  48,  $CB, $00     ; pedaco 2-4
-
+; === CABECA (4x2 de 16) ===
+.byte 0,  0,  $24, $00     ; pedaco 1-1
+.byte 16,  0,  $2C, $00     ; pedaco 1-2
+.byte 32,  0,  $28, $00     ; pedaco 1-3
+.byte 48,  0,  $2A, $00     ; pedaco 1-4
+.byte 0,  16,  $44, $00     ; pedaco 2-1
+.byte 16,  16,  $46, $00     ; pedaco 2-2
+.byte 32,  16,  $48, $00     ; pedaco 2-3
+.byte 48,  16,  $4A, $00     ; pedaco 2-4
+; === CORPO (4x2 de 16) ===
+.byte 0,  32,  $A5, $00     ; pedaco 1-1
+.byte 16,  32,  $A9, $00     ; pedaco 1-2
+.byte 32,  32,  $A7, $00     ; pedaco 1-3
+.byte 48,  32,  $AB, $00     ; pedaco 1-4
+.byte 0,  48,  $C5, $00     ; pedaco 2-1
+.byte 16,  48,  $C9, $00     ; pedaco 2-2
+.byte 32,  48,  $C7, $00     ; pedaco 2-3
+.byte 48,  48,  $CB, $00     ; pedaco 2-4
 ; =============================================================================
-; FRAME 1: INIMIGO Preparing 
+; FRAME 1: INIMIGO Preparing
 ; =============================================================================
 PennyCrab_Layout_FramePreparing1:
-    ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $2A, $00     ; pedaco 1-1
-    .byte 16,  0,  $28, $00     ; pedaco 1-2
-    .byte 32,  0,  $26, $00     ; pedaco 1-3
-    .byte 48,  0,  $24, $00     ; pedaco 1-4
-    
-    .byte 0,  16,  $4A, $00     ; pedaco 2-1
-    .byte 16,  16,  $48, $00     ; pedaco 2-2
-    .byte 32,  16,  $46, $00     ; pedaco 2-3
-    .byte 48,  16,  $44, $00     ; pedaco 2-4
-
-    ; === CORPO (4x2 de 16) ===
-    .byte 0,  32,  $AB, $00     ; pedaco 1-1
-    .byte 16,  32,  $A9, $00     ; pedaco 1-2
-    .byte 32,  32,  $26, $00     ; pedaco 1-3
-    .byte 48,  32,  $A5, $00     ; pedaco 1-4
-    
-    .byte 0,  48,  $CB, $00     ; pedaco 2-1
-    .byte 16,  48,  $24, $00     ; pedaco 2-2
-    .byte 32,  48,  $22, $00     ; pedaco 2-3
-    .byte 48,  48,  $C5, $00     ; pedaco 2-4
-
+; === CABECA (4x2 de 16) ===
+.byte 0,  0,  $24, $00     ; pedaco 1-1
+.byte 16,  0,  $2C, $00     ; pedaco 1-2
+.byte 32,  0,  $2E, $00     ; pedaco 1-3
+.byte 48,  0,  $2A, $00     ; pedaco 1-4
+.byte 0,  16,  $44, $00     ; pedaco 2-1
+.byte 16,  16,  $46, $00     ; pedaco 2-2
+.byte 32,  16,  $48, $00     ; pedaco 2-3
+.byte 48,  16,  $4A, $00     ; pedaco 2-4
+; === CORPO (4x2 de 16) ===
+.byte 0,  32,  $A5, $00     ; pedaco 1-1
+.byte 16,  32,  $A9, $00     ; pedaco 1-2
+.byte 32,  32,  $A7, $00     ; pedaco 1-3
+.byte 48,  32,  $AB, $00     ; pedaco 1-4
+.byte 0,  48,  $C5, $00     ; pedaco 2-1
+.byte 16,  48,  $C9, $00     ; pedaco 2-2
+.byte 32,  48,  $C7, $00     ; pedaco 2-3
+.byte 48,  48,  $CB, $00     ; pedaco 2-4
 ; =============================================================================
-; FRAME 0: INIMIGO Attacking 
+; FRAME 2: INIMIGO Preparing
+; =============================================================================
+PennyCrab_Layout_FramePreparing2:
+; === CABECA (4x2 de 16) ===
+.byte 0,  0,  $24, $00     ; pedaco 1-1
+.byte 16,  0,  $2C, $00     ; pedaco 1-2
+.byte 32,  0,  $2E, $00     ; pedaco 1-3
+.byte 48,  0,  $2A, $00     ; pedaco 1-4
+.byte 0,  16,  $44, $00     ; pedaco 2-1
+.byte 16,  16,  $4C, $00     ; pedaco 2-2
+.byte 32,  16,  $48, $00     ; pedaco 2-3
+.byte 48,  16,  $4A, $00     ; pedaco 2-4
+; === CORPO (4x2 de 16) ===
+.byte 0,  32,  $A5, $00     ; pedaco 1-1
+.byte 16,  32,  $A9, $00     ; pedaco 1-2
+.byte 32,  32,  $A7, $00     ; pedaco 1-3
+.byte 48,  32,  $AB, $00     ; pedaco 1-4
+.byte 0,  48,  $C5, $00     ; pedaco 2-1
+.byte 16,  48,  $C9, $00     ; pedaco 2-2
+.byte 32,  48,  $C7, $00     ; pedaco 2-3
+.byte 48,  48,  $CB, $00     ; pedaco 2-4
+; =============================================================================
+; FRAME 3: INIMIGO Preparing
+; =============================================================================
+PennyCrab_Layout_FramePreparing3:
+; === CABECA (4x2 de 16) ===
+.byte 0,  0,  $24, $00     ; pedaco 1-1
+.byte 16,  0,  $2C, $00     ; pedaco 1-2
+.byte 32,  0,  $2E, $00     ; pedaco 1-3
+.byte 48,  0,  $2A, $00     ; pedaco 1-4
+.byte 0,  16,  $44, $00     ; pedaco 2-1
+.byte 16,  16,  $4C, $00     ; pedaco 2-2
+.byte 32,  16,  $4E, $00     ; pedaco 2-3
+.byte 48,  16,  $4A, $00     ; pedaco 2-4
+; === CORPO (4x2 de 16) ===
+.byte 0,  32,  $A5, $00     ; pedaco 1-1
+.byte 16,  32,  $A9, $00     ; pedaco 1-2
+.byte 32,  32,  $A7, $00     ; pedaco 1-3
+.byte 48,  32,  $AB, $00     ; pedaco 1-4
+.byte 0,  48,  $C5, $00     ; pedaco 2-1
+.byte 16,  48,  $C9, $00     ; pedaco 2-2
+.byte 32,  48,  $C7, $00     ; pedaco 2-3
+.byte 48,  48,  $CB, $00     ; pedaco 2-4
+; =============================================================================
+; FRAME 0: INIMIGO Attacking
 ; =============================================================================
 PennyCrab_Layout_FrameAttacking0:
-    ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $44, $00     ; pedaco 1-1
-    .byte 16,  0,  $28, $00     ; pedaco 1-2
-    .byte 32,  0,  $26, $00     ; pedaco 1-3
-    .byte 48,  0,  $4A, $00     ; pedaco 1-4
-    
-    .byte 0,  16,  $A5, $00     ; pedaco 2-1
-    .byte 16,  16,  $48, $00     ; pedaco 2-2
-    .byte 32,  16,  $46, $00     ; pedaco 2-3
-    .byte 48,  16,  $AB, $00     ; pedaco 2-4
-
-    ; === CORPO (4x2 de 16) ===
-    .byte 0,  32,  $A5, $00     ; pedaco 1-1
-    .byte 16,  32,  $A9, $00     ; pedaco 1-2
-    .byte 32,  32,  $A7, $00     ; pedaco 1-3
-    .byte 48,  32,  $AB, $00     ; pedaco 1-4
-    
-    .byte 0,  48,  $C5, $00     ; pedaco 2-1
-    .byte 16,  48,  $C9, $00     ; pedaco 2-2
-    .byte 32,  48,  $C7, $00     ; pedaco 2-3
-    .byte 48,  48,  $CB, $00     ; pedaco 2-4
-
+; === CABECA (4x2 de 16) ===
+.byte 0,  0,  $44, $00     ; pedaco 1-1
+.byte 16,  0,  $28, $00     ; pedaco 1-2
+.byte 32,  0,  $26, $00     ; pedaco 1-3
+.byte 48,  0,  $4A, $00     ; pedaco 1-4
+.byte 0,  16,  $A5, $00     ; pedaco 2-1
+.byte 16,  16,  $48, $00     ; pedaco 2-2
+.byte 32,  16,  $46, $00     ; pedaco 2-3
+.byte 48,  16,  $AB, $00     ; pedaco 2-4
+; === CORPO (4x2 de 16) ===
+.byte 0,  32,  $A5, $00     ; pedaco 1-1
+.byte 16,  32,  $A9, $00     ; pedaco 1-2
+.byte 32,  32,  $A7, $00     ; pedaco 1-3
+.byte 48,  32,  $AB, $00     ; pedaco 1-4
+.byte 0,  48,  $C5, $00     ; pedaco 2-1
+.byte 16,  48,  $C9, $00     ; pedaco 2-2
+.byte 32,  48,  $C7, $00     ; pedaco 2-3
+.byte 48,  48,  $CB, $00     ; pedaco 2-4
 ; =============================================================================
-; FRAME 1: INIMIGO Attacking 
+; FRAME 1: INIMIGO Attacking
 ; =============================================================================
 PennyCrab_Layout_FrameAttacking1:
-    ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $28, $00     ; pedaco 1-1
-    .byte 16,  0,  $A9, $00     ; pedaco 1-2
-    .byte 32,  0,  $26, $00     ; pedaco 1-3
-    .byte 48,  0,  $22, $00     ; pedaco 1-4
-    
-    .byte 0,  16,  $CB, $00     ; pedaco 2-1
-    .byte 16,  16,  $48, $00     ; pedaco 2-2
-    .byte 32,  16,  $C5, $00     ; pedaco 2-3
-    .byte 48,  16,  $44, $00     ; pedaco 2-4
-
-    ; === CORPO (4x2 de 16) ===
-    .byte 0,  32,  $AB, $00     ; pedaco 1-1
-    .byte 16,  32,  $A9, $00     ; pedaco 1-2
-    .byte 32,  32,  $26, $00     ; pedaco 1-3
-    .byte 48,  32,  $A5, $00     ; pedaco 1-4
-    
-    .byte 0,  48,  $CB, $00     ; pedaco 2-1
-    .byte 16,  48,  $24, $00     ; pedaco 2-2
-    .byte 32,  48,  $22, $00     ; pedaco 2-3
-    .byte 48,  48,  $C5, $00     ; pedaco 2-4
-
-
+; === CABECA (4x2 de 16) ===
+.byte 0,  0,  $28, $00     ; pedaco 1-1
+.byte 16,  0,  $A9, $00     ; pedaco 1-2
+.byte 32,  0,  $26, $00     ; pedaco 1-3
+.byte 48,  0,  $22, $00     ; pedaco 1-4
+.byte 0,  16,  $CB, $00     ; pedaco 2-1
+.byte 16,  16,  $48, $00     ; pedaco 2-2
+.byte 32,  16,  $C5, $00     ; pedaco 2-3
+.byte 48,  16,  $44, $00     ; pedaco 2-4
+; === CORPO (4x2 de 16) ===
+.byte 0,  32,  $AB, $00     ; pedaco 1-1
+.byte 16,  32,  $A9, $00     ; pedaco 1-2
+.byte 32,  32,  $26, $00     ; pedaco 1-3
+.byte 48,  32,  $A5, $00     ; pedaco 1-4
+.byte 0,  48,  $CB, $00     ; pedaco 2-1
+.byte 16,  48,  $24, $00     ; pedaco 2-2
+.byte 32,  48,  $22, $00     ; pedaco 2-3
+.byte 48,  48,  $C5, $00     ; pedaco 2-4
 ;-------------------------------------------------------------------------------
 ;   DrawPennyCrab
 ;-------------------------------------------------------------------------------
 .proc DrawPennyCrab
-
-        ldy #$0000              ; Indice Y vai caminhar pela tabela de Layout
-
+ldy #$0000              ; Indice Y vai caminhar pela tabela de Layout
 DrawLoop:
-        ; === 1. PROCESSAR POSIÇÃO X COM ESPELHAMENTO ===
-        lda PennyCrab + PennyCrabStruct::Facing
-        bne DrawXNormal         ; Se Facing != 0 (Direita/Padrão), pula para o cálculo normal
-
+; === 1. PROCESSAR POSIÇÃO X COM ESPELHAMENTO ===
+lda PennyCrab + PennyCrabStruct::Facing
+bne DrawXNormal         ; Se Facing != 0 (Direita/Padrão), pula para o cálculo normal
 DrawXInverted:
-        ; Se estiver olhando para a esquerda, aplica a inversão de colunas:
-        ; X_Global + (Largura_Total - 16) - Offset_X_Do_Bloco
-        ; Para 64px de largura, (Largura_Total - 16) = 48
-        lda #48
-        sec
-        sbc PennyCrab_Layout, Y ; Subtrai o Offset X atual (0, 16, 32 ou 48)
-        clc
-        adc PennyCrab + PennyCrabStruct::X_Pos ; Soma a ancoragem global
-        sta OAMMIRROR, X
-        bra ProcessY
-
+lda #48
+sec
+sbc PennyCrab_Layout, Y
+clc
+adc PennyCrab + PennyCrabStruct::X_Pos
+sta OAMMIRROR, X
+bra ProcessY
 DrawXNormal:
-        clc
-        lda PennyCrab + PennyCrabStruct::X_Pos    
-        adc PennyCrab_Layout, Y ; Le o Offset X padrão (Y + 0)
-        sta OAMMIRROR, X                          
-
+clc
+lda PennyCrab + PennyCrabStruct::X_Pos
+adc PennyCrab_Layout, Y
+sta OAMMIRROR, X
 ProcessY:
-        inx                                       
-        iny                     ; Aponta para o Offset Y (Y + 1)
-
+inx
+iny
 ; === 2. PROCESSAR POSIÇÃO Y ===
-        clc
-        lda PennyCrab + PennyCrabStruct::Y_Pos    
-        adc PennyCrab_Layout, Y ; Le o Offset Y (Y + 1)
-        sta OAMMIRROR, X                          
-        inx
-        iny                     ; Aponta para o Tile ID (Y + 2)
-
+clc
+lda PennyCrab + PennyCrabStruct::Y_Pos
+adc PennyCrab_Layout, Y
+sta OAMMIRROR, X
+inx
+iny
 ; === 3. SELEÇÃO DINÂMICA DE TILE ID BASEADO NO FRAME ===
-
-        lda PennyCrab + PennyCrabStruct::State
-        cmp #STATE_PREPARING
-        beq DrawPreparing
-        cmp #STATE_ATACKING
-        beq DrawAttacking
-        bra DrawWalking
-
-DrawPreparing:        
-        lda PennyCrab + PennyCrabStruct::Preparing_Anim_Frame
-        beq FramePreparing0
-
-
-FramePreparing1:
-        lda PennyCrab_Layout_FramePreparing1, Y        ; Le o Tile ID do Layout 1 (Y + 2)
-        bra WriteTile
-
+lda PennyCrab + PennyCrabStruct::State
+cmp #STATE_PREPARING
+beq DrawPreparing
+cmp #STATE_ATACKING
+beq DrawAttacking
+bra DrawWalking
+DrawPreparing:
+lda PennyCrab + PennyCrabStruct::Preparing_Anim_Frame
+cmp #1
+beq JumpToFramePreparing1
+cmp #2
+beq JumpToFramePreparing2
+cmp #3
+beq JumpToFramePreparing3
 FramePreparing0:
-        lda PennyCrab_Layout_FramePreparing0, Y               ; Le o Tile ID do Layout 0 (Y + 2)
-        bra WriteTile
-
+lda PennyCrab_Layout_FramePreparing0, Y
+bra WriteTile
+JumpToFramePreparing1:
+lda PennyCrab_Layout_FramePreparing1, Y
+bra WriteTile
+JumpToFramePreparing2:
+lda PennyCrab_Layout_FramePreparing2, Y
+bra WriteTile
+JumpToFramePreparing3:
+lda PennyCrab_Layout_FramePreparing3, Y
+bra WriteTile
 DrawAttacking:
-
-        lda PennyCrab + PennyCrabStruct::Attacking_Anim_Frame
-        beq FrameAttacking0
-
+stz PennyCrab + PennyCrabStruct::Preparing_Anim_Frame
+lda PennyCrab + PennyCrabStruct::Attacking_Anim_Frame
+beq FrameAttacking0
 FrameAttacking1:
-        lda PennyCrab_Layout_FrameAttacking1, Y        ; Le o Tile ID do Layout 1 (Y + 2)
-        bra WriteTile
-
+lda PennyCrab_Layout_FrameAttacking1, Y
+bra WriteTile
 FrameAttacking0:
-        lda PennyCrab_Layout_FrameAttacking0, Y               ; Le o Tile ID do Layout 0 (Y + 2)
-        bra WriteTile
-
+lda PennyCrab_Layout_FrameAttacking0, Y
+bra WriteTile
 DrawWalking:
-        lda PennyCrab + PennyCrabStruct::Anim_Frame
-        beq Frame0
-    
+stz PennyCrab + PennyCrabStruct::Preparing_Anim_Frame
+stz PennyCrab + PennyCrabStruct::Attacking_Anim_Frame
+lda PennyCrab + PennyCrabStruct::Anim_Frame
+beq Frame0
 Frame1:
-        lda PennyCrab_Layout_Frame1, Y        ; Le o Tile ID do Layout 1 (Y + 2)
-        bra WriteTile
-
+lda PennyCrab_Layout_Frame1, Y
+bra WriteTile
 Frame0:
-        lda PennyCrab_Layout, Y               ; Le o Tile ID do Layout 0 (Y + 2)
-
+lda PennyCrab_Layout, Y
 WriteTile:
-        sta OAMMIRROR, X
-        inx
-        iny                     ; Aponta para os Atributos (Y + 3)
-
-        ; === 4. PROCESSAR ATRIBUTOS E INJETAR H-FLIP HIERÁRQUICO ===
-        lda PennyCrab_Layout, Y ; Le o Atributo original (Y + 3)
-        
-        ; Protege o registrador Y empilhando-o para não quebrar o loop de leitura
-        phy                     
-        
-        lda PennyCrab + PennyCrabStruct::Facing
-        bne @NoFlip             ; Se Facing != 0 (Direita), mantém a paleta padrão intacta
-
+sta OAMMIRROR, X
+inx
+iny
+; === 4. PROCESSAR ATRIBUTOS E INJETAR H-FLIP HIERÁRQUICO ===
+lda PennyCrab_Layout, Y
+phy
+lda PennyCrab + PennyCrabStruct::Facing
+bne @NoFlip
 @ApplyFlip:
-        lda PennyCrab_Layout, Y ; Recarrega o atributo original no acumulador
-        ora #%01000000          ; Injeta o Bit 6 (Horizontal Flip) via hardware da PPU
-        bra @SaveAttributes
-
+lda PennyCrab_Layout, Y
+ora #%01000000
+bra @SaveAttributes
 @NoFlip:
-        lda PennyCrab_Layout, Y ; Garante o atributo limpo original se estiver para a direita
-
+lda PennyCrab_Layout, Y
 @SaveAttributes:
-        ply                     ; Restaura o ponteiro Y original de volta para o registrador
-        sta OAMMIRROR, X        ; Grava na OAM física do espelho
-        
-        inx
-        iny                     ; Avança para o proximo bloco (X do proximo sprite)
-
-        ; Checa se ja desenhou todos os 16 blocos do inimigo (16 * 4 = 64 bytes lidos)
-        cpy #64                 
-        beq @Finish
-        brl DrawLoop ; tinha que ser somengte bne, mas da erro de range, entao tem que fazer essa gambiarra
+ply
+sta OAMMIRROR, X
+inx
+iny
+cpy #64
+beq @Finish
+brl DrawLoop
 @Finish:
-        rts
+rts
 .endproc

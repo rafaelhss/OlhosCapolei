@@ -7,6 +7,7 @@ ASSETS_INC = 1
 
 ;----- Import ------------------------------------------------------------------
 .import     SpriteData
+.import     VaderData
 .import     ColorData
 .import     BackgroundData
 ;-------------------------------------------------------------------------------

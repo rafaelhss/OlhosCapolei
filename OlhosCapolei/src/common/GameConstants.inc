@@ -17,22 +17,20 @@ SCREEN_BOTTOM   = $df   ; bottom screen boundary = 223
 STATE_WALKING = 0
 STATE_PREPARING = 1
 STATE_ATACKING = 2
+STATE_RESTING = 3
 
 ; a simple constant to define the sprite movement speed
 SPRITE_SIZE     = $08   ; sprites are 8 by 8 pixel
-SPRITE_SPEED    = $02   ; Velocidade base do heroi
-ENEMY_SPEED     = $01   ; Velocidade base do inimigo (andando de 1 em 1)
+SPRITE_SPEED    = $03   ; Velocidade base do heroi
 
 ENEMY_ATTACK_DISTANCE = $32   ;Chegou aqui, para e ataca   
 ENEMY_ATTACK_Y_RANGE  = $08   ;tolerancia no Y. Nao precisa estar exatamente na mesma linha
 
 ; --- Limites Preventivos contra Underflow (Zonas de Amortecimento) ---
 HERO_SAFE_LIMIT  = (SPRITE_SPEED + SPRITE_SPEED) ;- atencao. com speed 4 nao funciona. no turbo (v=8) ele escapa na borda direita 
-ENEMY_SAFE_LIMIT = ENEMY_SPEED
 
 ; --- Limites de Tela Automatizados para o Code Review do Senior ---
 HERO_SCREEN_SAFE_LIMIT  = SCREEN_RIGHT - HERO_SAFE_LIMIT
-ENEMY_SCREEN_SAFE_LIMIT = SCREEN_RIGHT - ENEMY_SAFE_LIMIT
 
 
 OAMMIRROR_SIZE  = $0220 ; OAMRAM can hold data for 128 sprites, 4 bytes each
@@ -98,6 +96,39 @@ A_BUTTON        = $0080
     Attacking_Timer     .byte   ; Contador de frames durante atacar
     Attacking_Anim_Timer     .byte   ; Contador de frames para animacao
     Attacking_Anim_Frame .byte    
+    
+    Resting_Timer       .byte ;contador de frames para ficar parado
+    
+    ; --- Nova estrutura de Hitbox de Ataque (O "Rastro") ---
+    Hitbox_Active       .byte   ; 0 = Inativa, 1 = Ativa (Rastro para o motor de colisão)
+    Hitbox_X1           .byte   ; Canto esquerdo da área de dano na tela
+    Hitbox_X2           .byte   ; Canto direito da área de dano na tela
+    Hitbox_Y1           .byte   ; Canto superior da área de dano na tela
+    Hitbox_Y2           .byte   ; Canto inferior da área de dano na tela
+
+.endstruct
+
+
+.struct VaderCrabStruct
+    X_Pos       .byte   ; 8-bit horizontal position (0-255)
+    Y_Pos       .byte   ; 8-bit vertical position
+    Tile_Count  .byte   ; Guarda quantos blocos compoem esse inimigo
+    Walk_Anim_Speed .byte ;quanto menor mais rapido. 0 para;
+    Anim_Timer  .byte   ; Contador para velocidade da animacao
+    Anim_Frame  .byte   ; Frame atual (0, 1, 2...)
+    Anim_Ptr    .res 2  ; Reserva 2 bytes para armazenar o ponteiro de animacao
+    Facing              .byte   ; 0 = Olhando para a Direita, 1 = Olhando para a Esquerda
+    State               .byte   ; Estado atual da IA (Walk, Prepare, Attack)
+    State_Timer         .byte   ; Contador de frames para as transições de estado
+    Preparing_Timer     .byte   ; Contador de frames antes de atacar, depois de chegar
+    Preparing_Anim_Timer     .byte   ; Contador de frames para animacao
+    Preparing_Anim_Frame .byte
+    
+    Attacking_Timer     .byte   ; Contador de frames durante atacar
+    Attacking_Anim_Timer     .byte   ; Contador de frames para animacao
+    Attacking_Anim_Frame .byte    
+
+    Resting_Timer       .byte ;contador de frames para ficar parado
     
     ; --- Nova estrutura de Hitbox de Ataque (O "Rastro") ---
     Hitbox_Active       .byte   ; 0 = Inativa, 1 = Ativa (Rastro para o motor de colisão)
