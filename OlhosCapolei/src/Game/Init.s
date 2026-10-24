@@ -110,6 +110,17 @@
         sta PennyCrab + PennyCrabStruct::Anim_Timer
         lda #$00                       
         sta PennyCrab + PennyCrabStruct::Anim_Frame   
+
+        ; ◄ CRÍTICO: INICIALIZAÇÃO CONTRA O BUG DOS 5 SEGUNDOS
+        lda #$08                       
+        sta PennyCrab + PennyCrabStruct::Preparing_Anim_Timer
+        stz PennyCrab + PennyCrabStruct::Preparing_Anim_Frame
+        sta PennyCrab + PennyCrabStruct::Attacking_Anim_Timer
+        sta PennyCrab + PennyCrabStruct::Attacking_Timer
+        stz PennyCrab + PennyCrabStruct::Attacking_Anim_Frame
+        
+        lda #STATE_WALKING
+        sta PennyCrab + PennyCrabStruct::State
 ;=========== FIM Penny
 
 

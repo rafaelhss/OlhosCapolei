@@ -13,12 +13,12 @@ SCREEN_RIGHT    = $ff   ; right screen boundary = 255
 SCREEN_TOP      = $00   ; top screen boundary = 0
 SCREEN_BOTTOM   = $df   ; bottom screen boundary = 223
 
-STATE_WALK     = 0
-STATE_PREPARE  = 1
-STATE_ATTACK   = 2
 
+STATE_WALKING = 0
+STATE_PREPARING = 1
+STATE_ATACKING = 2
 
-    ; a simple constant to define the sprite movement speed
+; a simple constant to define the sprite movement speed
 SPRITE_SIZE     = $08   ; sprites are 8 by 8 pixel
 SPRITE_SPEED    = $02   ; Velocidade base do heroi
 ENEMY_SPEED     = $01   ; Velocidade base do inimigo (andando de 1 em 1)
@@ -91,6 +91,13 @@ A_BUTTON        = $0080
     Facing              .byte   ; 0 = Olhando para a Direita, 1 = Olhando para a Esquerda
     State               .byte   ; Estado atual da IA (Walk, Prepare, Attack)
     State_Timer         .byte   ; Contador de frames para as transições de estado
+    Preparing_Timer     .byte   ; Contador de frames antes de atacar, depois de chegar
+    Preparing_Anim_Timer     .byte   ; Contador de frames para animacao
+    Preparing_Anim_Frame .byte
+    
+    Attacking_Timer     .byte   ; Contador de frames durante atacar
+    Attacking_Anim_Timer     .byte   ; Contador de frames para animacao
+    Attacking_Anim_Frame .byte    
     
     ; --- Nova estrutura de Hitbox de Ataque (O "Rastro") ---
     Hitbox_Active       .byte   ; 0 = Inativa, 1 = Ativa (Rastro para o motor de colisão)
