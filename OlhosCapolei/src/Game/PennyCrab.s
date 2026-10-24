@@ -25,12 +25,15 @@
 
 
 WALK_ANIM_SPEED = $08 ; quanto menor mais rapido
-PREPARING_ANIM_SPEED = $08
-PREPARING_DURATION_FRAMES = 120
+
+PREPARING_ANIM_SPEED = 60
+PREPARING_DURATION_FRAMES = 240
+PREPARING_MAX_FRAMES = 2
 
 ;attackin speed e frames. Se for iguais o ataque tem 1 frame. Se forem um metade do outro, dois frames. e assim vai
-ATTACKING_ANIM_SPEED = 7   
+ATTACKING_ANIM_SPEED = 30   
 ATTACKING_DURATION_FRAMES = 60
+ATTACK_MAX_FRAMES = 2  ; Altere este número para quantos frames a arte tiver! (3, 4, 5...)
 
 
 .segment "CODE"
@@ -65,9 +68,18 @@ AttackingAnim:
     lda #ATTACKING_ANIM_SPEED ; Ajuste este valor para mais rapido ou mais lento
     sta PennyCrab + PennyCrabStruct::Attacking_Anim_Timer
     
-    ; 3. Alterna o Frame (Se era 0 vira 1, se era 1 vira 0)
+   ; 2. Avança de forma linear para o próximo frame
     lda PennyCrab + PennyCrabStruct::Attacking_Anim_Frame
-    eor #$01 ; Logica XOR inverte o bit 0 perfeitamente (0 <-> 1)
+    clc
+    adc #1                          ; Incrementa o ID do frame (+1)
+    
+    ; 3. COMPARAÇÃO COM O TETO (Módulo Dinâmico)
+    cmp #ATTACK_MAX_FRAMES          ; Checa se atingiu o limite de N frames da arte
+    bcc @SaveFrame                  ; Se for MENOR, pula o reset e salva direto
+    
+    lda #0                          ; Se for IGUAL, estourou a animação! Reseta para o frame 0
+
+@SaveFrame:
     sta PennyCrab + PennyCrabStruct::Attacking_Anim_Frame
 
     brl Move ;Ataquei Pulo o prepare e vejo se o hero fugiu
@@ -96,10 +108,20 @@ PreparingAnim:
     lda #PREPARING_ANIM_SPEED ; Ajuste este valor para mais rapido ou mais lento
     sta PennyCrab + PennyCrabStruct::Preparing_Anim_Timer
     
-    ; 3. Alterna o Frame (Se era 0 vira 1, se era 1 vira 0)
+   ; 2. Avança de forma linear para o próximo frame
     lda PennyCrab + PennyCrabStruct::Preparing_Anim_Frame
-    eor #$01 ; Logica XOR inverte o bit 0 perfeitamente (0 <-> 1)
+    clc
+    adc #1                          ; Incrementa o ID do frame (+1)
+    
+    ; 3. COMPARAÇÃO COM O TETO (Módulo Dinâmico)
+    cmp #PREPARING_MAX_FRAMES          ; Checa se atingiu o limite de N frames da arte
+    bcc @SaveFramePrep                  ; Se for MENOR, pula o reset e salva direto
+    
+    lda #0                          ; Se for IGUAL, estourou a animação! Reseta para o frame 0
+
+@SaveFramePrep:
     sta PennyCrab + PennyCrabStruct::Preparing_Anim_Frame
+
 
 
  WalkFrameUpdate:
