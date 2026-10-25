@@ -19,6 +19,10 @@ STATE_PREPARING = 1
 STATE_ATACKING = 2
 STATE_RESTING = 3
 
+
+STATE_HURT_NOT = 0
+STATE_HURT = 1
+
 ; a simple constant to define the sprite movement speed
 SPRITE_SIZE     = $08   ; sprites are 8 by 8 pixel
 SPRITE_SPEED    = $03   ; Velocidade base do heroi
@@ -63,6 +67,14 @@ A_BUTTON        = $0080
     Tile_Count  .byte   ; Quantidade de sprites na OAM (Serão 6 para este arranjo)
     Anim_Timer  .byte   ; Contador de frames da caminhada
     Anim_Frame  .byte   ; Frame atual dos pés (0 ou 1)
+
+    Hurtbox_Active       .byte   ; Pode ser que pegou uma estrela, ou ta no meio de um ataque, enfim...
+    Hurtbox_X1           .byte   ; Canto esquerdo da área de dano na tela
+    Hurtbox_X2           .byte   ; Canto direito da área de dano na tela
+    Hurtbox_Y1           .byte   ; Canto superior da área de dano na tela
+    Hurtbox_Y2           .byte   ; Canto inferior da área de dano na tela
+ ;   HurtState            .byte   ; ta apanhando ou nao
+    HurtTimer            .byte
 .endstruct
 
 

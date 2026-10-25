@@ -12,24 +12,42 @@
 
 .import BigHero
 .export DrawBigHero, MoveBigHero
+.export DrawBigHeroHurtboxDebug
 
 .segment "CODE"
+
+HURT_TILE = $06
+HURT_NOT_TILE = $04
+DP_HURT_TILE = $01
 
 .proc DrawBigHero
         lda #%00110000          ; Prioridade 3, Paleta 0
         sta $00                 ; Salva os atributos na Direct Page para reuso
 
+        lda BigHero + BigHeroStruct::HurtTimer
+        beq DrawNormalFace
+        
         ; =====================================================================
         ; FILEIRA 1: CABEÇA E OMBROS (Y + 0)
         ; =====================================================================
         ; Bloco Superior Esquerdo
+
+        lda #HURT_TILE
+        bra ContinueDraw
+        
+DrawNormalFace:
+        lda #HURT_NOT_TILE
+
+ContinueDraw:
+        sta z:DP_HURT_TILE
+
         lda BigHero + BigHeroStruct::X_Pos
         sta OAMMIRROR, x
         inx
         lda BigHero + BigHeroStruct::Y_Pos
         sta OAMMIRROR, x
         inx
-        lda #$20                ; Tile VRAM da Cabeça Esquerda
+        lda z:DP_HURT_TILE               ; Tile VRAM da Cabeça Esquerda
         sta OAMMIRROR, x
         inx
         lda $00
@@ -212,6 +230,8 @@ DoneDrawing:
 ;   MoveBigHero (Atualiza Posição e Trata Animação)
 ;-------------------------------------------------------------------------------
 .proc MoveBigHero
+
+
      ; Inicializacao de velocidade sempre em 8-bit
         lda #SPRITE_SPEED
         sta HOR_SPEED
@@ -293,5 +313,88 @@ MoveDown:
 MoveDone:
         sep #$20                    ; Garante que a CPU saia da rotina em 8-bit
         .a8
+        
+        
+;=== atualiza a hurtbox ===========
+
+    lda BigHero + BigHeroStruct::X_Pos
+    sta BigHero + BigHeroStruct::Hurtbox_X1
+    clc
+    adc #32                             ; largura do heroi
+    sta BigHero + BigHeroStruct::Hurtbox_X2
+
+    lda BigHero + BigHeroStruct::Y_Pos
+    sta BigHero + BigHeroStruct::Hurtbox_Y1
+    clc
+    adc #64                             ; altura do heroi
+    sta BigHero + BigHeroStruct::Hurtbox_Y2
+
+    lda BigHero + BigHeroStruct::HurtTimer
+    beq Done
+    dec BigHero + BigHeroStruct::HurtTimer
+    lda #$01 
+    sta BigHero + BigHeroStruct::Hurtbox_Active
+        
+
+
+;==== fim hurtbox =================
+        
+        
+ Done:       
         rts
 .endproc
+
+
+
+;---------------- DEBUG ---------------
+.proc DrawBigHeroHurtboxDebug
+
+    ; --- SPRITE 1 (Lado Esquerdo da Hitbox) ---
+    ; Posição X
+    lda BigHero + BigHeroStruct::Hurtbox_X1
+    sta a:OAMMIRROR, X
+    inx
+    
+    ; Posição Y
+    lda BigHero + BigHeroStruct::Hurtbox_Y1
+    sta a:OAMMIRROR, X
+    inx
+    
+    ; Tile ID (Substitua por um ID de tile quadrado do seu jogo)
+    lda #$A0            ; Exemplo: tile $FE é um quadrado vermelho/branco
+    sta a:OAMMIRROR, X
+    inx
+    
+    ; Atributos (Paleta de debug para ficar visível)
+    lda #$31      ; Escolha uma paleta com cor forte (ex: Paleta 4, prioridade alta)
+    sta a:OAMMIRROR, X
+    inx
+
+    ; --- SPRITE 2 --
+    ; Posição X
+    lda BigHero + BigHeroStruct::Hurtbox_X2
+    ;sec
+    ;sbc #16
+    sta a:OAMMIRROR, X
+    inx
+    
+    ; Posição Y (Mesmo Y)
+    lda BigHero + BigHeroStruct::Hurtbox_Y2
+    sta a:OAMMIRROR, X
+    inx
+    
+    ; Mesmo Tile ID
+    lda #$A2            
+    sta a:OAMMIRROR, X
+    inx
+    
+    ; Mesmo Atributo
+    lda #$31      
+    sta OAMMIRROR, X    
+    inx
+
+    rts
+.endproc
+
+
+;------------FIM DEBUG -------------

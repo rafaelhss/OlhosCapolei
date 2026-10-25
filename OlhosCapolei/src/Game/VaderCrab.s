@@ -29,14 +29,14 @@
 WALK_SPEED = $01
 WALK_ANIM_SPEED = $08 ; quanto menor mais rapido
 
-PREPARING_ANIM_SPEED = 40
-PREPARING_DURATION_FRAMES = 120
-PREPARING_MAX_FRAMES = 4
+PREPARING_ANIM_SPEED = 30
+PREPARING_DURATION_FRAMES = 60
+PREPARING_MAX_FRAMES = 3
 
 ;attackin speed e frames. Se for iguais o ataque tem 1 frame. Se forem um metade do outro, dois frames. e assim vai
-ATTACKING_ANIM_SPEED = 30   
-ATTACKING_DURATION_FRAMES = 60
-ATTACK_MAX_FRAMES = 2  ; Altere este número para quantos frames a arte tiver! (3, 4, 5...)
+ATTACKING_ANIM_SPEED = 15   
+ATTACKING_DURATION_FRAMES = 45
+ATTACK_MAX_FRAMES = 3  ; Altere este número para quantos frames a arte tiver! (3, 4, 5...)
 
 REST_TIME = 30 ;  
 
@@ -389,104 +389,104 @@ Done:
 ; Formato por linha: Offset_X, Offset_Y, Tile_ID, Atributos(Paleta/Flip)
 VaderCrab_Layout:
     ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $EE, $01     ; pedaco 1-1
-    .byte 16,  0,  $00, $01     ; pedaco 1-2
-    .byte 32,  0,  $02, $01     ; pedaco 1-3
-    .byte 48,  0,  $EE, $01     ; pedaco 1-4
+    .byte 0,  0,  $00, $01     ; pedaco 1-1
+    .byte 16,  0,  $02, $01     ; pedaco 1-2
+    .byte 32,  0,  $04, $01     ; pedaco 1-3
+    .byte 48,  0,  $06, $01     ; pedaco 1-4
     
-    .byte 0,  16,  $EE, $01     ; pedaco 2-1
-    .byte 16,  16,  $20, $01     ; pedaco 2-2
-    .byte 32,  16,  $22, $01     ; pedaco 2-3
-    .byte 48,  16,  $EE, $01     ; pedaco 2-4
+    .byte 0,  16,  $20, $01     ; pedaco 2-1
+    .byte 16,  16,  $22, $01     ; pedaco 2-2
+    .byte 32,  16,  $24, $01     ; pedaco 2-3
+    .byte 48,  16,  $26, $01     ; pedaco 2-4
 
     ; === CORPO (4x2 de 16) ===
-    .byte 0,  32,  $64, $00     ; pedaco 1-1
-    .byte 16,  32,  $66, $00     ; pedaco 1-2
-    .byte 32,  32,  $68, $00     ; pedaco 1-3
-    .byte 48,  32,  $6A, $00     ; pedaco 1-4
+    .byte 0,  32,  $40, $01     ; pedaco 1-1
+    .byte 16,  32,  $42, $01     ; pedaco 1-2
+    .byte 32,  32,  $44, $01     ; pedaco 1-3
+    .byte 48,  32,  $46, $01     ; pedaco 1-4
     
-    .byte 0,  48,  $84, $00     ; pedaco 2-1
-    .byte 16,  48,  $86, $00     ; pedaco 2-2
-    .byte 32,  48,  $88, $00     ; pedaco 2-3
-    .byte 48,  48,  $8A, $00     ; pedaco 2-4
+    .byte 0,  48,  $60, $01     ; pedaco 2-1
+    .byte 16,  48,  $62, $01     ; pedaco 2-2
+    .byte 32,  48,  $64, $01     ; pedaco 2-3
+    .byte 48,  48,  $66, $01     ; pedaco 2-4
 
 ; =============================================================================
 ; FRAME 1: INIMIGO ANDANDO (Proximas posicoes livres de Tile)
 ; =============================================================================
 VaderCrab_Layout_Frame1:
     ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $EE, $01     ; pedaco 1-1
-    .byte 16,  0,  $00, $01     ; pedaco 1-2
-    .byte 32,  0,  $02, $01     ; pedaco 1-3
-    .byte 48,  0,  $EE, $01     ; pedaco 1-4
+    .byte 0,  0,  $00, $01     ; pedaco 1-1
+    .byte 16,  0,  $02, $01     ; pedaco 1-2
+    .byte 32,  0,  $04, $01     ; pedaco 1-3
+    .byte 48,  0,  $06, $01     ; pedaco 1-4
     
-    .byte 0,  16,  $EE, $01     ; pedaco 2-1
-    .byte 16,  16,  $20, $01     ; pedaco 2-2
-    .byte 32,  16,  $22, $01     ; pedaco 2-3
-    .byte 48,  16,  $EE, $01     ; pedaco 2-4
+    .byte 0,  16,  $20, $01     ; pedaco 2-1
+    .byte 16,  16,  $22, $01     ; pedaco 2-2
+    .byte 32,  16,  $24, $01     ; pedaco 2-3
+    .byte 48,  16,  $26, $01     ; pedaco 2-4
 
     ; === CORPO (4x2 de 16) ===
-    .byte 0,  32,  $A5, $00     ; pedaco 1-1
-    .byte 16,  32,  $A7, $00     ; pedaco 1-2
-    .byte 32,  32,  $A9, $00     ; pedaco 1-3
-    .byte 48,  32,  $AB, $00     ; pedaco 1-4
+    .byte 0,  32,  $48, $01     ; pedaco 1-1
+    .byte 16,  32,  $42, $01     ; pedaco 1-2
+    .byte 32,  32,  $44, $01     ; pedaco 1-3
+    .byte 48,  32,  $4E, $01     ; pedaco 1-4
     
-    .byte 0,  48,  $C5, $00     ; pedaco 2-1
-    .byte 16,  48,  $C7, $00     ; pedaco 2-2
-    .byte 32,  48,  $C9, $00     ; pedaco 2-3
-    .byte 48,  48,  $CB, $00     ; pedaco 2-4
+    .byte 0,  48,  $68, $01     ; pedaco 2-1
+    .byte 16,  48,  $6A, $01     ; pedaco 2-2
+    .byte 32,  48,  $6C, $01     ; pedaco 2-3
+    .byte 48,  48,  $6E, $01     ; pedaco 2-4
 
 ; =============================================================================
 ; FRAME 0: INIMIGO Preparing 
 ; =============================================================================
 VaderCrab_Layout_FramePreparing0:
     ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $24, $00     ; pedaco 1-1
-    .byte 16,  0,  $2C, $00     ; pedaco 1-2
-    .byte 32,  0,  $28, $00     ; pedaco 1-3
-    .byte 48,  0,  $2A, $00     ; pedaco 1-4
+    .byte 0,  0,  $08, $01     ; pedaco 1-1
+    .byte 16,  0,  $0A, $01     ; pedaco 1-2
+    .byte 32,  0,  $0C, $01     ; pedaco 1-3
+    .byte 48,  0,  $0E, $01     ; pedaco 1-4
     
-    .byte 0,  16,  $44, $00     ; pedaco 2-1
-    .byte 16,  16,  $46, $00     ; pedaco 2-2
-    .byte 32,  16,  $48, $00     ; pedaco 2-3
-    .byte 48,  16,  $4A, $00     ; pedaco 2-4
+    .byte 0,  16,  $20, $01     ; pedaco 2-1
+    .byte 16,  16,  $2A, $01     ; pedaco 2-2
+    .byte 32,  16,  $2C, $01     ; pedaco 2-3
+    .byte 48,  16,  $2E, $01     ; pedaco 2-4
 
     ; === CORPO (4x2 de 16) ===
-    .byte 0,  32,  $A5, $00     ; pedaco 1-1
-    .byte 16,  32,  $A9, $00     ; pedaco 1-2
-    .byte 32,  32,  $A7, $00     ; pedaco 1-3
-    .byte 48,  32,  $AB, $00     ; pedaco 1-4
+    .byte 0,  32,  $48, $01     ; pedaco 1-1
+    .byte 16,  32,  $42, $01     ; pedaco 1-2
+    .byte 32,  32,  $4C, $01     ; pedaco 1-3
+    .byte 48,  32,  $4E, $01     ; pedaco 1-4
     
-    .byte 0,  48,  $C5, $00     ; pedaco 2-1
-    .byte 16,  48,  $C9, $00     ; pedaco 2-2
-    .byte 32,  48,  $C7, $00     ; pedaco 2-3
-    .byte 48,  48,  $CB, $00     ; pedaco 2-4
+    .byte 0,  48,  $68, $01     ; pedaco 2-1
+    .byte 16,  48,  $6A, $01     ; pedaco 2-2
+    .byte 32,  48,  $64, $01     ; pedaco 2-3
+    .byte 48,  48,  $6E, $01     ; pedaco 2-4
 
 ; =============================================================================
 ; FRAME 1: INIMIGO Preparing 
 ; =============================================================================
 VaderCrab_Layout_FramePreparing1:
     ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $24, $00     ; pedaco 1-1
-    .byte 16,  0,  $2C, $00     ; pedaco 1-2
-    .byte 32,  0,  $2E, $00     ; pedaco 1-3
-    .byte 48,  0,  $2A, $00     ; pedaco 1-4
+    .byte 0,  0,  $08, $01     ; pedaco 1-1
+    .byte 16,  0,  $0A, $01     ; pedaco 1-2
+    .byte 32,  0,  $0C, $01     ; pedaco 1-3
+    .byte 48,  0,  $0E, $01     ; pedaco 1-4
     
-    .byte 0,  16,  $44, $00     ; pedaco 2-1
-    .byte 16,  16,  $46, $00     ; pedaco 2-2
-    .byte 32,  16,  $48, $00     ; pedaco 2-3
-    .byte 48,  16,  $4A, $00     ; pedaco 2-4
+    .byte 0,  16,  $20, $01     ; pedaco 2-1
+    .byte 16,  16,  $2A, $01     ; pedaco 2-2
+    .byte 32,  16,  $2C, $01     ; pedaco 2-3
+    .byte 48,  16,  $2E, $01     ; pedaco 2-4
 
-    ; === CORPO (4x2 de 16) ===
-    .byte 0,  32,  $A5, $00     ; pedaco 1-1
-    .byte 16,  32,  $A9, $00     ; pedaco 1-2
-    .byte 32,  32,  $A7, $00     ; pedaco 1-3
-    .byte 48,  32,  $AB, $00     ; pedaco 1-4
+     ; === CORPO (4x2 de 16) ===
+    .byte 0,  32,  $48, $01     ; pedaco 1-1
+    .byte 16,  32,  $4A, $01     ; pedaco 1-2
+    .byte 32,  32,  $4C, $01     ; pedaco 1-3
+    .byte 48,  32,  $4E, $01     ; pedaco 1-4
     
-    .byte 0,  48,  $C5, $00     ; pedaco 2-1
-    .byte 16,  48,  $C9, $00     ; pedaco 2-2
-    .byte 32,  48,  $C7, $00     ; pedaco 2-3
-    .byte 48,  48,  $CB, $00     ; pedaco 2-4
+    .byte 0,  48,  $68, $01     ; pedaco 2-1
+    .byte 16,  48,  $6A, $01     ; pedaco 2-2
+    .byte 32,  48,  $6C, $01     ; pedaco 2-3
+    .byte 48,  48,  $6E, $01     ; pedaco 2-4
 
 
 ; =============================================================================
@@ -494,26 +494,27 @@ VaderCrab_Layout_FramePreparing1:
 ; =============================================================================
 VaderCrab_Layout_FramePreparing2:
     ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $24, $00     ; pedaco 1-1
-    .byte 16,  0,  $2C, $00     ; pedaco 1-2
-    .byte 32,  0,  $2E, $00     ; pedaco 1-3
-    .byte 48,  0,  $2A, $00     ; pedaco 1-4
+    .byte 0,  0,  $08, $01     ; pedaco 1-1
+    .byte 16,  0,  $0A, $01     ; pedaco 1-2
+    .byte 32,  0,  $0C, $01     ; pedaco 1-3
+    .byte 48,  0,  $0E, $01     ; pedaco 1-4
     
-    .byte 0,  16,  $44, $00     ; pedaco 2-1
-    .byte 16,  16,  $4C, $00     ; pedaco 2-2
-    .byte 32,  16,  $48, $00     ; pedaco 2-3
-    .byte 48,  16,  $4A, $00     ; pedaco 2-4
+    .byte 0,  16,  $28, $01     ; pedaco 2-1
+    .byte 16,  16,  $2A, $01     ; pedaco 2-2
+    .byte 32,  16,  $2C, $01     ; pedaco 2-3
+    .byte 48,  16,  $2E, $01     ; pedaco 2-4
 
     ; === CORPO (4x2 de 16) ===
-    .byte 0,  32,  $A5, $00     ; pedaco 1-1
-    .byte 16,  32,  $A9, $00     ; pedaco 1-2
-    .byte 32,  32,  $A7, $00     ; pedaco 1-3
-    .byte 48,  32,  $AB, $00     ; pedaco 1-4
+    .byte 0,  32,  $48, $01     ; pedaco 1-1
+    .byte 16,  32,  $4A, $01     ; pedaco 1-2
+    .byte 32,  32,  $4C, $01     ; pedaco 1-3
+    .byte 48,  32,  $4E, $01     ; pedaco 1-4
     
-    .byte 0,  48,  $C5, $00     ; pedaco 2-1
-    .byte 16,  48,  $C9, $00     ; pedaco 2-2
-    .byte 32,  48,  $C7, $00     ; pedaco 2-3
-    .byte 48,  48,  $CB, $00     ; pedaco 2-4
+    .byte 0,  48,  $68, $01     ; pedaco 2-1
+    .byte 16,  48,  $6A, $01     ; pedaco 2-2
+    .byte 32,  48,  $6C, $01     ; pedaco 2-3
+    .byte 48,  48,  $6E, $01     ; pedaco 2-4
+
 
 
 ; =============================================================================
@@ -521,26 +522,26 @@ VaderCrab_Layout_FramePreparing2:
 ; =============================================================================
 VaderCrab_Layout_FramePreparing3:
     ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $24, $00     ; pedaco 1-1
-    .byte 16,  0,  $2C, $00     ; pedaco 1-2
-    .byte 32,  0,  $2E, $00     ; pedaco 1-3
-    .byte 48,  0,  $2A, $00     ; pedaco 1-4
+    .byte 0,  0,  $08, $01     ; pedaco 1-1
+    .byte 16,  0,  $0A, $01     ; pedaco 1-2
+    .byte 32,  0,  $0C, $01     ; pedaco 1-3
+    .byte 48,  0,  $0E, $01     ; pedaco 1-4
     
-    .byte 0,  16,  $44, $00     ; pedaco 2-1
-    .byte 16,  16,  $4C, $00     ; pedaco 2-2
-    .byte 32,  16,  $4E, $00     ; pedaco 2-3
-    .byte 48,  16,  $4A, $00     ; pedaco 2-4
+    .byte 0,  16,  $28, $01     ; pedaco 2-1
+    .byte 16,  16,  $2A, $01     ; pedaco 2-2
+    .byte 32,  16,  $2C, $01     ; pedaco 2-3
+    .byte 48,  16,  $2E, $01     ; pedaco 2-4
 
     ; === CORPO (4x2 de 16) ===
-    .byte 0,  32,  $A5, $00     ; pedaco 1-1
-    .byte 16,  32,  $A9, $00     ; pedaco 1-2
-    .byte 32,  32,  $A7, $00     ; pedaco 1-3
-    .byte 48,  32,  $AB, $00     ; pedaco 1-4
+    .byte 0,  32,  $48, $01     ; pedaco 1-1
+    .byte 16,  32,  $4A, $01     ; pedaco 1-2
+    .byte 32,  32,  $4C, $01     ; pedaco 1-3
+    .byte 48,  32,  $4E, $01     ; pedaco 1-4
     
-    .byte 0,  48,  $C5, $00     ; pedaco 2-1
-    .byte 16,  48,  $C9, $00     ; pedaco 2-2
-    .byte 32,  48,  $C7, $00     ; pedaco 2-3
-    .byte 48,  48,  $CB, $00     ; pedaco 2-4
+    .byte 0,  48,  $68, $01     ; pedaco 2-1
+    .byte 16,  48,  $6A, $01     ; pedaco 2-2
+    .byte 32,  48,  $6C, $01     ; pedaco 2-3
+    .byte 48,  48,  $6E, $01     ; pedaco 2-4
 
 
 ; =============================================================================
@@ -548,15 +549,15 @@ VaderCrab_Layout_FramePreparing3:
 ; =============================================================================
 VaderCrab_Layout_FrameAttacking0:
     ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $44, $00     ; pedaco 1-1
-    .byte 16,  0,  $28, $00     ; pedaco 1-2
-    .byte 32,  0,  $26, $00     ; pedaco 1-3
-    .byte 48,  0,  $4A, $00     ; pedaco 1-4
+    .byte 0,  0,  $00, $01     ; pedaco 1-1
+    .byte 16,  0,  $02, $01     ; pedaco 1-2
+    .byte 32,  0,  $04, $01     ; pedaco 1-3
+    .byte 48,  0,  $06, $01     ; pedaco 1-4
     
-    .byte 0,  16,  $A5, $00     ; pedaco 2-1
-    .byte 16,  16,  $48, $00     ; pedaco 2-2
-    .byte 32,  16,  $46, $00     ; pedaco 2-3
-    .byte 48,  16,  $AB, $00     ; pedaco 2-4
+    .byte 0,  16,  $20, $01     ; pedaco 2-1
+    .byte 16,  16,  $22, $01     ; pedaco 2-2
+    .byte 32,  16,  $24, $01     ; pedaco 2-3
+    .byte 48,  16,  $26, $01     ; pedaco 2-4
 
     ; === CORPO (4x2 de 16) ===
     .byte 0,  32,  $A5, $00     ; pedaco 1-1
@@ -574,15 +575,16 @@ VaderCrab_Layout_FrameAttacking0:
 ; =============================================================================
 VaderCrab_Layout_FrameAttacking1:
     ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $28, $00     ; pedaco 1-1
-    .byte 16,  0,  $A9, $00     ; pedaco 1-2
-    .byte 32,  0,  $26, $00     ; pedaco 1-3
-    .byte 48,  0,  $22, $00     ; pedaco 1-4
+    ; === CABECA (4x2 de 16) ===
+    .byte 0,  0,  $00, $01     ; pedaco 1-1
+    .byte 16,  0,  $02, $01     ; pedaco 1-2
+    .byte 32,  0,  $04, $01     ; pedaco 1-3
+    .byte 48,  0,  $06, $01     ; pedaco 1-4
     
-    .byte 0,  16,  $CB, $00     ; pedaco 2-1
-    .byte 16,  16,  $48, $00     ; pedaco 2-2
-    .byte 32,  16,  $C5, $00     ; pedaco 2-3
-    .byte 48,  16,  $44, $00     ; pedaco 2-4
+    .byte 0,  16,  $20, $01     ; pedaco 2-1
+    .byte 16,  16,  $22, $01     ; pedaco 2-2
+    .byte 32,  16,  $24, $01     ; pedaco 2-3
+    .byte 48,  16,  $26, $01     ; pedaco 2-4
 
     ; === CORPO (4x2 de 16) ===
     .byte 0,  32,  $AB, $00     ; pedaco 1-1

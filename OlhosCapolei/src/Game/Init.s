@@ -184,6 +184,13 @@
         
         lda #0                          ; Começa com o frame de pé parado (guarda)
         sta BigHero + BigHeroStruct::Anim_Frame
+
+ ;       lda #STATE_HURT_NOT
+ ;       sta BigHero + BigHeroStruct::HurtState
+        
+        lda #$01
+        sta BigHero + BigHeroStruct::Hurtbox_Active
+
 ; =========== FIM BIGHERO
 
 

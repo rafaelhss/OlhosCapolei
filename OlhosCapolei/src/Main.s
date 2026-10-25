@@ -91,7 +91,7 @@ _ResetAlign:
         ldx #$00                ; X inicia em 0 como offset do primeiro Sprite na OAM
        
         jsr DrawVaderHitboxDebug   ; Usa o mesmo registrador X para colar o quadrado por cima!
-       
+        jsr DrawBigHeroHurtboxDebug
        
         ;jsr DrawHero            ; Desenha o Heroi e devolve o X avançado
         ;jsr DrawEnemy1          ; Desenha o Inimigo 1 a partir do ponto que o Heroi parou
@@ -106,9 +106,153 @@ _ResetAlign:
 ;-------------------------------------------------------------------------------
 
 .proc ApplyDamageToHero
-        ; Implementar lógica de colisão por bounding-box entre Hero e Enemy posteriormente
+
+
+        ; =====================================================================
+        ; FILTROS PRELIMINARES RÁPIDOS (8-bit)
+        ; =====================================================================
+        ; 1. Se a hitbox do VaderCrab não está ativa, aborta imediatamente
+        lda VaderCrab + VaderCrabStruct::Hitbox_Active
+        bne @CheckHurtbox
+        rts
+
+@CheckHurtbox:
+        ; 2. Se o BigHero não está vulnerável (frames de dano/invencibilidade), aborta
+        lda BigHero + BigHeroStruct::Hurtbox_Active
+        bne @StartAABB
+        rts
+
+        ; =====================================================================
+        ; MOTOR MATEMÁTICO POR EXCLUSÃO (Pipeline de Alta Performance 16-bit)
+        ; =====================================================================
+@StartAABB:
+        rep #$20                ; Transiciona o Acumulador para 16 bits (.a16)
+        .a16
+
+        ; --- TESTE DO EIXO X ---
+        
+        ; Teste 1: Se Hitbox_X2 <= Hurtbox_X1 (Inimigo totalmente à esquerda) -> SAI
+        lda VaderCrab + VaderCrabStruct::Hitbox_X2
+        and #$00FF              ; Isola o byte baixo (limpa lixo do registrador)
+        sta $00                 ; Guarda temporariamente na Direct Page ($00) para comparar
+        lda BigHero + BigHeroStruct::Hurtbox_X1
+        and #$00FF
+        cmp $00
+        bcs @NoCollision        ; Se Hurtbox_X1 >= Hitbox_X2, não há colisão!
+
+        ; Teste 2: Se Hitbox_X1 >= Hurtbox_X2 (Inimigo totalmente à direita) -> SAI
+        lda VaderCrab + VaderCrabStruct::Hitbox_X1
+        and #$00FF
+        sta $00
+        lda BigHero + BigHeroStruct::Hurtbox_X2
+        and #$00FF
+        cmp $00
+        bcc @NoCollision        ; Se Hurtbox_X2 <= Hitbox_X1, não há colisão! Se for igual, apenas raspou
+        beq @NoCollision
+
+        ; --- TESTE DO EIXO Y ---
+        
+        ; Teste 3: Se Hitbox_Y2 <= Hurtbox_Y1 (Inimigo totalmente acima) -> SAI
+        lda VaderCrab + VaderCrabStruct::Hitbox_Y2
+        and #$00FF
+        sta $00
+        lda BigHero + BigHeroStruct::Hurtbox_Y1
+        and #$00FF
+        cmp $00
+        bcs @NoCollision        ; Se Hurtbox_Y1 >= Hitbox_Y2, não há colisão!
+
+        ; Teste 4: Se Hitbox_Y1 >= Hurtbox_Y2 (Inimigo totalmente abaixo) -> SAI
+        lda VaderCrab + VaderCrabStruct::Hitbox_Y1
+        and #$00FF
+        sta $00
+        lda BigHero + BigHeroStruct::Hurtbox_Y2
+        and #$00FF
+        cmp $00
+        bcc @NoCollision        ; Se Hurtbox_Y2 <= Hitbox_Y1, não há colisão!
+        beq @NoCollision
+
+        ; =====================================================================
+        ; COLISÃO DETECTADA: O RETÂNGULO INTERSECTOU EM AMBOS OS EIXOS!
+        ; =====================================================================
+        sep #$20                ; Restaura o Acumulador para 8 bits (.a8)
+        .a8
+
+        ; Desativa a vulnerabilidade do herói imediatamente para não tomar dano infinito
+        stz BigHero + BigHeroStruct::Hurtbox_Active
+        ;lda #STATE_HURT
+        ;sta BigHero + BigHeroStruct::HurtState
+
+        ; Executa os gatilhos físicos e visuais do combate
+        jsr TriggerHeroDamageEffect
+        rts
+
+@NoCollision:
+        sep #$20                ; Restaura o Acumulador para 8 bits antes de sair (.a8)
+        .a8
         rts
 .endproc
+
+; --- Sub-rotina de suporte para aplicar os efeitos do golpe tomado ---
+
+;-------------------------------------------------------------------------------
+;   TriggerHeroDamageEffect
+;   Aplica Knockback no BigHero baseado no Facing do Inimigo e trata as bordas
+;-------------------------------------------------------------------------------
+.proc TriggerHeroDamageEffect
+        HURT_TIME = 30 ;quantodade de frames que fica de cara amassada
+        lda #HURT_TIME
+        sta BigHero + BigHeroStruct::HurtTimer
+
+
+        ; Constante local para a força do empurrão em pixels
+        KNOCKBACK_FORCE = 16
+
+        ; 1. Verifica a direção do VaderCrab para determinar o vetor do Knockback
+        lda VaderCrab + VaderCrabStruct::Facing
+        bne @PushToRight        ; Se Facing != 0 (Olhando para a Direita), empurra para a DIREITA
+
+@PushToLeft:
+        ; Inimigo olhando para a esquerda -> Empurra o herói para a ESQUERDA
+        lda BigHero + BigHeroStruct::X_Pos
+        sec
+        sbc #KNOCKBACK_FORCE
+        sta BigHero + BigHeroStruct::X_Pos
+
+        ; --- Proteção de Borda Esquerda (Underflow) ---
+        ; Se o resultado for menor que SCREEN_LEFT (ou se capotou a matemática devido ao SBC)
+        lda BigHero + BigHeroStruct::X_Pos
+        cmp #SCREEN_LEFT
+        bcs @DoneKnockback      ; Se X >= SCREEN_LEFT, está seguro. Pula.
+        
+        lda #SCREEN_LEFT        ; Se estourou a borda esquerda, trava o herói nela
+        sta BigHero + BigHeroStruct::X_Pos
+        bra @DoneKnockback
+
+@PushToRight:
+        ; Inimigo olhando para a direita -> Empurra o herói para a DIREITA
+        lda BigHero + BigHeroStruct::X_Pos
+        clc
+        adc #KNOCKBACK_FORCE
+        sta BigHero + BigHeroStruct::X_Pos
+
+        ; --- Proteção de Borda Direita (Overflow) ---
+        ; O BigHero ocupa 32px de largura. Limite máximo é SCREEN_RIGHT - 32
+        lda BigHero + BigHeroStruct::X_Pos
+        cmp #(SCREEN_RIGHT - 32)
+        bcc @DoneKnockback      ; Se X < limite direito, está seguro. Pula.
+        
+        lda #(SCREEN_RIGHT - 32) ; Se estourou a borda direita, trava o herói nela
+        sta BigHero + BigHeroStruct::X_Pos
+
+@DoneKnockback:
+        ; 2. [Opcional] Inicializa um Timer de Invencibilidade na struct do Herói
+        ; lda #60
+        ; sta BigHero + BigHeroStruct::Invincibility_Timer ; (Adicionar campo na struct se desejar)
+
+        rts
+.endproc
+
+
 
 ;-------------------------------------------------------------------------------
 ;   ROTINA CENTRALIZADA DE COLISÃO COM AS BORDAS (Aritmética de Underflow)

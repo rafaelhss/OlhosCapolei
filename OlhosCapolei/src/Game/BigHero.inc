@@ -8,6 +8,7 @@ BIGHERO_INC = 1
 ;----- Import ------------------------------------------------------------------
 .import     MoveBigHero
 .import     DrawBigHero
+.import     DrawBigHeroHurtboxDebug
 ;-------------------------------------------------------------------------------
 
 .endif
