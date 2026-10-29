@@ -15,7 +15,7 @@
 .segment "SPRITEDATA"
 SpriteData: .incbin "SpritesBig4.vra"
 VaderData: .incbin "VaderSprites3.vra"
-ColorData:  .incbin "Sprites11.pal"
+ColorData:  .incbin "SpritesBig4c.pal"
 BackgroundData: .incbin "Background.pal"
 
 ;-------------------------------------------------------------------------------

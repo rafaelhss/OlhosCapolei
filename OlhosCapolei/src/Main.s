@@ -54,13 +54,14 @@ _ResetAlign:
         ldx #$1fff              ; Aponta a Pilha para o topo da página espelho
         txs
 
+        jsr ClearProjectilePool 
+        
         jsr ClearRegisters
         jsr ClearVRAM
         jsr ClearCGRAM
         jsr ClearOAMRAM
         jsr InitDemo            ; Executa inicialização customizada e ativa PPU
 
-        jsr ClearProjectilePool 
         jsr SpawnWeaponOnGround ;
 
         ; --- ENTRADA EM AMBIENTE DE EXECUÇÃO REAL ---
@@ -87,7 +88,7 @@ _ResetAlign:
         jsr MoveBigHero
         jsr MovePennyCrab
         jsr MoveVaderCrab
-        ;jsr UpdateProjectiles
+        jsr UpdateProjectiles
 
 
         ; 3. FILTRO DE COLISÕES & REGRAS DE GAMEPLAY
@@ -96,23 +97,24 @@ _ResetAlign:
         
 
 
-        ; 4. SISTEMA DE RENDERIZAÇÃO FINAL (Injeção na OAMMIRROR)
-        ldx #$00                ; X inicia em 0 como offset do primeiro Sprite na OAM
+        ; =====================================================================
+        ; 4. SISTEMA DE RENDERIZAÇÃO FINAL (Injeção síncrona na OAMMIRROR)
+        ; =====================================================================
+        ldx #$0000                ; X inicia em 0 como offset do primeiro Sprite na OAM
        
-        ;jsr DrawVaderHitboxDebug   ; Usa o mesmo registrador X para colar o quadrado por cima!
-        ;jsr DrawBigHeroHurtboxDebug
-        
-        jsr DrawProjectiles
-        jsr DrawDroppedWeapon;
+        jsr DrawProjectiles       ; Desenha e devolve X atualizado em 16-bit
+        jsr DrawDroppedWeapon     ; Desenha e devolve X atualizado
        
-        jsr DrawBigHero 
-        ;jsr DrawPennyCrab
+        ; Como DrawBigHero consome X mas não atualizava o fluxo para a Main,
+        ; vamos amarrar o tráfego salvando o progresso do registrador gráfico.
+        jsr DrawBigHero          
         
+        ; Se o VaderCrab sumia ou piscava no Everdrive, era porque o X chegava 
+        ; corrompido aqui. Agora o pipeline gráfico corre limpo de ponta a ponta.
         jsr DrawVaderCrab
 
-        
-        
         jmp GameLoop
+
 .endproc
 ;-------------------------------------------------------------------------------
 

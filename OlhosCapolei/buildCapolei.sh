@@ -3,17 +3,13 @@
 # Exit imediatamente se qualquer comando falhar
 set -e
 
-# =============================================================================
-# CONFIGURAÇÃO DE CAMINHO MANUAL (FALLBACK)
-# Se o script não conseguir fisgar o cartão sozinho, comente a linha abaixo
-# e coloque o caminho exato onde o Ubuntu montou o cartão de 2GB.
-# Exemplo: MANUAL_SD_PATH="/media/rafa/MEU_SD"
-# =============================================================================
-MANUAL_SD_PATH=""
+# 1. Gera o sufixo temporal baseado apenas em Hora e Minuto (HHMM)
+TIMESTAMP=$(date +"%H%M")
 
 echo "========================================"
-# 1. Pipeline de Compilação Padrão
-echo "⚙️  Configurando e compilando OlhosCapolei..."
+echo "⚙️  Configurando e compilando OlhosCapolei [Build: $TIMESTAMP]..."
+echo "========================================"
+
 cmake -S . -B build
 cmake --build build -t clean
 cmake --build build
@@ -21,39 +17,33 @@ cmake --build build
 echo "========================================"
 echo "✅ Compilação concluída com sucesso!"
 
-# 2. Pipeline de Detecção Avançada
-SD_PATH=""
-
-if [ -n "$MANUAL_SD_PATH" ]; then
-    SD_PATH="$MANUAL_SD_PATH"
-else
-    # Busca na árvore de montagem ativa por qualquer volume externo em /media ou /run/media
-    SD_PATH=$(findmnt -ln -o TARGET | grep -E '^/(media|run/media|mnt)/' | head -n 1 || true)
-fi
+# 2. Pipeline de Detecção Avançada de SD Card
+SD_PATH=$(findmnt -ln -o TARGET | grep -E '^/(media|run/media|mnt)/' | head -n 1 || true)
 
 if [ -n "$SD_PATH" ]; then
     echo "💾 Dispositivo detectado em: $SD_PATH"
     
-    # 3. Solução da Gambiarra: Forçar Remontagem em modo Read-Write (RW)
-    echo "🔓 Remontando o cartão como Read-Write (Pode pedir sua senha do sudo)..."
+    echo "🔓 Remontando o cartão como Read-Write..."
     sudo mount -o remount,rw "$SD_PATH"
     
-    # 4. Transferência Segura da ROM para a Raiz do SD Card
+    # 3. Limpeza Preventiva: Deleta todas as ROMs antigas do projeto na raiz do SD
+    echo "🧹 Limpando builds antigos do OlhosCapolei do cartão..."
+    rm -f "$SD_PATH"/OlhosCapolei*
+    
     if [ -f "build/OlhosCapolei.smc" ]; then
-        echo "🚀 Enviando OlhosCapolei.smc para a raiz do cartão..."
-        cp build/OlhosCapolei.smc "$SD_PATH/"
+        # 4. Define o nome final usando o Timestamp HHMM gerado
+        TARGET_NAME="OlhosCapolei_$TIMESTAMP.smc"
+        echo "🚀 Enviando $TARGET_NAME para a raiz do cartão..."
+        cp build/OlhosCapolei.smc "$SD_PATH/$TARGET_NAME"
         
-        # O comando sync força o Linux a descarregar o buffer de escrita imediatamente no hardware
+        # O comando sync força o Linux a descarregar o buffer de escrita no hardware físico
         sync
-        echo "🎉 ROM atualizada com sucesso no seu Everdrive!"
+        echo "🎉 ROM $TARGET_NAME atualizada com sucesso no seu Everdrive!"
     else
         echo "❌ Erro: Arquivo build/OlhosCapolei.smc não foi encontrado."
     fi
 else
-    echo "⚠️  Não foi possível detectar o ponto de montagem automaticamente."
-    echo "💡 DICA: Clique no ícone '2.0 GB Volume' no seu gerenciador de arquivos,"
-    echo "   depois abra o terminal e digite 'df -h' ou 'findmnt' para ver onde ele foi montado."
-    echo "   Aí basta abrir este script e preencher a variável MANUAL_SD_PATH no topo!"
+    echo "⚠️  Não foi possível detectar o SD Card automaticamente."
 fi
 
 echo "========================================"

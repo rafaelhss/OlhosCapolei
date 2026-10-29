@@ -83,9 +83,9 @@
         ; --- 3. CARGA DE CORES PARA CGRAM ---
         ; Altera a Cor 00 diretamente via hardware para manter a TELA AZUL
         stz CGADD                       ; Seleciona o índice $00 da CGRAM (Cor de Fundo)
-        lda #$00                        ; Byte Baixo do Azul Puro do SNES ($00)
+        lda #$90                        ; Byte Baixo do Azul Puro do SNES ($00)
         sta CGDATA                      ; Envia para a PPU
-        lda #$7C                        ; Byte Alto do Azul Puro do SNES ($7C)
+        lda #$A2                        ; Byte Alto do Azul Puro do SNES ($7C)
         sta CGDATA                      ; Envia para a PPU (Escrita dupla finalizada)
        
         ; Agora carrega normalmente a paleta dos sprites no índice $80
@@ -184,6 +184,9 @@
         
         lda #0                          ; Começa com o frame de pé parado (guarda)
         sta BigHero + BigHeroStruct::Anim_Frame
+
+        lda #0                          ; Começa com o sem arma
+        sta BigHero + BigHeroStruct::Current_Weapon_ID
 
  ;       lda #STATE_HURT_NOT
  ;       sta BigHero + BigHeroStruct::HurtState

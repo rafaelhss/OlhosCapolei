@@ -1,7 +1,12 @@
 ; -----------------------------------------------------------------------------
 ;   File: Weapon.s
 ;   Description: Centralized Weapon, Projectile, and Ground Pickup Subsystem
+;   Project: OlhosCapolei
 ; -----------------------------------------------------------------------------
+
+.p816
+.a8
+.i16
 
 ;----- Exports -----------------------------------------------------------------
 .export     GetWeaponData
@@ -48,62 +53,61 @@ Weapon_Data_Table:
     .byte $A0, $36, $01, $09, $A4, $01  ; ID 6: Bazuca
 
 ;-------------------------------------------------------------------------------
-;   GetWeaponData
-;-------------------------------------------------------------------------------
-.segment "CODE"
-
-;-------------------------------------------------------------------------------
-;   ClearProjectilePool (Garante RAM limpa no Boot contra sprites fantasmas)
+;   ClearProjectilePool (Garante RAM limpa e força Y=$E0 contra Sprites Fantasmas)
 ;-------------------------------------------------------------------------------
 .proc ClearProjectilePool
+        phb                             ; Salva Data Bank atual
+        lda #.bankbyte(Projectile_Pool)
+        pha
+        plb                             ; Configura Data Bank para o banco da WRAM
+
         ldx #$0000
 @LoopLimpeza:
-        stz Projectile_Pool + ProjectileEntity::Active, x
-        stz Projectile_Pool + ProjectileEntity::X_Pos, x
-        stz Projectile_Pool + ProjectileEntity::Y_Pos, x
-        stz Projectile_Pool + ProjectileEntity::Tile_ID, x
-        stz Projectile_Pool + ProjectileEntity::Attrs, x
-        stz Projectile_Pool + ProjectileEntity::Speed_X, x
-        stz Projectile_Pool + ProjectileEntity::Speed_Y, x
+        lda #0
+        sta Projectile_Pool + ProjectileEntity::Active, x
+        sta Projectile_Pool + ProjectileEntity::X_Pos, x
+        sta Projectile_Pool + ProjectileEntity::Tile_ID, x
+        sta Projectile_Pool + ProjectileEntity::Attrs, x
+        sta Projectile_Pool + ProjectileEntity::Speed_X, x
+        sta Projectile_Pool + ProjectileEntity::Speed_Y, x
+        
+        ; Força Y=$E0 (Totalmente fora da tela visível do SNES)
+        lda #$E0                
+        sta Projectile_Pool + ProjectileEntity::Y_Pos, x
         
         txa
         clc
-        adc #.sizeof(ProjectileEntity)
+        adc #.sizeof(ProjectileEntity)  
         tax
-        cpx #(.sizeof(ProjectileEntity) * MAX_PROJECTILES)
+        cpx #(.sizeof(ProjectileEntity) * 4) 
         bcc @LoopLimpeza
+
+        plb                             ; Restaura Data Bank
         rts
 .endproc
 
 ;-------------------------------------------------------------------------------
 ;   GetWeaponData (Versão Blindada contra Lixo de 16-bit nos Índices)
-;   Entrada: Acumulador A = ID da Arma (8-bit)
-;   Saída:   Registrador Y = Offset exato limpo em 16-bit
 ;-------------------------------------------------------------------------------
 .proc GetWeaponData
-        sta z:$00               ; Salva o ID de 8 bits temporariamente na DP
+        sta z:DP_TEMP_00        ; Salva o ID temporariamente na Direct Page
         
-        ; Transiciona temporariamente para modo 16 bits no acumulador para limpar o lixo
         rep #$20
         .a16
+        lda z:DP_TEMP_00
         and #$00FF              ; Garante que a parte alta do acumulador seja ZERO absoluto
         
-        ; Resgata o ID limpo e multiplica por 6: (ID * 4) + (ID * 2)
-        lda z:$00
-        and #$00FF              ; Isola estritamente o byte baixo
         asl a                   ; A = ID * 2
-        sta z:$02               
+        sta z:DP_TEMP_02               
         asl a                   ; A = ID * 4
         clc
-        adc z:$02               ; A = ID * 6 (Matemática pura em 16 bits sem estouro)
-        tay                     ; Y recebe o offset perfeito de 16 bits com a parte alta zerada!
+        adc z:DP_TEMP_02        ; A = ID * 6 (Matemática estável em 16-bit)
+        tay                     ; Y recebe o offset perfeito de 16 bits
         
-        ; Restaura o Acumulador para o modo padrão de 8 bits do jogo
         sep #$20
         .a8
         rts
 .endproc
-
 
 ;-------------------------------------------------------------------------------
 ;   ProcessWeaponAttack (Refatorado com Constantes de Escopo)
@@ -129,76 +133,76 @@ Weapon_Data_Table:
         lda BigHero + BigHeroStruct::Current_Weapon_ID
         cmp #WEAPON_ID_ROCK
         beq @ArremessarItem
-        
-        ; (Se futuramente adicionar o Ovo, basta colocar a constante WEAPON_ID_EGG aqui)
 
 @AtirarLinhaReta:
         lda Weapon_Data_Table + 4, y    ; Pega o Tile_ID da tabela (Pistola/Bazuca)
-        sta z:$00                       
+        sta z:DP_TEMP_00                       
         lda Weapon_Data_Table + 1, y    ; Pega os Atributos
-        sta z:$01                       
+        sta z:DP_TEMP_01                       
         jsr SpawnProjectile             
         rts
 
 @ArremessarItem:
         lda Weapon_Data_Table + 4, y    ; Pega o Tile_ID dinâmico da tabela ($26)
-        jsr SpawnThrowable              ; Chama o nosso motor parabólico genérico
+        jsr SpawnThrowable              ; Chama o nosso motor arremessável genérico
 
-        ; ◄ A SOLUÇÃO: Remove a pedra da mão do herói para que ela seja consumida!
-        sep #$20                        ; Garante acumulador em 8-bit
+        ; Remove a pedra da mão do herói para que ela seja consumida visualmente
+        sep #$20
         .a8
-        lda #WEAPON_ID_UNARMED          ; Carrega 0 (Desarmado)
-        sta BigHero + BigHeroStruct::Current_Weapon_ID ; Atualiza o inventário do herói
+        lda #WEAPON_ID_UNARMED          
+        sta BigHero + BigHeroStruct::Current_Weapon_ID 
 
 @Exit:
         rts
 .endproc
 
-;------------------------------------------------------------------------
 ;-------------------------------------------------------------------------------
-;   SpawnThrowable (Versão Engenharia de Elite - Segura e Sem Uso de Pilha)
-;   Entrada: Acumulador A = Tile_ID do arremessável
-;-------------------------------------------------------------------------------
-;-------------------------------------------------------------------------------
-;   SpawnThrowable (Totalmente Higienizado via Constantes Centrais)
+;   SpawnThrowable (Versão Engenharia de Elite - Sem Uso de Pilha Perigosa)
 ;-------------------------------------------------------------------------------
 .proc SpawnThrowable
-        sta z:DP_WEAPON_TILE_TMP        ; ◄ Salva no canal seguro de armas
+        phb                             ; Preserva Data Bank
+        lda #.bankbyte(Projectile_Pool)
+        pha
+        plb                             ; Alinha Banco para WRAM
 
-        ldx #$0000              
+        sta z:DP_WEAPON_TILE_TMP        ; Salva o Tile_ID com segurança na Direct Page
+
+        ldx #$0000                      ; Reseta X para varrer o Pool
 @LoopPool:
         lda Projectile_Pool + ProjectileEntity::Active, x
         beq @EncontrouSlot      
         
         txa
         clc
-        adc #.sizeof(ProjectileEntity)
+        adc #7                          ; Caminha 7 bytes rígidos
         tax                     
         
-        cpx #(.sizeof(ProjectileEntity) * MAX_PROJECTILES)
+        cpx #28                         ; Limite de segurança física
         bcc @LoopPool
-        rts                     
+        plb                             ; Restaura banco antes de dar rts
+        rts                             ; Pool cheio, ignora o disparo de forma segura
 
 @EncontrouSlot:
         lda #1
         sta Projectile_Pool + ProjectileEntity::Active, x
         
-        lda z:DP_WEAPON_TILE_TMP        ; ◄ Resgata do canal de armas
+        lda z:DP_WEAPON_TILE_TMP        
         sta Projectile_Pool + ProjectileEntity::Tile_ID, x
         
-        stx z:DP_WEAPON_OAM_BACKUP      ; ◄ Guarda o X OAM no slot de armas
+        stx z:DP_WEAPON_OAM_BACKUP      ; Protege o offset do Projétil contra chamadas à ROM
 
         lda BigHero + BigHeroStruct::Current_Weapon_ID
         jsr GetWeaponData       
         
-        lda Weapon_Data_Table + 1, y 
-        sta z:DP_TEMP_02                ; Usa rascunho temporário legítimo
+        lda Weapon_Data_Table + 1, y    ; Lê os atributos da ROM (Paleta/Prioridade)
+        sta z:DP_TEMP_02               
 
-        ldx z:DP_WEAPON_OAM_BACKUP      ; ◄ Recupera do slot seguro de armas
+        ldx z:DP_WEAPON_OAM_BACKUP      ; Resgata o X do projétil intacto
         
         lda z:DP_TEMP_02               
         sta Projectile_Pool + ProjectileEntity::Attrs, x 
         
+        ; Configura posição de spawn inicial (altura do peito do BigHero)
         lda BigHero + BigHeroStruct::X_Pos
         sta Projectile_Pool + ProjectileEntity::X_Pos, x
         
@@ -207,85 +211,40 @@ Weapon_Data_Table:
         sbc #16                 
         sta Projectile_Pool + ProjectileEntity::Y_Pos, x
         
+        ; ---- APLICAÇÃO DO FACING DO HERÓI NA FÍSICA ----
         lda BigHero + BigHeroStruct::Facing
         bne @ArremessoEsquerda
 
 @ArremessoDireita:
-        lda #$03                
+        lda #$03                        ; Velocidade horizontal estável para a direita
         sta Projectile_Pool + ProjectileEntity::Speed_X, x
         bra @ConfigurarGravidade
 
 @ArremessoEsquerda:
-        lda #<-3                
+        lda #<-3                        ; Velocidade horizontal para a esquerda (assinado)
         sta Projectile_Pool + ProjectileEntity::Speed_X, x
         
         lda Projectile_Pool + ProjectileEntity::Attrs, x
-        eor #$40
+        eor #$40                        ; Injeta Flip Horizontal via hardware da PPU
         sta Projectile_Pool + ProjectileEntity::Attrs, x
 
 @ConfigurarGravidade:
-        lda #<-4                
+        lda #<-4                        ; Impulso parabólico inicial para CIMA ($FC)
         sta Projectile_Pool + ProjectileEntity::Speed_Y, x
-        rts                     
-.endproc
-
-;-------------------------------------------------------------------------------
-;   DrawProjectiles (Totalmente Higienizado via Constantes Centrais)
-;-------------------------------------------------------------------------------
-;   DrawProjectiles (Versão Ultra-Blindada contra Desalinhamento da OAM)
-;   Entrada: Registrador X = Offset atual vindo da Main.s
-;   Saída:   Registrador X = Offset OAM perfeitamente atualizado para os outros draws
-;-------------------------------------------------------------------------------
-
-;-------------------------------------------------------------------------------
-.proc DrawProjectiles
-        stx z:DP_WEAPON_OAM_BACKUP      ; ◄ Preserva o X que veio da Main no canal de armas
-        stz z:DP_WEAPON_POOL_PTR        ; ◄ Reseta o ponteiro do loop no canal de armas
-
-@DrawLoop:
-        ldy z:DP_WEAPON_POOL_PTR        ; ◄ Indexa a leitura da RAM usando o canal de armas
-        lda Projectile_Pool + ProjectileEntity::Active, y
-        beq @NextSlot           
-
-        ldx z:DP_WEAPON_OAM_BACKUP      ; ◄ Resgata o X do canal de armas
-
-        lda Projectile_Pool + ProjectileEntity::X_Pos, y
-        sta OAMMIRROR, x
-        inx
-
-        lda Projectile_Pool + ProjectileEntity::Y_Pos, y
-        sta OAMMIRROR, x
-        inx
-
-        lda Projectile_Pool + ProjectileEntity::Tile_ID, y
-        sta OAMMIRROR, x
-        inx
-
-        lda Projectile_Pool + ProjectileEntity::Attrs, y 
-        sta OAMMIRROR, x
-        inx                     
-
-        stx z:DP_WEAPON_OAM_BACKUP      ; ◄ Atualiza o progresso no canal de armas
-
-@NextSlot:
-        lda z:DP_WEAPON_POOL_PTR
-        clc
-        adc #.sizeof(ProjectileEntity)
-        sta z:DP_WEAPON_POOL_PTR        ; ◄ Avança no canal de armas
         
-        cmp #(.sizeof(ProjectileEntity) * MAX_PROJECTILES)
-        bcc @DrawLoop
-
-        ldx z:DP_WEAPON_OAM_BACKUP      ; ◄ Entrega o X perfeitamente estável para a Main.s
+        plb                             ; Restaura Data Bank
         rts                     
 .endproc
 
-
-
 ;-------------------------------------------------------------------------------
-;   SpawnProjectile
+;   SpawnProjectile (Mantido para tiros retilíneos da Pistola/Bazuca)
 ;-------------------------------------------------------------------------------
 .proc SpawnProjectile
+        phb
+        lda #.bankbyte(Projectile_Pool)
+        pha
+        plb
+
         ldx #$0000              
 
 @LoopPool:
@@ -294,235 +253,240 @@ Weapon_Data_Table:
         
         txa
         clc
-        adc #.sizeof(ProjectileEntity)
+        adc #7
         tax                     
         
-        cpx #(.sizeof(ProjectileEntity) * MAX_PROJECTILES)
+        cpx #28
         bcc @LoopPool
+        plb
         rts                     
 
 @EncontrouSlot:
         lda #1
         sta Projectile_Pool + ProjectileEntity::Active, x
         
-        lda z:$00
+        lda z:DP_TEMP_00
         sta Projectile_Pool + ProjectileEntity::Tile_ID, x
-        lda z:$01
+        lda z:DP_TEMP_01
         sta Projectile_Pool + ProjectileEntity::Attrs, x
         
         lda BigHero + BigHeroStruct::X_Pos
         clc
-        adc #16                 
-        sta Projectile_Pool + ProjectileEntity::X_Pos, x
         
-        lda BigHero + BigHeroStruct::Y_Pos
-        clc
-        adc #24                 
-        sta Projectile_Pool + ProjectileEntity::Y_Pos, x
-        
-        lda #$04                
-        sta Projectile_Pool + ProjectileEntity::Speed_X, x
-
-        rts
+adc #16
+sta Projectile_Pool + ProjectileEntity::X_Pos, x
+lda BigHero + BigHeroStruct::Y_Pos
+clc
+adc #24
+sta Projectile_Pool + ProjectileEntity::Y_Pos, x
+lda #$04
+sta Projectile_Pool + ProjectileEntity::Speed_X, x
+plb
+rts
 .endproc
-
 ;-------------------------------------------------------------------------------
-;   UpdateProjectiles (Versão Atualizada com Suporte a Gravidade/Parábola)
+;   UpdateProjectiles (Física Híbrida Corrigida com Limpador Automático de Chão)
 ;-------------------------------------------------------------------------------
 .proc UpdateProjectiles
-        ldx #$0000              
-
+phb
+lda #.bankbyte(Projectile_Pool)
+pha
+plb
+ldx #$0000
 @UpdateLoop:
-        lda Projectile_Pool + ProjectileEntity::Active, x
-        beq @NextSlot           
-
-        ; 1. Atualiza Posição Horizontal (X)
-        lda Projectile_Pool + ProjectileEntity::X_Pos, x
-        clc
-        adc Projectile_Pool + ProjectileEntity::Speed_X, x
-        sta Projectile_Pool + ProjectileEntity::X_Pos, x
-
-        ; Checa se saiu das bordas laterais da tela
-        cmp #SCREEN_RIGHT - 8
-        bcs @DesativarProjetil  
-        cmp #SCREEN_LEFT + 4
-        bcc @DesativarProjetil
-
-        ; 2. Atualiza Posição Vertical (Y) com Gravidade
-        ; (Nota: Se for um projétil retilíneo comum, o Speed_Y estará zerado e não afetará)
-        lda Projectile_Pool + ProjectileEntity::Y_Pos, x
-        clc
-        adc Projectile_Pool + ProjectileEntity::Speed_Y, x
-        sta Projectile_Pool + ProjectileEntity::Y_Pos, x
-
-        ; Aplica aceleração constante da gravidade se o item estiver no ar
-        lda Projectile_Pool + ProjectileEntity::Speed_Y, x
-        clc
-        adc #$01                ; Soma +1 puxando o Y para baixo a cada frame
-        sta Projectile_Pool + ProjectileEntity::Speed_Y, x
-
-   ;    ;3. Checa colisão com o chão horizontal fixo da tela (Ajustado para o limite inferior real)
-        lda Projectile_Pool + ProjectileEntity::Y_Pos, x
-        cmp #$DF                ; Alterado de $A0 para $DF (SCREEN_BOTTOM)
-        bcs @DesativarProjetil  ; Se passar da base da tela, ela some
-
-        bra @NextSlot
-
+lda Projectile_Pool + ProjectileEntity::Active, x
+beq @NextSlot
+; 1. Movimentação Horizontal (X)
+lda Projectile_Pool + ProjectileEntity::X_Pos, x
+clc
+adc Projectile_Pool + ProjectileEntity::Speed_X, x
+sta Projectile_Pool + ProjectileEntity::X_Pos, x
+cmp #SCREEN_RIGHT - 8
+bcs @DesativarProjetil
+cmp #SCREEN_LEFT + 4
+bcc @DesativarProjetil
+; 2. Movimentação Vertical (Y) + Gravidade Parabólica
+lda Projectile_Pool + ProjectileEntity::Y_Pos, x
+clc
+adc Projectile_Pool + ProjectileEntity::Speed_Y, x
+sta Projectile_Pool + ProjectileEntity::Y_Pos, x
+lda Projectile_Pool + ProjectileEntity::Speed_Y, x
+clc
+adc #$01                ; Gravidade +1 por frame puxando para baixo
+sta Projectile_Pool + ProjectileEntity::Speed_Y, x
+; 3. Validação do Chão Técnico Real (Trava em SCREEN_BOTTOM)
+lda Projectile_Pool + ProjectileEntity::Y_Pos, x
+cmp #$DF                ; Limite real da tela ($DF)
+bcc @NextSlot           ; Se Y < $DF, a pedra continua voando
 @DesativarProjetil:
-        lda #0
-        sta Projectile_Pool + ProjectileEntity::Active, x 
+lda #0
+sta Projectile_Pool + ProjectileEntity::Active, x
+lda #$E0
+sta Projectile_Pool + ProjectileEntity::Y_Pos, x ; Expulsa da tela ao morrer
+@NextSlot:
+txa
+clc
+adc #.sizeof(ProjectileEntity)
+tax
+cpx #(.sizeof(ProjectileEntity) * 4)
+bcc @UpdateLoop
+plb
+rts
+.endproc
+;-------------------------------------------------------------------------------
+;   DrawProjectiles (Versão Síncrona - Com Correção de Indexação ca65)
+;-------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
+;   DrawProjectiles (Versão Pura - Sem nenhuma correção ou blindagem)
+;-------------------------------------------------------------------------------
+.proc DrawProjectiles
+        ldy #$0000                      ; Inicializa o índice do Pool de Projéteis em 0
+
+@DrawLoop:
+        ; Verifica se o projétil está ativo de forma direta
+        lda Projectile_Pool + ProjectileEntity::Active, y
+        beq @NextSlot                   ; Se for 0, ignora e pula para o próximo
+
+        ; Descarrega os 4 bytes sequenciais direto na OAMMIRROR usando o X atual
+        lda Projectile_Pool + ProjectileEntity::X_Pos, y
+        sta OAMMIRROR, x
+        inx
+        
+        lda Projectile_Pool + ProjectileEntity::Y_Pos, y
+        sta OAMMIRROR, x
+        inx
+        
+        lda Projectile_Pool + ProjectileEntity::Tile_ID, y
+        sta OAMMIRROR, x
+        inx
+        
+        lda Projectile_Pool + ProjectileEntity::Attrs, y
+        sta OAMMIRROR, x
+        inx                             ; Avança o ponteiro OAM para o próximo slot
 
 @NextSlot:
-        txa
+        ; Avança para o próximo projétil no buffer de RAM (avanço rígido de 7 bytes)
+        tya
         clc
-        adc #.sizeof(ProjectileEntity)
-        tax
-        cpx #(.sizeof(ProjectileEntity) * MAX_PROJECTILES)
-        bcc @UpdateLoop
+        adc #7
+        tay
+        
+        cpy #28                         ; Verifica se varreu os 4 slots (4 * 7 = 28)
+        bcc @DrawLoop
 
-        rts
+        rts                             ; Retorna deixando o X onde parou para a Main.s
 .endproc
 
 ; =============================================================================
 ; SUBSISTEMA DE COLETA DE ARMAS NO CHÃO (PICKUP SYSTEM)
 ; =============================================================================
-
-;-------------------------------------------------------------------------------
-;   SpawnWeaponOnGround
-;-------------------------------------------------------------------------------
 .proc SpawnWeaponOnGround
-        jsr rand                
-        and #$07                
-        beq SpawnWeaponOnGround 
-        cmp #7
-        beq SpawnWeaponOnGround 
-        sta Ground_Weapon + DroppedWeaponEntity::Weapon_ID
-
-        jsr rand
-        sta Ground_Weapon + DroppedWeaponEntity::X_Pos
-        lda Ground_Weapon + DroppedWeaponEntity::X_Pos
-        cmp #32
-        bcc @FixXLow
-        cmp #220
-        bcs @FixXHigh
-        bra @SpawnY
-
+jsr rand
+and #$07
+beq SpawnWeaponOnGround
+cmp #7
+beq SpawnWeaponOnGround
+sta Ground_Weapon + DroppedWeaponEntity::Weapon_ID
+jsr rand
+sta Ground_Weapon + DroppedWeaponEntity::X_Pos
+lda Ground_Weapon + DroppedWeaponEntity::X_Pos
+cmp #32
+bcc @FixXLow
+cmp #220
+bcs @FixXHigh
+bra @SpawnY
 @FixXLow:
-        lda #40
-        sta Ground_Weapon + DroppedWeaponEntity::X_Pos
-        bra @SpawnY
+lda #40
+sta Ground_Weapon + DroppedWeaponEntity::X_Pos
+bra @SpawnY
 @FixXHigh:
-        lda #200
-        sta Ground_Weapon + DroppedWeaponEntity::X_Pos
-
+lda #200
+sta Ground_Weapon + DroppedWeaponEntity::X_Pos
 @SpawnY:
-        jsr rand
-        and #$7F                
-        clc
-        adc #100                
-        sta Ground_Weapon + DroppedWeaponEntity::Y_Pos
-        lda Ground_Weapon + DroppedWeaponEntity::Y_Pos
-        cmp #180
-        bcc @DoneSpawn
-        lda #150                
-        sta Ground_Weapon + DroppedWeaponEntity::Y_Pos
-
+jsr rand
+and #$7F
+clc
+adc #100
+sta Ground_Weapon + DroppedWeaponEntity::Y_Pos
+lda Ground_Weapon + DroppedWeaponEntity::Y_Pos
+cmp #180
+bcc @DoneSpawn
+lda #150
+sta Ground_Weapon + DroppedWeaponEntity::Y_Pos
 @DoneSpawn:
-        lda #1
-        sta Ground_Weapon + DroppedWeaponEntity::Active
-        rts
+lda #1
+sta Ground_Weapon + DroppedWeaponEntity::Active
+rts
 .endproc
-
-;-------------------------------------------------------------------------------
-;   CheckWeaponPickup
-;-------------------------------------------------------------------------------
 .proc CheckWeaponPickup
-        lda Ground_Weapon + DroppedWeaponEntity::Active
-        bne @CalcularEixoX
-        rts
-
+lda Ground_Weapon + DroppedWeaponEntity::Active
+bne @CalcularEixoX
+rts
 @CalcularEixoX:
-        lda BigHero + BigHeroStruct::X_Pos
-        clc
-        adc #8                  
-        sec
-        sbc Ground_Weapon + DroppedWeaponEntity::X_Pos
-        bcs @TesteX
-        eor #$FF                
-        clc
-        adc #1
+lda BigHero + BigHeroStruct::X_Pos
+clc
+adc #8
+sec
+sbc Ground_Weapon + DroppedWeaponEntity::X_Pos
+bcs @TesteX
+eor #$FF
+clc
+adc #1
 @TesteX:
-        cmp #PICKUP_DISTANCE
-        bcs @NoPickup           
-
+cmp #PICKUP_DISTANCE
+bcs @NoPickup
 @CalcularEixoY:
-        lda BigHero + BigHeroStruct::Y_Pos
-        clc
-        adc #56                 
-        sec
-        sbc Ground_Weapon + DroppedWeaponEntity::Y_Pos
-        bcs @TesteY
-        eor #$FF
-        clc
-        adc #1
+lda BigHero + BigHeroStruct::Y_Pos
+clc
+adc #56
+sec
+sbc Ground_Weapon + DroppedWeaponEntity::Y_Pos
+bcs @TesteY
+eor #$FF
+clc
+adc #1
 @TesteY:
-        cmp #PICKUP_DISTANCE
-        bcs @NoPickup
-
-        lda Ground_Weapon + DroppedWeaponEntity::Weapon_ID
-        sta BigHero + BigHeroStruct::Current_Weapon_ID 
-        stz Ground_Weapon + DroppedWeaponEntity::Active 
+cmp #PICKUP_DISTANCE
+bcs @NoPickup
+lda Ground_Weapon + DroppedWeaponEntity::Weapon_ID
+sta BigHero + BigHeroStruct::Current_Weapon_ID
+stz Ground_Weapon + DroppedWeaponEntity::Active
 @NoPickup:
-        rts
+rts
 .endproc
-
-
-;-------------------------------------------------------------------------------
-;   DrawDroppedWeapon (Versão Corrigida)
-;-------------------------------------------------------------------------------
 .proc DrawDroppedWeapon
-        lda Ground_Weapon + DroppedWeaponEntity::Active
-        bne @Desenhar
-        rts
-
+lda Ground_Weapon + DroppedWeaponEntity::Active
+bne @Desenhar
+rts
 @Desenhar:
-        ; Salva o X da OAM para não perder a referência durante a chamada
-        stx z:$06
-
-        lda Ground_Weapon + DroppedWeaponEntity::Weapon_ID
-        jsr GetWeaponData       ; Retorna o offset exato e limpo no registrador Y
-
-        ; Recupera o offset OAM original guardado em $06
-        ldx z:$06
-
-        ; Escreve a Posição X da RAM na OAMMIRROR
-        lda Ground_Weapon + DroppedWeaponEntity::X_Pos
-        sta OAMMIRROR, x
-        inx
-
-        ; Escreve a Posição Y da RAM na OAMMIRROR
-        lda Ground_Weapon + DroppedWeaponEntity::Y_Pos
-        sta OAMMIRROR, x
-        inx
-
-        ; Escreve o Tile_ID estático correto lido da ROM0 (Weapon_Data_Table)
-        lda Weapon_Data_Table, y
-        sta OAMMIRROR, x
-        inx
-
-        ; Escreve os Atributos padrão (Paleta 0, Prioridade 2 para ficar atrás dos personagens)
-        lda #%00100000          
-        sta OAMMIRROR, x
-        inx                     ; Devolve X avançado com sucesso para o GameLoop
-
-        rts
+stx z:DP_TEMP_00
+lda Ground_Weapon + DroppedWeaponEntity::Weapon_ID
+jsr GetWeaponData
+ldx z:DP_TEMP_00
+lda Ground_Weapon + DroppedWeaponEntity::X_Pos
+sta OAMMIRROR, x
+inx
+lda Ground_Weapon + DroppedWeaponEntity::Y_Pos
+sta OAMMIRROR, x
+inx
+lda Weapon_Data_Table, y
+sta OAMMIRROR, x
+inx
+lda #%00100000
+sta OAMMIRROR, x
+inx
+rts
 .endproc
-
 
 ; =============================================================================
-; SEÇÃO DE ALOCAÇÃO NA MEMÓRIA RAM (BSS)
+; SEÇÃO DE ALOCAÇÃO NA MEMÓRIA RAM (BSS) - PROTEÇÃO CONTRA SOBREPOSIÇÃO
 ; =============================================================================
 .segment "BSS"
 .export Ground_Weapon
-Projectile_Pool:  .res ( .sizeof(ProjectileEntity) * MAX_PROJECTILES )
+.export Projectile_Pool
+
+; Aloca exatamente os bytes necessários baseados na Struct (4 slots * 7 bytes = 28)
+Projectile_Pool:  .tag ProjectileEntity, 4
+; Força um alinhamento rígido para que nenhuma variável morda a outra
+.align 2
 Ground_Weapon:    .tag DroppedWeaponEntity
