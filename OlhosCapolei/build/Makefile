@@ -193,6 +193,14 @@ src/Game/VaderCrab.s.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/OlhosCapolei.dir/build.make CMakeFiles/OlhosCapolei.dir/src/Game/VaderCrab.s.o
 .PHONY : src/Game/VaderCrab.s.o
 
+src/Game/Weapon.o: src/Game/Weapon.s.o
+.PHONY : src/Game/Weapon.o
+
+# target to build an object file
+src/Game/Weapon.s.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/OlhosCapolei.dir/build.make CMakeFiles/OlhosCapolei.dir/src/Game/Weapon.s.o
+.PHONY : src/Game/Weapon.s.o
+
 src/Main.o: src/Main.s.o
 .PHONY : src/Main.o
 
@@ -258,6 +266,7 @@ help:
 	@echo "... src/Game/Input.o"
 	@echo "... src/Game/PennyCrab.o"
 	@echo "... src/Game/VaderCrab.o"
+	@echo "... src/Game/Weapon.o"
 	@echo "... src/Main.o"
 	@echo "... src/PPU/PPU.o"
 	@echo "... src/common/InitSNES.o"

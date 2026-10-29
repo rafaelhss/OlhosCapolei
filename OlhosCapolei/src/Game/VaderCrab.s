@@ -30,13 +30,13 @@ WALK_SPEED = $01
 WALK_ANIM_SPEED = $08 ; quanto menor mais rapido
 
 PREPARING_ANIM_SPEED = 30
-PREPARING_DURATION_FRAMES = 60
+PREPARING_DURATION_FRAMES = 90
 PREPARING_MAX_FRAMES = 3
 
 ;attackin speed e frames. Se for iguais o ataque tem 1 frame. Se forem um metade do outro, dois frames. e assim vai
 ATTACKING_ANIM_SPEED = 15   
-ATTACKING_DURATION_FRAMES = 45
-ATTACK_MAX_FRAMES = 3  ; Altere este número para quantos frames a arte tiver! (3, 4, 5...)
+ATTACKING_DURATION_FRAMES = 30
+ATTACK_MAX_FRAMES = 2  ; Altere este número para quantos frames a arte tiver! (3, 4, 5...)
 
 REST_TIME = 30 ;  
 
@@ -549,26 +549,33 @@ VaderCrab_Layout_FramePreparing3:
 ; =============================================================================
 VaderCrab_Layout_FrameAttacking0:
     ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $00, $01     ; pedaco 1-1
-    .byte 16,  0,  $02, $01     ; pedaco 1-2
-    .byte 32,  0,  $04, $01     ; pedaco 1-3
-    .byte 48,  0,  $06, $01     ; pedaco 1-4
+    .byte 0,  0,  $08, $01     ; pedaco 1-1
+    .byte 16,  0,  $0A, $01     ; pedaco 1-2
+    .byte 32,  0,  $0C, $01     ; pedaco 1-3
+    .byte 48,  0,  $0E, $01     ; pedaco 1-4
     
     .byte 0,  16,  $20, $01     ; pedaco 2-1
-    .byte 16,  16,  $22, $01     ; pedaco 2-2
-    .byte 32,  16,  $24, $01     ; pedaco 2-3
-    .byte 48,  16,  $26, $01     ; pedaco 2-4
+    .byte 16,  16,  $2A, $01     ; pedaco 2-2
+    .byte 32,  16,  $2C, $01     ; pedaco 2-3
+    .byte 48,  16,  $2E, $01     ; pedaco 2-4
 
+
+   
     ; === CORPO (4x2 de 16) ===
-    .byte 0,  32,  $A5, $00     ; pedaco 1-1
-    .byte 16,  32,  $A9, $00     ; pedaco 1-2
-    .byte 32,  32,  $A7, $00     ; pedaco 1-3
-    .byte 48,  32,  $AB, $00     ; pedaco 1-4
-    
-    .byte 0,  48,  $C5, $00     ; pedaco 2-1
-    .byte 16,  48,  $C9, $00     ; pedaco 2-2
-    .byte 32,  48,  $C7, $00     ; pedaco 2-3
-    .byte 48,  48,  $CB, $00     ; pedaco 2-4
+    .byte 0,  32,  $48, $01     ; pedaco 1-1
+    .byte 16,  32,  $42, $01     ; pedaco 1-2
+    .byte 32,  32,  $4C, $01     ; pedaco 1-3
+    .byte 48,  32,  $8C, $01     ; pedaco 1-4
+
+
+
+    .byte 0,  48,  $68, $01     ; pedaco 2-1
+    .byte 16,  48,  $6A, $01     ; pedaco 2-2
+    .byte 32,  48,  $88, $01     ; pedaco 2-3
+    .byte 48,  48,  $8A, $01     ; pedaco 2-4
+
+
+
 
 ; =============================================================================
 ; FRAME 1: INIMIGO Attacking 
@@ -576,26 +583,28 @@ VaderCrab_Layout_FrameAttacking0:
 VaderCrab_Layout_FrameAttacking1:
     ; === CABECA (4x2 de 16) ===
     ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $00, $01     ; pedaco 1-1
-    .byte 16,  0,  $02, $01     ; pedaco 1-2
-    .byte 32,  0,  $04, $01     ; pedaco 1-3
-    .byte 48,  0,  $06, $01     ; pedaco 1-4
+    .byte 0,  0,  $08, $01     ; pedaco 1-1
+    .byte 16,  0,  $0A, $01     ; pedaco 1-2
+    .byte 32,  0,  $0C, $01     ; pedaco 1-3
+    .byte 48,  0,  $0E, $01     ; pedaco 1-4
     
     .byte 0,  16,  $20, $01     ; pedaco 2-1
-    .byte 16,  16,  $22, $01     ; pedaco 2-2
-    .byte 32,  16,  $24, $01     ; pedaco 2-3
-    .byte 48,  16,  $26, $01     ; pedaco 2-4
+    .byte 16,  16,  $2A, $01     ; pedaco 2-2
+    .byte 32,  16,  $2C, $01     ; pedaco 2-3
+    .byte 48,  16,  $2E, $01     ; pedaco 2-4
+
+
 
     ; === CORPO (4x2 de 16) ===
-    .byte 0,  32,  $AB, $00     ; pedaco 1-1
-    .byte 16,  32,  $A9, $00     ; pedaco 1-2
-    .byte 32,  32,  $26, $00     ; pedaco 1-3
-    .byte 48,  32,  $A5, $00     ; pedaco 1-4
+    .byte 0,  32,  $48, $01     ; pedaco 1-1
+    .byte 16,  32,  $42, $01     ; pedaco 1-2
+    .byte 32,  32,  $4C, $01     ; pedaco 1-3
+    .byte 48,  32,  $8C, $01     ; pedaco 1-4
     
-    .byte 0,  48,  $CB, $00     ; pedaco 2-1
-    .byte 16,  48,  $24, $00     ; pedaco 2-2
-    .byte 32,  48,  $22, $00     ; pedaco 2-3
-    .byte 48,  48,  $C5, $00     ; pedaco 2-4
+    .byte 0,  48,  $68, $01     ; pedaco 2-1
+    .byte 16,  48,  $6A, $01     ; pedaco 2-2
+    .byte 32,  48,  $88, $01     ; pedaco 2-3
+    .byte 48,  48,  $8A, $01     ; pedaco 2-4
 
 
 ;-------------------------------------------------------------------------------
@@ -732,11 +741,12 @@ WriteTile:
         inx
         iny                     ; Avança para o proximo bloco (X do proximo sprite)
 
+        
         ; Checa se ja desenhou todos os 16 blocos do inimigo (16 * 4 = 64 bytes lidos)
         cpy #64                 
-        beq @Finish
+        beq Finish
         brl DrawLoop ; tinha que ser somengte bne, mas da erro de range, entao tem que fazer essa gambiarra
-@Finish:
+Finish:
         rts
 .endproc
 

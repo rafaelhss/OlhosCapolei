@@ -1,5 +1,6 @@
 ; -----------------------------------------------------------------------------
-;   File: BigHero.s (Versão Corrigida - 4 Fileiras Reais para 64px de Altura)
+;   File: BigHero.s (Konami/Capcom Architecture Style - Refactored)
+;   Description: High-performance dynamic table-driven renderer for BigHero
 ; -----------------------------------------------------------------------------
 
 .p816
@@ -9,300 +10,276 @@
 .include "GameConstants.inc"
 .include "MemoryMapWRAM.inc"
 .include "Registers.inc"
+.include "Weapon.inc"
 
 .import BigHero
+.import GetWeaponData       
+.import Weapon_Data_Table  
+
+
 .export DrawBigHero, MoveBigHero
 .export DrawBigHeroHurtboxDebug
 
+; --- Alocação de Ponteiro na Direct Page ---
+;DP_HERO_LAYOUT_PTR = $04 ;comentada pq foi para o gameconstants
+
 .segment "CODE"
 
-HURT_TILE = $06
-HURT_NOT_TILE = $04
-DP_HURT_TILE = $01
+; =============================================================================
+; BANCO DE MATRIZES DE ANIMAÇÃO (Layouts de 8 blocos x 4 bytes = 32 bytes)
+; Formato: Offset_X, Offset_Y, Tile_ID, Atributos
+; =============================================================================
 
+; FRAME 0: Guarda Neutra (Pés Parados)
+BigHero_Layout_Idle:
+    .byte 0, 0,$20,$30, 16, 0,$22,$30
+    .byte 0,16,$40,$30, 16,16,$42,$30
+    .byte 0,32,$60,$30, 16,32,$62,$30
+    .byte 0,48,$80,$30, 16,48,$82,$30
+
+; FRAME 1: Caminhada (Passo Aberto)
+BigHero_Layout_Walk:
+    .byte 0, 0,$20,$30, 16, 0,$22,$30
+    .byte 0,16,$40,$30, 16,16,$42,$30
+    .byte 0,32,$60,$30, 16,32,$62,$30
+    .byte 0,48,$A0,$30, 16,48,$A2,$30
+
+; FRAME 2: Estado de Dano / Hitstun (Cabeça muda para Tiles $A0/$A2)
+BigHero_Layout_Hurt:
+    .byte 0, 0,$A0,$30, 16, 0,$A2,$30
+    .byte 0,16,$40,$30, 16,16,$42,$30
+    .byte 0,32,$60,$30, 16,32,$62,$30
+    .byte 0,48,$80,$30, 16,48,$82,$30
+
+; --- Tabela de Offsets Locais da Mão do BigHero por Frame ---
+; Define onde a arma deve ser colada em relação ao X_Pos e Y_Pos globais
+Hero_Hand_Offsets:
+    .byte 24, 20    ; Frame 0 (Idle): Mão avança 24px em X, desce 20px em Y
+    .byte 24, 18    ; Frame 1 (Walk): Mão avança 24px em X, desce 18px em Y
+    .byte 12, 24    ; Frame 2 (Hurt): Mão recua para 12px em X devido ao hitstun
+
+;-------------------------------------------------------------------------------
+;   DrawBigHero
+;-------------------------------------------------------------------------------
 .proc DrawBigHero
-        lda #%00110000          ; Prioridade 3, Paleta 0
-        sta $00                 ; Salva os atributos na Direct Page para reuso
-
+        ; --- PIPELINE DE SELEÇÃO DE ANIMAÇÃO HIERÁRQUICA ---
         lda BigHero + BigHeroStruct::HurtTimer
-        beq DrawNormalFace
-        
-        ; =====================================================================
-        ; FILEIRA 1: CABEÇA E OMBROS (Y + 0)
-        ; =====================================================================
-        ; Bloco Superior Esquerdo
+        beq @CheckMovement
 
-        lda #HURT_TILE
-        bra ContinueDraw
-        
-DrawNormalFace:
-        lda #HURT_NOT_TILE
+        ldy #.loword(BigHero_Layout_Hurt)
+        sty z:DP_HERO_LAYOUT_PTR
+        bra @StartDraw
 
-ContinueDraw:
-        sta z:DP_HURT_TILE
-
-        lda BigHero + BigHeroStruct::X_Pos
-        sta OAMMIRROR, x
-        inx
-        lda BigHero + BigHeroStruct::Y_Pos
-        sta OAMMIRROR, x
-        inx
-        lda z:DP_HURT_TILE               ; Tile VRAM da Cabeça Esquerda
-        sta OAMMIRROR, x
-        inx
-        lda $00
-        sta OAMMIRROR, x
-        inx
-
-        ; Bloco Superior Direito
-        lda BigHero + BigHeroStruct::X_Pos
-        clc
-        adc #16
-        sta OAMMIRROR, x
-        inx
-        lda BigHero + BigHeroStruct::Y_Pos
-        sta OAMMIRROR, x
-        inx
-        lda #$22                ; Tile VRAM da Cabeça Direita
-        sta OAMMIRROR, x
-        inx
-        lda $00
-        sta OAMMIRROR, x
-        inx
-
-        ; =====================================================================
-        ; FILEIRA 2: PEITO E ABDÔMEN (Y + 16)
-        ; =====================================================================
-        ; Bloco do Meio-Superior Esquerdo
-        lda BigHero + BigHeroStruct::X_Pos
-        sta OAMMIRROR, x
-        inx
-        lda BigHero + BigHeroStruct::Y_Pos
-        clc
-        adc #16                 ; Desce 16 pixels na tela
-        sta OAMMIRROR, x
-        inx
-        lda #$40                ; Avança uma linha de blocos na VRAM (+$20)
-        sta OAMMIRROR, x
-        inx
-        lda $00
-        sta OAMMIRROR, x
-        inx
-
-        ; Bloco do Meio-Superior Direito
-        lda BigHero + BigHeroStruct::X_Pos
-        clc
-        adc #16
-        sta OAMMIRROR, x
-        inx
-        lda BigHero + BigHeroStruct::Y_Pos
-        clc
-        adc #16
-        sta OAMMIRROR, x
-        inx
-        lda #$42
-        sta OAMMIRROR, x
-        inx
-        lda $00
-        sta OAMMIRROR, x
-        inx
-
-        ; =====================================================================
-        ; FILEIRA 3: CINTURA E COXAS (Y + 32)
-        ; =====================================================================
-        ; Bloco do Meio-Inferior Esquerdo
-        lda BigHero + BigHeroStruct::X_Pos
-        sta OAMMIRROR, x
-        inx
-        lda BigHero + BigHeroStruct::Y_Pos
-        clc
-        adc #32                 ; Desce 32 pixels na tela
-        sta OAMMIRROR, x
-        inx
-        lda #$60                ; Avança mais uma linha na VRAM (+$20)
-        sta OAMMIRROR, x
-        inx
-        lda $00
-        sta OAMMIRROR, x
-        inx
-
-        ; Bloco do Meio-Inferior Direito
-        lda BigHero + BigHeroStruct::X_Pos
-        clc
-        adc #16
-        sta OAMMIRROR, x
-        inx
-        lda BigHero + BigHeroStruct::Y_Pos
-        clc
-        adc #32
-        sta OAMMIRROR, x
-        inx
-        lda #$62
-        sta OAMMIRROR, x
-        inx
-        lda $00
-        sta OAMMIRROR, x
-        inx
-
-        ; =====================================================================
-        ; FILEIRA 4: OS PÉS ANIMADOS (Y + 48) -> Aqui fechamos os 64 pixels!
-        ; =====================================================================
+@CheckMovement:
         lda BigHero + BigHeroStruct::Anim_Frame
-        cmp #1
-        beq PassoAberto
+        bne @WalkFrame
+        
+        ldy #.loword(BigHero_Layout_Idle)
+        sty z:DP_HERO_LAYOUT_PTR
+        bra @StartDraw
 
-        ; --- Frame 0: Pés Parados (Guarda Neutra)
-        lda BigHero + BigHeroStruct::X_Pos
-        sta OAMMIRROR, x
-        inx
-        lda BigHero + BigHeroStruct::Y_Pos
-        clc
-        adc #48                 ; Cravado na base de 48 pixels abaixo do topo
-        sta OAMMIRROR, x
-        inx
-        lda #$80                ; Linha de tiles dos pés parados na VRAM
-        sta OAMMIRROR, x
-        inx
-        lda $00
-        sta OAMMIRROR, x
-        inx
+@WalkFrame:
+        ldy #.loword(BigHero_Layout_Walk)
+        sty z:DP_HERO_LAYOUT_PTR
 
-        lda BigHero + BigHeroStruct::X_Pos
-        clc
-        adc #16
-        sta OAMMIRROR, x
-        inx
-        lda BigHero + BigHeroStruct::Y_Pos
-        clc
-        adc #48
-        sta OAMMIRROR, x
-        inx
-        lda #$82
-        sta OAMMIRROR, x
-        inx
-        lda $00
-        sta OAMMIRROR, x
-        inx
-        bra DoneDrawing
+@StartDraw:
+        ; =====================================================================
+        ; CRÍTICO: ACOPLAMENTO FRONTAL DA ARMA EQUIPADA (ORDEM HIERÁRQUICA OAM)
+        ; =====================================================================
+        ; Desenhamos a arma PRIMEIRO. Assim ela pega um índice mais baixo na OAM
+        ; e a PPU do SNES a renderiza na frente do peito do herói automaticamente!
+        lda BigHero + BigHeroStruct::Current_Weapon_ID
+        beq @DrawHeroBody               ; Se ID for 0 (Desarmado), vai direto para o corpo
 
-PassoAberto:
-        ; --- Frame 1: Pés em Movimento (Caminhando)
-        lda BigHero + BigHeroStruct::X_Pos
-        sta OAMMIRROR, x
-        inx
-        lda BigHero + BigHeroStruct::Y_Pos
-        clc
-        adc #48
-        sta OAMMIRROR, x
-        inx
-        lda #$A0                ; Linha de tiles dos pés andando na VRAM
-        sta OAMMIRROR, x
-        inx
-        lda $00
-        sta OAMMIRROR, x
-        inx
+        sta z:DP_TEMP_00                       ; Guarda temporariamente o ID em $00 da DP
 
+        ; Descobre qual índice de frame da mão ler (0=Idle, 1=Walk, 2=Hurt)
+        lda BigHero + BigHeroStruct::HurtTimer
+        beq @CheckHandWalk
+        lda #2                          ; Força frame da mão em Hurt
+        bra @CalcularOffsetsMao
+
+@CheckHandWalk:
+        lda BigHero + BigHeroStruct::Anim_Frame ; Pega 0 ou 1 da caminhada
+
+@CalcularOffsetsMao:
+        asl a                           ; Multiplica por 2 (cada entrada tem 2 bytes: X e Y)
+        tay                             ; Transfere para Y para indexar a Hero_Hand_Offsets
+
+        lda Hero_Hand_Offsets, y     
+        sta z:DP_TEMP_02                       ; Guarda Offset X local da mão em $02 da DP
+        lda Hero_Hand_Offsets + 1, y 
+        sta z:DP_TEMP_03                       ; Guarda Offset Y local da mão em $03 da DP
+
+        ; Preserva o offset OAM (X) antes de chamar a rotina de dados státicos da ROM
+        stx z:DP_HERO_OAM_BACKUP
+
+        lda z:DP_TEMP_00                       ; Recarrega o ID da arma
+        jsr GetWeaponData               ; Retorna em Y o offset exato da arma na ROM
+        
+        ldx z:DP_HERO_OAM_BACKUP                       ; Recupera o offset OAM limpo
+
+        ; Injeta o sprite da arma acoplada na OAMMIRROR
         lda BigHero + BigHeroStruct::X_Pos
         clc
-        adc #16
+        adc z:DP_TEMP_02                       ; Posição X Global da arma
         sta OAMMIRROR, x
         inx
+
         lda BigHero + BigHeroStruct::Y_Pos
         clc
-        adc #48
-        sta OAMMIRROR, x
-        inx
-        lda #$A2
-        sta OAMMIRROR, x
-        inx
-        lda $00
+        adc z:DP_TEMP_03                       ; Posição Y Global da arma
         sta OAMMIRROR, x
         inx
 
+        lda Weapon_Data_Table, y        ; Carrega o Tile_ID correto da arma vindo da ROM
+        sta OAMMIRROR, x
+        inx
 
+        lda Weapon_Data_Table + 1, y    ; Carrega os Atributos de paleta/prioridade da arma
+        sta OAMMIRROR, x
+        inx                             ; Avança OAM de forma cumulativa
 
+@DrawHeroBody:
+        ldy #$0000              ; Reseta Y para indexar os 8 blocos do corpo do herói
 
-DoneDrawing:
+DrawLoop:
+        ; --- EIXO X (Com suporte a espelhamento) ---
+        lda BigHero + BigHeroStruct::Facing
+        beq @NoXFlip
+
+        ; Se estiver olhando para a esquerda, nós invertemos o deslocamento X do bloco
+        ; O herói tem 32px de largura, e cada bloco tem 16px. 
+        ; Para espelhar a matriz de 2 colunas: Novo_Offset = 16 - Offset_Original
+        lda #16
+        sec
+        sbc (DP_HERO_LAYOUT_PTR),y
+        bra @ApplyXPos
+
+@NoXFlip:
+        lda (DP_HERO_LAYOUT_PTR),y
+
+@ApplyXPos:
+        clc
+        adc BigHero + BigHeroStruct::X_Pos
+        sta OAMMIRROR, x
+        inx
+        iny                     
+
+        ; --- EIXO Y ---
+        clc
+        lda BigHero + BigHeroStruct::Y_Pos
+        adc (DP_HERO_LAYOUT_PTR),y
+        sta OAMMIRROR, x
+        inx
+        iny                     
+
+        ; --- TILE ID ---
+        lda (DP_HERO_LAYOUT_PTR),y
+        sta OAMMIRROR, x
+        inx
+        iny                     
+
+        ; --- ATRIBUTOS (Injeta o Flip se Facing = 1) ---
+        lda (DP_HERO_LAYOUT_PTR),y
+        sta z:$00                       ; Guarda o atributo original da ROM em $00
+        
+        lda BigHero + BigHeroStruct::Facing
+        beq @WriteAttributes            ; Se for 0 (Direita), pula o flip
+        
+        lda z:$00
+        eor #$40                        ; Aplica Flip Horizontal via Hardware (Bit 6)
+        sta z:$00
+
+@WriteAttributes:
+        lda z:$00
+        sta OAMMIRROR, x
+        inx
+        iny                     
+
+        cpy #32
+        bne DrawLoop
+
         rts
 .endproc
 
 ;-------------------------------------------------------------------------------
-;   MoveBigHero (Atualiza Posição e Trata Animação)
+;   MoveBigHero
 ;-------------------------------------------------------------------------------
 .proc MoveBigHero
-
-
-     ; Inicializacao de velocidade sempre em 8-bit
         lda #SPRITE_SPEED
         sta HOR_SPEED
         sta VER_SPEED
 
-        ; === LOGICA DE TURBO (A_BUTTON) ===
-        rep #$20                    ; Abre 16-bit apenas para ler o controle
+        rep #$20                
         .a16
         lda JOYHELD1
         and #A_BUTTON
         beq CheckRight
         
-        sep #$20                    ; Fecha para 8-bit para aplicar a velocidade
+        sep #$20                
         .a8
         lda #(SPRITE_SPEED + SPRITE_SPEED)
         sta HOR_SPEED
         sta VER_SPEED
 
 CheckRight:
-        rep #$20                    ; Abre 16-bit apenas para testar o botao
+        rep #$20                
         .a16
         lda JOYHELD1
         and #RIGHT_BUTTON
         beq CheckLeft
 
-        sep #$20                    ; === FECHA PARA 8-BIT ANTES DE MEXER NA RAM ===
+        sep #$20                
         .a8
 MoveRight:
+        stz BigHero + BigHeroStruct::Facing     ; ◄ $00 = Olhando para a DIREITA
         lda BigHero + BigHeroStruct::X_Pos
         clc
-        adc HOR_SPEED               ; Matematica limpa de 1 byte
-        sta BigHero + BigHeroStruct::X_Pos ; Grava apenas 1 byte, protegendo o Y_Pos!
+        adc HOR_SPEED               
+        sta BigHero + BigHeroStruct::X_Pos 
 
 CheckLeft:
-        rep #$20                    ; Abre 16-bit apenas para testar o botao
+        rep #$20                
         .a16
         lda JOYHELD1
         and #LEFT_BUTTON
         beq CheckUp
 
-        sep #$20                    ; === FECHA PARA 8-BIT ===
+        sep #$20                
         .a8
 MoveLeft:
+        lda #$01
+        sta BigHero + BigHeroStruct::Facing     ; ◄ $01 = Olhando para a ESQUERDA
         lda BigHero + BigHeroStruct::X_Pos
         sec
-        sbc HOR_SPEED               ; CORRIGIDO: Era VER_SPEED no arquivo original!
+        sbc HOR_SPEED               
         sta BigHero + BigHeroStruct::X_Pos
 
+
 CheckUp:
-        rep #$20                    ; Abre 16-bit apenas para testar o botao
+        rep #$20                
         .a16
         lda JOYHELD1
         and #UP_BUTTON
         beq CheckDown
 
-        sep #$20                    ; === FECHA PARA 8-BIT ===
+        sep #$20                
         .a8
 MoveUp:
         lda BigHero + BigHeroStruct::Y_Pos
         sec
-        sbc VER_SPEED               ; CORRIGIDO: Movimento vertical usa VER_SPEED
+        sbc VER_SPEED               
         sta BigHero + BigHeroStruct::Y_Pos
 
 CheckDown:
-        rep #$20                    ; Abre 16-bit apenas para testar o botao
+        rep #$20                
         .a16
         lda JOYHELD1
         and #DOWN_BUTTON
-        beq MoveDone
+        beq CheckPickupButton
 
-        sep #$20                    ; === FECHA PARA 8-BIT ===
+        sep #$20                
         .a8
 MoveDown:
         lda BigHero + BigHeroStruct::Y_Pos
@@ -310,91 +287,89 @@ MoveDown:
         adc VER_SPEED                       
         sta BigHero + BigHeroStruct::Y_Pos
 
-MoveDone:
-        sep #$20                    ; Garante que a CPU saia da rotina em 8-bit
+CheckPickupButton:
+        ; === CENTRALIZAÇÃO DE INPUT: BOTÃO X PARA COLETAR ARMA ===
+        rep #$20                    
+        .a16
+        lda JOYTRIGGER1             ; Captura o clique atômico do frame
+        and #X_BUTTON                  ; Máscara de hardware do botão X
+        beq CheckAttackButton             
+
+        sep #$20                    
         .a8
-        
-        
-;=== atualiza a hurtbox ===========
+        jsr CheckWeaponPickup       ; Dispara o motor tridimensional de coleta do chão
 
-    lda BigHero + BigHeroStruct::X_Pos
-    sta BigHero + BigHeroStruct::Hurtbox_X1
-    clc
-    adc #32                             ; largura do heroi
-    sta BigHero + BigHeroStruct::Hurtbox_X2
+CheckAttackButton:                  
+        rep #$20
+        .a16
+        lda JOYTRIGGER1             
+        and #Y_BUTTON               ; ◄ ALTERADO: Agora intercepta o clique do botão Y!
+        beq @PickupDone             
 
-    lda BigHero + BigHeroStruct::Y_Pos
-    sta BigHero + BigHeroStruct::Hurtbox_Y1
-    clc
-    adc #64                             ; altura do heroi
-    sta BigHero + BigHeroStruct::Hurtbox_Y2
-
-    lda BigHero + BigHeroStruct::HurtTimer
-    beq Done
-    dec BigHero + BigHeroStruct::HurtTimer
-    lda #$01 
-    sta BigHero + BigHeroStruct::Hurtbox_Active
-        
+        sep #$20                    
+        .a8
+        jsr ProcessWeaponAttack     ; Invoca o motor de ataque (tiro ou arremesso de pedra)
 
 
-;==== fim hurtbox =================
+@PickupDone:
+        sep #$20                    
+        .a8
+
+MoveDone:
+        ; --- SISTEMA DE MANUTENÇÃO DE GEOMETRIA & INVENCIBILIDADE ---
+        lda BigHero + BigHeroStruct::X_Pos
+        sta BigHero + BigHeroStruct::Hurtbox_X1
+        clc
+        adc #32                             
+        sta BigHero + BigHeroStruct::Hurtbox_X2
+
+        lda BigHero + BigHeroStruct::Y_Pos
+        sta BigHero + BigHeroStruct::Hurtbox_Y1
+        clc
+        adc #64                             
+        sta BigHero + BigHeroStruct::Hurtbox_Y2
+
+        lda BigHero + BigHeroStruct::HurtTimer
+        beq @Vulnerable
         
-        
- Done:       
+        dec BigHero + BigHeroStruct::HurtTimer
+        stz BigHero + BigHeroStruct::Hurtbox_Active 
+        rts
+
+@Vulnerable:
+        lda #$01 
+        sta BigHero + BigHeroStruct::Hurtbox_Active
         rts
 .endproc
 
-
-
-;---------------- DEBUG ---------------
+;-------------------------------------------------------------------------------
+;   DrawBigHeroHurtboxDebug
+;-------------------------------------------------------------------------------
 .proc DrawBigHeroHurtboxDebug
+        lda BigHero + BigHeroStruct::Hurtbox_X1
+        sta a:OAMMIRROR, X
+        inx
+        lda BigHero + BigHeroStruct::Hurtbox_Y1
+        sta a:OAMMIRROR, X
+        inx
+        lda #$A0            
+        sta a:OAMMIRROR, X
+        inx
+        lda #$31      
+        sta a:OAMMIRROR, X
+        inx
 
-    ; --- SPRITE 1 (Lado Esquerdo da Hitbox) ---
-    ; Posição X
-    lda BigHero + BigHeroStruct::Hurtbox_X1
-    sta a:OAMMIRROR, X
-    inx
-    
-    ; Posição Y
-    lda BigHero + BigHeroStruct::Hurtbox_Y1
-    sta a:OAMMIRROR, X
-    inx
-    
-    ; Tile ID (Substitua por um ID de tile quadrado do seu jogo)
-    lda #$A0            ; Exemplo: tile $FE é um quadrado vermelho/branco
-    sta a:OAMMIRROR, X
-    inx
-    
-    ; Atributos (Paleta de debug para ficar visível)
-    lda #$31      ; Escolha uma paleta com cor forte (ex: Paleta 4, prioridade alta)
-    sta a:OAMMIRROR, X
-    inx
-
-    ; --- SPRITE 2 --
-    ; Posição X
-    lda BigHero + BigHeroStruct::Hurtbox_X2
-    ;sec
-    ;sbc #16
-    sta a:OAMMIRROR, X
-    inx
-    
-    ; Posição Y (Mesmo Y)
-    lda BigHero + BigHeroStruct::Hurtbox_Y2
-    sta a:OAMMIRROR, X
-    inx
-    
-    ; Mesmo Tile ID
-    lda #$A2            
-    sta a:OAMMIRROR, X
-    inx
-    
-    ; Mesmo Atributo
-    lda #$31      
-    sta OAMMIRROR, X    
-    inx
-
-    rts
+        lda BigHero + BigHeroStruct::Hurtbox_X2
+        sta a:OAMMIRROR, X
+        inx
+        lda BigHero + BigHeroStruct::Hurtbox_Y2
+        sta a:OAMMIRROR, X
+        inx
+        lda #$A2            
+        sta a:OAMMIRROR, X
+        inx
+        lda #$31      
+        sta OAMMIRROR, X    
+        inx
+        rts
 .endproc
-
-
-;------------FIM DEBUG -------------

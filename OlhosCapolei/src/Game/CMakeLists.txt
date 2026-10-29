@@ -10,4 +10,5 @@ target_sources( ${PROJECT_NAME}
     PRIVATE Hero.s
     PRIVATE BigHero.s
     PRIVATE PennyCrab.s
-    PRIVATE VaderCrab.s)
+    PRIVATE VaderCrab.s
+    PRIVATE Weapon.s)

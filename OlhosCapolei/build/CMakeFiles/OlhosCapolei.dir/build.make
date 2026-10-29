@@ -132,14 +132,19 @@ CMakeFiles/OlhosCapolei.dir/src/Game/VaderCrab.s.o: /home/rafa/Documents/Projeto
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building CA65816 object CMakeFiles/OlhosCapolei.dir/src/Game/VaderCrab.s.o"
 	/usr/bin/ca65 --cpu 65816                               $(CA65816_FLAGS)                               -s                               -o CMakeFiles/OlhosCapolei.dir/src/Game/VaderCrab.s.o                               /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/VaderCrab.s
 
+CMakeFiles/OlhosCapolei.dir/src/Game/Weapon.s.o: CMakeFiles/OlhosCapolei.dir/flags.make
+CMakeFiles/OlhosCapolei.dir/src/Game/Weapon.s.o: /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Weapon.s
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building CA65816 object CMakeFiles/OlhosCapolei.dir/src/Game/Weapon.s.o"
+	/usr/bin/ca65 --cpu 65816                               $(CA65816_FLAGS)                               -s                               -o CMakeFiles/OlhosCapolei.dir/src/Game/Weapon.s.o                               /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Weapon.s
+
 CMakeFiles/OlhosCapolei.dir/src/PPU/PPU.s.o: CMakeFiles/OlhosCapolei.dir/flags.make
 CMakeFiles/OlhosCapolei.dir/src/PPU/PPU.s.o: /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/PPU/PPU.s
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building CA65816 object CMakeFiles/OlhosCapolei.dir/src/PPU/PPU.s.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Building CA65816 object CMakeFiles/OlhosCapolei.dir/src/PPU/PPU.s.o"
 	/usr/bin/ca65 --cpu 65816                               $(CA65816_FLAGS)                               -s                               -o CMakeFiles/OlhosCapolei.dir/src/PPU/PPU.s.o                               /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/PPU/PPU.s
 
 CMakeFiles/OlhosCapolei.dir/src/Main.s.o: CMakeFiles/OlhosCapolei.dir/flags.make
 CMakeFiles/OlhosCapolei.dir/src/Main.s.o: /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Main.s
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Building CA65816 object CMakeFiles/OlhosCapolei.dir/src/Main.s.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_15) "Building CA65816 object CMakeFiles/OlhosCapolei.dir/src/Main.s.o"
 	/usr/bin/ca65 --cpu 65816                               $(CA65816_FLAGS)                               -s                               -o CMakeFiles/OlhosCapolei.dir/src/Main.s.o                               /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Main.s
 
 # Object files for target OlhosCapolei
@@ -156,6 +161,7 @@ OlhosCapolei_OBJECTS = \
 "CMakeFiles/OlhosCapolei.dir/src/Game/BigHero.s.o" \
 "CMakeFiles/OlhosCapolei.dir/src/Game/PennyCrab.s.o" \
 "CMakeFiles/OlhosCapolei.dir/src/Game/VaderCrab.s.o" \
+"CMakeFiles/OlhosCapolei.dir/src/Game/Weapon.s.o" \
 "CMakeFiles/OlhosCapolei.dir/src/PPU/PPU.s.o" \
 "CMakeFiles/OlhosCapolei.dir/src/Main.s.o"
 
@@ -174,11 +180,12 @@ OlhosCapolei.smc: CMakeFiles/OlhosCapolei.dir/src/Game/Hero.s.o
 OlhosCapolei.smc: CMakeFiles/OlhosCapolei.dir/src/Game/BigHero.s.o
 OlhosCapolei.smc: CMakeFiles/OlhosCapolei.dir/src/Game/PennyCrab.s.o
 OlhosCapolei.smc: CMakeFiles/OlhosCapolei.dir/src/Game/VaderCrab.s.o
+OlhosCapolei.smc: CMakeFiles/OlhosCapolei.dir/src/Game/Weapon.s.o
 OlhosCapolei.smc: CMakeFiles/OlhosCapolei.dir/src/PPU/PPU.s.o
 OlhosCapolei.smc: CMakeFiles/OlhosCapolei.dir/src/Main.s.o
 OlhosCapolei.smc: CMakeFiles/OlhosCapolei.dir/build.make
 OlhosCapolei.smc: CMakeFiles/OlhosCapolei.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_15) "Linking CA65816 executable OlhosCapolei.smc"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_16) "Linking CA65816 executable OlhosCapolei.smc"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/OlhosCapolei.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

@@ -27,6 +27,8 @@
 .include "BigHero.inc"
 .include "PennyCrab.inc"
 .include "VaderCrab.inc"
+.include "Weapon.inc"
+
 ;-------------------------------------------------------------------------------
 
 .segment "CODE"
@@ -58,6 +60,9 @@ _ResetAlign:
         jsr ClearOAMRAM
         jsr InitDemo            ; Executa inicialização customizada e ativa PPU
 
+        jsr ClearProjectilePool 
+        jsr SpawnWeaponOnGround ;
+
         ; --- ENTRADA EM AMBIENTE DE EXECUÇÃO REAL ---
         lda #$81                ; ◄ AUTO-POLLING LIGADO: Habilita NMI ($80) + Auto-read ($01)
         sta NMITIMEN
@@ -82,24 +87,30 @@ _ResetAlign:
         jsr MoveBigHero
         jsr MovePennyCrab
         jsr MoveVaderCrab
+        ;jsr UpdateProjectiles
+
 
         ; 3. FILTRO DE COLISÕES & REGRAS DE GAMEPLAY
         jsr ApplyEdgeCollisions
         jsr ApplyDamageToHero
+        
+
 
         ; 4. SISTEMA DE RENDERIZAÇÃO FINAL (Injeção na OAMMIRROR)
         ldx #$00                ; X inicia em 0 como offset do primeiro Sprite na OAM
        
-        jsr DrawVaderHitboxDebug   ; Usa o mesmo registrador X para colar o quadrado por cima!
-        jsr DrawBigHeroHurtboxDebug
+        ;jsr DrawVaderHitboxDebug   ; Usa o mesmo registrador X para colar o quadrado por cima!
+        ;jsr DrawBigHeroHurtboxDebug
+        
+        jsr DrawProjectiles
+        jsr DrawDroppedWeapon;
        
-        ;jsr DrawHero            ; Desenha o Heroi e devolve o X avançado
-        ;jsr DrawEnemy1          ; Desenha o Inimigo 1 a partir do ponto que o Heroi parou
-        ;jsr DrawEnemy2          ; Desenha o Inimigo 2 dinamicamente
         jsr DrawBigHero 
         ;jsr DrawPennyCrab
         
         jsr DrawVaderCrab
+
+        
         
         jmp GameLoop
 .endproc
