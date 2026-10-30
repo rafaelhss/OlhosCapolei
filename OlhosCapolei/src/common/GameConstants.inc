@@ -70,6 +70,8 @@ DP_WEAPON_POOL_PTR      = $0C   ; Ocupa $0C (Índice de controle de varredura da
 ; --- Categorias Unificadas de Armas ---
 WEAPON_TYPE_MELEE      = $00  ; Arma Branca (Cano, Faca, Pau)
 WEAPON_TYPE_PROJECTILE = $01  ; Arma de Disparo/Arremesso (Pedra, Pistola, Bazuca)
+WEAPON_TYPE_THROWABLE  = $02  ; Arma jogavel (pedra, martelo, bosta)
+
 
 ; --- Tabela Oficial de IDs de Armas ---
 WEAPON_ID_UNARMED      = 0
@@ -79,6 +81,7 @@ WEAPON_ID_WOOD         = 3
 WEAPON_ID_ROCK         = 4    ; Pedra de Arremesso oficial do jogo
 WEAPON_ID_PISTOL       = 5
 WEAPON_ID_BAZOOKA      = 6
+WEAPON_ID_HAMMER       = 7
 
 ; =============================================================================
 ; DEFINIÇÕES DE ESTRUTURAS DE DADOS (WRAM TABLES)

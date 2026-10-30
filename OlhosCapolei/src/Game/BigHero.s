@@ -24,7 +24,7 @@
 ;DP_HERO_LAYOUT_PTR = $04 ;comentada pq foi para o gameconstants
 
 
-PICKUP_DISTANCE  = 64        ; Tolerância em pixels para conseguir pegar a arma
+PICKUP_DISTANCE  = 48        ; Tolerância em pixels para conseguir pegar a arma
 
 .segment "CODE"
 
@@ -259,66 +259,71 @@ CheckPickupButton:
         ldy #.loword(WeaponB) 
         jsr CheckWeaponPickup       ; Dispara o motor tridimensional de coleta do chão
 
+
 CheckAttackButton:                  
         rep #$20
         .a16
         lda JOYTRIGGER1             
-        and #Y_BUTTON               ; ◄ ALTERADO: Agora intercepta o clique do botão Y!
+        and #Y_BUTTON               
         beq @PickupDone             
 
         sep #$20                    
         .a8
         
-    ; --- GERENCIAMENTO DE INVENTÁRIO (Responsabilidade do Herói) ---
+        ; 1. Localiza o slot físico ANTES de zerar o inventário do herói
+        jsr LoadActiveWeaponToY
+        
+        ; 2. Gerenciamento de Inventário Consumível
         lda BigHero + BigHeroStruct::Current_Weapon_ID
-        cmp #WEAPON_ID_ROCK             ; É a pedra consumível?
-        bne @DispararAtaqueComum        ; Se for outra arma infinita (faca/cano), vai direto
+        cmp #WEAPON_ID_ROCK             
+        beq @Arremessar        
+        cmp #WEAPON_ID_HAMMER             
+        beq @Arremessar        
+        bra @DispararAtaqueComum
 
-        ; O herói zera o seu inventário local imediatamente antes do arremesso
+@Arremessar:
         lda #WEAPON_ID_UNARMED
         sta BigHero + BigHeroStruct::Current_Weapon_ID
 
 @DispararAtaqueComum:
-        jsr ProcessWeaponAttack         ; Invoca a inteligência da arma para agir no mundo
+        ; Executa o arremesso passando o Y preservado com o endereço da arma ativa
+        jsr ProcessWeaponAttack         
 
 
 @PickupDone:
         sep #$20                    
         .a8
+        lda BigHero + BigHeroStruct::Current_Weapon_ID
+        cmp #WEAPON_ID_UNARMED
+        beq MoveDone
+        
+        ; Sincroniza o slot de arraste para a caminhada
+        jsr LoadActiveWeaponToY
+        ldy z:DP_HERO_OAM_BACKUP     ; Recupera o ponteiro salvo da DP para garantir
 
-        ; === SISTEMA DE ARRASTE DA ARMA EQUIPADA ===
-        ; === SISTEMA DE ARRASTE DA ARMA EQUIPADA COM FACING ===
-        lda WeaponA + WeaponStruct::Active
-        bne MoveDone                 ; Se != 0, a arma ainda está no chão. Pula.
-
-        ; Verifica a direção do Herói
+@ProcessarArraste:
+        ; --- CALCULO DO ARRASTE GEOMÉTRICO USANDO O PONTEIRO Y ---
         lda BigHero + BigHeroStruct::Facing
         bne @ArrasteEsquerda
 
 @ArrasteDireita:
-        ; Herói olhando para a DIREITA: Avança a arma para frente do peito
         lda BigHero + BigHeroStruct::X_Pos
         clc
-        adc #16                      ; Offset X para a direita
-        sta WeaponA + WeaponStruct::X_Pos
-
+        adc #16                      
+        sta a:WeaponStruct::X_Pos, y 
         bra @AjustarY
 
 @ArrasteEsquerda:
-        ; Herói olhando para a ESQUERDA: Recua a arma para o lado esquerdo
         lda BigHero + BigHeroStruct::X_Pos
-       clc
-        adc #01                      ; Offset X para a direita
-        
-        sta WeaponA + WeaponStruct::X_Pos
+        clc
+        adc #01                      
+        sta a:WeaponStruct::X_Pos, y 
 
 @AjustarY:
-        ; O eixo Y (altura) permanece idêntico em ambas as direções
         lda BigHero + BigHeroStruct::Y_Pos
         clc
         adc #24                      
-        sta WeaponA + WeaponStruct::Y_Pos
-
+        sta a:WeaponStruct::Y_Pos, y 
 MoveDone:
         ; --- SISTEMA DE MANUTENÇÃO DE GEOMETRIA & INVENCIBILIDADE ---
         lda BigHero + BigHeroStruct::X_Pos
@@ -351,51 +356,18 @@ MoveDone:
 ;   Calcula a proximidade entre BigHero e WeaponA. Se perto, equipa
 ;-------------------------------------------------------------------------------
 ;-------------------------------------------------------------------------------
-;   CheckWeaponPickup / DropWeapon
-;   Gerencia a coleta (se a arma estiver no chão) ou o descarte (se estiver na mão)
+;   CheckWeaponPickup / DropWeapon (Versão Corrigida Parametrizada)
 ;-------------------------------------------------------------------------------
-
 .proc CheckWeaponPickup
-        ; === VIA 1: SE O HERÓI JÁ ESTIVER COM A PEDRA NA MÃO, ELE LARGA ===
-        lda BigHero + BigHeroStruct::Current_Weapon_ID
-        cmp #WEAPON_ID_ROCK
-        bne @CheckPickupFromGround       ; Se não tem a pedra na mão, tenta pegar do chão
+        ; 1. Se a arma enviada por Y já estiver equipada por este herói, o botão X dropa ela
+        lda a:WeaponStruct::Active, y
+        cmp #WEAPON_STATE_EQUIPPED
+        beq @DropWeapon
 
-@DropWeapon:
-        ; 1. Limpa o inventário local do herói imediatamente
-        lda #WEAPON_ID_UNARMED
-        sta BigHero + BigHeroStruct::Current_Weapon_ID
-
-        ; 2. Devolve o estado físico da arma para o CHÃO (WEAPON_STATE_GROUND = 1)
-        lda #WEAPON_STATE_GROUND
-         sta a:WeaponStruct::Active, y
-
-
-        ; 3. Atualiza o Target_Y da arma para a linha atual do solo onde ela foi solta
-        ; Isso garante que ela se alinhe perfeitamente com os pés atuais do herói
-        lda BigHero + BigHeroStruct::Y_Pos
-        clc
-        adc #48                         
-        sta a:WeaponStruct::Target_Y, y
-        sta a:WeaponStruct::Y_Pos, y
-
-        ; 4. Ajusta a posição X para ela cair ligeiramente à frente ou no pé do herói
-        lda BigHero + BigHeroStruct::X_Pos
-        clc
-        adc #8                          ; Centraliza um pouco no pé
-        sta a:WeaponStruct::X_Pos, y
-
-        ; 5. Restaura o Tile ID padrão da pedra no chão
-        lda #$6D
-        sta a:WeaponStruct::Tile_ID, y
-        rts
-
-@CheckPickupFromGround:
-        ; === VIA 2: ARQUITETURA PADRÃO DE COLETA ===
-        ; Garante que a arma está no chão (WEAPON_STATE_GROUND = 1) antes de tentar coletar
+        ; 2. Se a arma está no chão, checa proximidade para ver se o jogador está em cima dela
         lda a:WeaponStruct::Active, y
         cmp #WEAPON_STATE_GROUND
-        bne @NoPickup
+        bne @Exit
 
         ; --- Cálculo de Distância Absoluta no Eixo X ---
         lda BigHero + BigHeroStruct::X_Pos
@@ -407,7 +379,7 @@ MoveDone:
         adc #1                  
 @DiffXPositive:
         cmp #PICKUP_DISTANCE
-        bcs @NoPickup           
+        bcs @Exit           
 
         ; --- Cálculo de Distância Absoluta no Eixo Y ---
         lda BigHero + BigHeroStruct::Y_Pos
@@ -419,24 +391,42 @@ MoveDone:
         adc #1
 @DiffYPositive:
         cmp #PICKUP_DISTANCE
-        bcs @NoPickup           
+        bcs @Exit           
 
-        ; --- Coleta Concluída com Sucesso ---
-        lda #WEAPON_ID_ROCK
+        ; --- SE PASSOU NOS TESTES: COLETA ESTA ARMA ESPECÍFICA ---
+        lda a:WeaponStruct::Weapon_ID, y
         sta BigHero + BigHeroStruct::Current_Weapon_ID
         
-        lda #$8D                        ; Sprite/Tile ID dela na mão (ou segurando)
-        sta a:WeaponStruct::Tile_ID, y
-
-        ; Seta o estado físico da arma para EQUIPPED (0)
         lda #WEAPON_STATE_EQUIPPED
         sta a:WeaponStruct::Active, y
+        rts
 
-@NoPickup:
+@DropWeapon:
+        ; Desequipa rigidamente a arma que estava na mão
+        lda #WEAPON_ID_UNARMED
+        sta BigHero + BigHeroStruct::Current_Weapon_ID
+
+        lda #WEAPON_STATE_GROUND
+        sta a:WeaponStruct::Active, y
+
+        ; Alinha o repouso no chão com os pés atuais do herói
+        lda BigHero + BigHeroStruct::Y_Pos
+        clc
+        adc #48                         
+        sta a:WeaponStruct::Target_Y, y
+        sta a:WeaponStruct::Y_Pos, y
+
+        lda BigHero + BigHeroStruct::X_Pos
+        clc
+        adc #8                          
+        sta a:WeaponStruct::X_Pos, y
+
+        ;lda #$6D                        ; Restaura tile original de chão
+        ;sta a:WeaponStruct::Tile_ID, y
+
+@Exit:
         rts
 .endproc
-
-
 
 ;-------------------------------------------------------------------------------
 ;   DrawBigHeroHurtboxDebug

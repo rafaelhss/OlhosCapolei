@@ -17,6 +17,7 @@
 .export     DrawDroppedWeapon
 .export     Weapon_Data_Table 
 .export     ClearProjectilePool
+.export LoadActiveWeaponToY
 
 ;----- Imports -----------------------------------------------------------------
 .import     VaderCrab
@@ -67,47 +68,43 @@ Weapon_Data_Table:
         rts
 .endproc
 
+
 ;-------------------------------------------------------------------------------
 ;   ProcessWeaponAttack
-;   Responsabilidade: Modificar o estado físico da arma no cenário.
+;   Entrada: Y = Endereço absoluto do slot ativo (WeaponA ou WeaponB)
 ;-------------------------------------------------------------------------------
 .proc ProcessWeaponAttack
-        ; Só inicia o arremesso se a WeaponA estiver de fato na mão (WEAPON_STATE_EQUIPPED)
-        lda WeaponA + WeaponStruct::Active
+        ; Testa o estado usando o slot parametrizado
+        lda a:WeaponStruct::Active, y
         cmp #WEAPON_STATE_EQUIPPED
         bne @Exit                       
 
-        ; 1. Transiciona o estado físico da pedra para voando (THROWN)
+        ; 1. Transiciona para o estado voando (THROWN)
         lda #WEAPON_STATE_THROWN
-        sta WeaponA + WeaponStruct::Active
+        sta a:WeaponStruct::Active, y
 
-        ; === CAPTURA DO CHÃO TÉCNICO DO HERÓI ===
-        ; O pé do BigHero (sombra) fica na base dele (Y_Pos + altura do sprite).
-        ; Como seu sprite tem 64px de altura, o pé real está em Y_Pos + 64.
-        ; Se o seu offset gráfico de arraste já joga a pedra para a mão na linha do pé,
-        ; use diretamente o Y atual da arma ou calcule o pé do herói:
+        ; 2. Calcula a linha de chão do solo
         lda BigHero + BigHeroStruct::Y_Pos
         clc
-        adc #48                         ; 64 do hero - 16 de mim Alinha a linha de repouso com o pé/sombra do herói
-        sta WeaponA + WeaponStruct::Target_Y
+        adc #48                         
+        sta a:WeaponStruct::Target_Y, y
 
-        ; 2. Define a trajetória horizontal baseada no Facing atual do herói
+        ; 3. Define trajetória horizontal com base no Facing
         lda BigHero + BigHeroStruct::Facing
         bne @ArremessoEsquerda
 
 @ArremessoDireita:
-        lda #$06                        ; Avança para a direita
-        sta WeaponA + WeaponStruct::Speed_X
+        lda #$06                        
+        sta a:WeaponStruct::Speed_X, y
         bra @AplicarImpulsoVertical
 
 @ArremessoEsquerda:
-        lda #<-6                        ; Recua para a esquerda ($FA)
-        sta WeaponA + WeaponStruct::Speed_X
+        lda #$FA                        ; Força <-6 em byte assinado
+        sta a:WeaponStruct::Speed_X, y
 
 @AplicarImpulsoVertical:
-        ; 3. Dá o impulso vertical inicial para CIMA ($FA) criando a parábola
-        lda #<-6                        
-        sta WeaponA + WeaponStruct::Speed_Y
+        lda #$FA                        ; Força impulso vertical inicial para cima (-6)
+        sta a:WeaponStruct::Speed_Y, y
 
 @Exit:
         rts
@@ -115,88 +112,82 @@ Weapon_Data_Table:
 
 ;-------------------------------------------------------------------------------
 ;   UpdateProjectiles
-;   Responsabilidade: Processar a física da parábola e quique seguro nas paredes
+;   Entrada: Y = Endereço absoluto do slot a processar (WeaponA ou WeaponB)
 ;-------------------------------------------------------------------------------
 .proc UpdateProjectiles
-        ; Só processa se a WeaponA estiver no estado de voo (WEAPON_STATE_THROWN = 2)
-        lda WeaponA + WeaponStruct::Active
+        lda a:WeaponStruct::Active, y
         cmp #WEAPON_STATE_THROWN
-        bne Exit
+        beq @StartFisica
+        rts
 
-        ; 1. Movimentação Horizontal (Eixo X)
-        lda WeaponA + WeaponStruct::X_Pos
+@StartFisica:
+        ; 1. Deslocamento Horizontal
+        lda a:WeaponStruct::X_Pos, y
         clc
-        adc WeaponA + WeaponStruct::Speed_X
-        sta WeaponA + WeaponStruct::X_Pos
+        adc a:WeaponStruct::Speed_X, y
+        sta a:WeaponStruct::X_Pos, y
 
-        ; --- CHECAGEM DE COLISÃO LATERAL (PAREDES DA TELA) ---
-CheckWallRight:
-        lda WeaponA + WeaponStruct::X_Pos
-        cmp #(SCREEN_RIGHT - 16)        ; Pedra tem 16px de largura
-        bcc CheckWallLeft               ; Se X < limite direito, checa a esquerda
+        ; --- CHECAGEM DE COLISÃO LATERAL ---
+@CheckWallRight:
+        lda a:WeaponStruct::X_Pos, y
+        cmp #(SCREEN_RIGHT - 16)        
+        bcc @CheckWallLeft               
 
-        ; --- RICOCHETE NA DIREITA (DESCOLA PARA A ESQUERDA) ---
-        lda #(SCREEN_RIGHT - 17)        ; Força uma posição segura 1px para fora da parede
-        sta WeaponA + WeaponStruct::X_Pos
-        bra AplicarFisicaRicochete
+        lda #(SCREEN_RIGHT - 17)        
+        sta a:WeaponStruct::X_Pos, y
+        bra @AplicarFisicaRicochete
 
-CheckWallLeft:
-        lda WeaponA + WeaponStruct::X_Pos
+@CheckWallLeft:
+        lda a:WeaponStruct::X_Pos, y
         cmp #(SCREEN_LEFT + 4)
-        bcs ProcessVertical            ; Se X >= limite esquerdo, segue para o eixo Y
+        bcs @ProcessVertical            
 
-        ; --- RICOCHETE NA ESQUERDA (DESCOLA PARA A DIREITA) ---
-        lda #(SCREEN_LEFT + 5)          ; Força uma posição segura 1px para fora da parede
-        sta WeaponA + WeaponStruct::X_Pos
+        lda #(SCREEN_LEFT + 5)          
+        sta a:WeaponStruct::X_Pos, y
 
-AplicarFisicaRicochete:
-        ; Inverte matematicamente a direção horizontal (Soma <-> Subtração) via Complemento de 2
-        lda WeaponA + WeaponStruct::Speed_X
+@AplicarFisicaRicochete:
+        lda a:WeaponStruct::Speed_X, y
         eor #$FF
         clc
         adc #1
-        sta WeaponA + WeaponStruct::Speed_X
+        sta a:WeaponStruct::Speed_X, y
 
-        ; Aplica um quique vertical para cima para dar peso ao impacto na parede
-        lda #$FC                        ; Força Speed_Y = -4 (Impulso para cima)
-        sta WeaponA + WeaponStruct::Speed_Y
+        lda #$FC                        ; Impulso para cima (-4)
+        sta a:WeaponStruct::Speed_Y, y
 
-ProcessVertical:
-        ; 2. Movimentação Vertical (Eixo Y) + Gravidade
-        lda WeaponA + WeaponStruct::Y_Pos
+@ProcessVertical:
+        ; 2. Deslocamento Vertical + Gravidade
+        lda a:WeaponStruct::Y_Pos, y
         clc
-        adc WeaponA + WeaponStruct::Speed_Y
-        sta WeaponA + WeaponStruct::Y_Pos
+        adc a:WeaponStruct::Speed_Y, y
+        sta a:WeaponStruct::Y_Pos, y
 
-        ; Gravidade puxa +1 pixel para baixo a cada frame
-        lda WeaponA + WeaponStruct::Speed_Y
+        ; Gravidade incrementa +1 frame a frame
+        lda a:WeaponStruct::Speed_Y, y
         clc
         adc #$01
-        sta WeaponA + WeaponStruct::Speed_Y
+        sta a:WeaponStruct::Speed_Y, y
 
-        ; 3. Verificação Dinâmica de Queda (BMI = Subindo/Y negativo)
-        lda WeaponA + WeaponStruct::Speed_Y
-        bmi Exit                       
+        ; 3. Checagem de Solo
+        lda a:WeaponStruct::Speed_Y, y
+         StructuralBMI:
+        bmi @Exit                       ; Se for negativo (subindo), pula teste de chão
 
-        lda WeaponA + WeaponStruct::Y_Pos
-        cmp WeaponA + WeaponStruct::Target_Y                       
-        bcc Exit                       
+        lda a:WeaponStruct::Y_Pos, y
+        cmp a:WeaponStruct::Target_Y, y                      
+        bcc @Exit                       
 
 @TocouOChao:
-        ; Trava a pedra exatamente na linha do solo alvo
-        lda WeaponA + WeaponStruct::Target_Y
-        sta WeaponA + WeaponStruct::Y_Pos
+        lda a:WeaponStruct::Target_Y, y
+        sta a:WeaponStruct::Y_Pos, y
 
-        ; Reseta o estado físico para "No Chão" (WEAPON_STATE_GROUND = 1)
         lda #WEAPON_STATE_GROUND
-        sta WeaponA + WeaponStruct::Active
+        sta a:WeaponStruct::Active, y
 
-        lda #$6D                        ; Sprite estático da pedra no solo
-        sta WeaponA + WeaponStruct::Tile_ID
-
-Exit:
+@Exit:
         rts
 .endproc
+
 ;-------------------------------------------------------------------------------
 ;   DrawProjectiles (Versão Pura - Sem nenhuma correção ou blindagem)
 ;-------------------------------------------------------------------------------
@@ -270,4 +261,32 @@ Exit:
         ldy #.loword(WeaponA)            ; Garante que aponta para a WeaponA padrão
         jsr DrawDroppedWeapon
         rts      
+.endproc
+
+
+
+
+
+.proc LoadActiveWeaponToY
+ ; === VARREDURA DINÂMICA DE SLOTS POR ESTADO VISUAL ===
+        ; Em vez de adivinhar pelo ID, checa qual slot físico está com o estado EQUIPPED (0)
+        
+@ChecarSlotA:
+        lda WeaponA + WeaponStruct::Active
+        cmp #WEAPON_STATE_EQUIPPED
+        bne @ChecarSlotB                 ; Se não está equipada, tenta o próximo slot
+
+        ldy #.loword(WeaponA)            ; Sucesso: O slot ativo é a WeaponA
+        sty z:DP_HERO_OAM_BACKUP
+        bra Done
+
+@ChecarSlotB:
+        lda WeaponB + WeaponStruct::Active
+        cmp #WEAPON_STATE_EQUIPPED
+        bne Done                     ; Se nenhum slot está equipado, pula o arraste
+
+        ldy #.loword(WeaponB)            ; Sucesso: O slot ativo é a WeaponB
+        sty z:DP_HERO_OAM_BACKUP
+Done:
+rts
 .endproc

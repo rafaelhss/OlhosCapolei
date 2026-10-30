@@ -107,7 +107,7 @@
 
         lda #$01
         sta WeaponA + WeaponStruct::Active
-        lda #$00
+        lda #WEAPON_ID_ROCK
         sta WeaponA + WeaponStruct::Weapon_ID
         lda #$6D
         sta WeaponA + WeaponStruct::Tile_ID
@@ -122,11 +122,11 @@
 
 ;------------fim weaponA---------
 
-;----------  WeaponA ----------------
+;----------  WeaponB ----------------
 
         lda #$01
         sta WeaponB + WeaponStruct::Active
-        lda #$00
+        lda #WEAPON_ID_HAMMER
         sta WeaponB + WeaponStruct::Weapon_ID
         lda #$AD
         sta WeaponB + WeaponStruct::Tile_ID
@@ -140,7 +140,7 @@
         stz WeaponB + WeaponStruct::Speed_X
         stz WeaponB + WeaponStruct::Speed_Y
 
-;------------fim weaponA---------
+;------------fim weaponB---------
 
 
 

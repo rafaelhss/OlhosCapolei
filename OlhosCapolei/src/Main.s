@@ -94,16 +94,30 @@ _ResetAlign:
         ; 2. SESSÃO DE FÍSICA E MOVIMENTAÇÃO
         jsr MoveHero
         jsr MoveEnemy1
+
+
         jsr MoveBigHero
         jsr MovePennyCrab
         jsr MoveVaderCrab
+
+
+        ldy #.loword(WeaponA)
+        jsr UpdateProjectiles
+        
+        ldy #.loword(WeaponB)
         jsr UpdateProjectiles
 
         ; 3. FILTRO DE COLISÕES & REGRAS DE GAMEPLAY
         jsr ApplyEdgeCollisions
         jsr ApplyDamageToHero
-        jsr ApplyWeaponCollisions       ; ◄ ADICIONADO: O gerenciador central testa a pedrada aqui!
+        
+        
+        ; --- CHECA COLISÃO DA PEDRADA PARA CADA SLOT DE FORMA ISOLADA ---
+        ldy #.loword(WeaponA)
+        jsr ApplyWeaponCollisions       ; Testa se a arma do Slot A acertou o Vader
 
+        ldy #.loword(WeaponB)
+        jsr ApplyWeaponCollisions       ; Testa se a arma do Slot B acertou o Vader
         ; 4. SISTEMA DE RENDERIZAÇÃO FINAL
         ldx #$0000     
         
@@ -120,15 +134,12 @@ _ResetAlign:
 .endproc
 
 ;-------------------------------------------------------------------------------
-;   ApplyWeaponCollisions (AABB CENTRALIZADO: WeaponA vs VaderCrab)
-;-------------------------------------------------------------------------------
-;-------------------------------------------------------------------------------
-;   ApplyWeaponCollisions (AABB CENTRALIZADO: WeaponA vs VaderCrab)
-;   Processado puramente em 8-bit com aplicação imediata de Bounce Back
+;   ApplyWeaponCollisions (AABB CENTRALIZADO E PARAMETRIZADO VIA Y)
+;   Entrada: Y = Endereço absoluto do slot (WeaponA ou WeaponB)
 ;-------------------------------------------------------------------------------
 .proc ApplyWeaponCollisions
-        ; 1. Filtro preliminar: Só checa colisão se a pedra estiver voando (STATE_THROWN = 2)
-        lda WeaponA + WeaponStruct::Active
+        ; 1. Filtro preliminar: Só checa colisão se o slot enviado em Y estiver voando (THROWN = 2)
+        lda a:WeaponStruct::Active, y
         cmp #WEAPON_STATE_THROWN
         beq @CheckVaderVulnerable
         rts
@@ -140,32 +151,32 @@ _ResetAlign:
         rts
 
 @StartAABB:
-        ; --- TESTE DO EIXO X ---
-        lda WeaponA + WeaponStruct::X_Pos
+        ; --- TESTE DO EIXO X (Usando o slot parametrizado em Y) ---
+        lda a:WeaponStruct::X_Pos, y
         clc
-        adc #16                 ; Largura estimada da pedra
+        adc #16                 ; Largura estimada da pedra/martelo
         cmp VaderCrab + VaderCrabStruct::Hurtbox_X1
         bcc NoCollision
         beq NoCollision
 
-        lda WeaponA + WeaponStruct::X_Pos
+        lda a:WeaponStruct::X_Pos, y
         cmp VaderCrab + VaderCrabStruct::Hurtbox_X2
         bcs NoCollision
 
         ; --- TESTE DO EIXO Y ---
-        lda WeaponA + WeaponStruct::Y_Pos
+        lda a:WeaponStruct::Y_Pos, y
         clc
-        adc #16                 ; Altura estimada da pedra
+        adc #16                 ; Altura estimada
         cmp VaderCrab + VaderCrabStruct::Hurtbox_Y1
         bcc NoCollision
         beq NoCollision
 
-        lda WeaponA + WeaponStruct::Y_Pos
+        lda a:WeaponStruct::Y_Pos, y
         cmp VaderCrab + VaderCrabStruct::Hurtbox_Y2
         bcs NoCollision
 
         ; =====================================================================
-        ; IMPACTO CONFIRMADO: A PEDRA ACERTOU O VADER!
+        ; IMPACTO CONFIRMADO: A ARMA DO SLOT Y ACERTOU O VADER!
         ; =====================================================================
         
         ; 1. Força o VaderCrab a entrar em estado de Hitstun (30 frames)
@@ -175,21 +186,18 @@ _ResetAlign:
         ; =====================================================================
         ; 🦀 BOUNCE BACK / KNOCKBACK DO VADERCRAB
         ; =====================================================================
-        ; Força do empurrão em pixels
         VADER_KNOCKBACK = 12
 
-        ; Verifica para qual lado a pedra estava viajando para empurrar o Vader na direção correta
-        lda WeaponA + WeaponStruct::Speed_X
+        ; Verifica a direção do projétil ativo para empurrar o Vader corretamente
+        lda a:WeaponStruct::Speed_X, y
         bmi @PedraIndoParaEsquerda
 
 @PedraIndoParaDireita:
-        ; Se a pedra viajava para a direita, o Vader é empurrado para a DIREITA
         lda VaderCrab + VaderCrabStruct::X_Pos
         clc
         adc #VADER_KNOCKBACK
         sta VaderCrab + VaderCrabStruct::X_Pos
 
-        ; Proteção contra estouro da borda direita da tela (Largura do Vader: 48px)
         cmp #(SCREEN_RIGHT - 48)
         bcc @ApplyRicochet
         lda #(SCREEN_RIGHT - 48)
@@ -197,13 +205,11 @@ _ResetAlign:
         bra @ApplyRicochet
 
 @PedraIndoParaEsquerda:
-        ; Se a pedra viajava para a esquerda (Sinal negativo), o Vader é empurrado para a ESQUERDA
         lda VaderCrab + VaderCrabStruct::X_Pos
         sec
         sbc #VADER_KNOCKBACK
         sta VaderCrab + VaderCrabStruct::X_Pos
 
-        ; Proteção contra underflow na borda esquerda da tela
         cmp #SCREEN_LEFT
         bcs @ApplyRicochet
         lda #SCREEN_LEFT
@@ -211,18 +217,17 @@ _ResetAlign:
 
 @ApplyRicochet:
         ; =====================================================================
-        ; 2. RICOCHETE DA PEDRA
+        ; 2. RICOCHETE PARAMETRIZADO DA ARMA QUE ESTAVA EM VOO
         ; =====================================================================
-        ; Inversão matemática do vetor horizontal (Soma <-> Subtração)
-        lda WeaponA + WeaponStruct::Speed_X
+        lda a:WeaponStruct::Speed_X, y
         eor #$FF
         clc
         adc #1
-        sta WeaponA + WeaponStruct::Speed_X
+        sta a:WeaponStruct::Speed_X, y
 
-        ; 3. Impulso Vertical: Faz a pedra "quicar" para cima mudando a velocidade Y
-        lda #$FC                ; Equivale a <-4 em byte assinado de 8 bits
-        sta WeaponA + WeaponStruct::Speed_Y
+        ; 3. Impulso Vertical no quique da arma ativa
+        lda #$FC                ; Força Speed_Y = -4
+        sta a:WeaponStruct::Speed_Y, y
 
 NoCollision:
         rts
