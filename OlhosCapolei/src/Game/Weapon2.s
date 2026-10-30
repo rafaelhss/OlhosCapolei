@@ -228,7 +228,10 @@ Exit:
 
 
 
-
+;-------------------------------------------------------------------------------
+;   DrawDroppedWeapon
+;   Responsabilidade: Renderizar o item e aplicar H-Flip baseado no herói se equipado
+;-------------------------------------------------------------------------------
 .proc DrawDroppedWeapon
         lda WeaponA + WeaponStruct::X_Pos
         sta OAMMIRROR, x
@@ -236,14 +239,31 @@ Exit:
         lda WeaponA + WeaponStruct::Y_Pos
         sta OAMMIRROR, x
         inx
-        lda WeaponA + WeaponStruct::Tile_ID ;tile
+        lda WeaponA + WeaponStruct::Tile_ID 
         sta OAMMIRROR, x
         inx
-        lda $01 ; atributos
-        sta OAMMIRROR, x
-        inx
+        
+        ; --- SISTEMA DE FLIP DINÂMICO PARA ITEM EQUIPADO ---
+        lda WeaponA + WeaponStruct::Active
+        cmp #WEAPON_STATE_EQUIPPED
+        bne @UseDefaultAttributes        ; Se estiver no chão, usa o atributo padrão ($01)
 
-        rts  
-rts
+        ; Se estiver na mão, checa a direção do BigHero
+        lda BigHero + BigHeroStruct::Facing
+        beq @UseDefaultAttributes        ; Se Facing = 0 (Direita), não aplica flip
+
+@ApplyHeroFlip:
+        lda #$00                         ; Atributo original (Página 1 da VRAM)
+        eor #$40                         ; Aplica Flip Horizontal via Hardware (Bit 6)
+        sta OAMMIRROR, x
+        inx
+        rts
+
+@UseDefaultAttributes:
+        lda #$00                         ; Atributo padrão sem espelhamento
+        sta OAMMIRROR, x
+        inx
+        rts
 .endproc
+
 

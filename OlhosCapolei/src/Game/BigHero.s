@@ -54,6 +54,12 @@ BigHero_Layout_Hurt:
     .byte 0,32,$60,$30, 16,32,$62,$30
     .byte 0,48,$80,$30, 16,48,$82,$30
 
+BigHero_Layout_WeaponA:
+    .byte 0, 0,$20,$30, 16, 0,$22,$30
+    .byte 0,16,$40,$30, 16,16,$42,$30
+    .byte 0,32,$A4,$30, 16,32,$A6,$30
+    .byte 0,48,$80,$30, 16,48,$82,$30
+
 
 ;-------------------------------------------------------------------------------
 ;   DrawBigHero
@@ -61,11 +67,21 @@ BigHero_Layout_Hurt:
 .proc DrawBigHero
         ; --- PIPELINE DE SELEÇÃO DE ANIMAÇÃO HIERÁRQUICA ---
         lda BigHero + BigHeroStruct::HurtTimer
-        beq @CheckMovement
+        beq @CheckWeapon
 
         ldy #.loword(BigHero_Layout_Hurt)
         sty z:DP_HERO_LAYOUT_PTR
         bra @StartDraw
+
+@CheckWeapon:
+        lda BigHero + BigHeroStruct::Current_Weapon_ID
+        cmp #WEAPON_ID_UNARMED
+        beq @CheckMovement
+
+        ldy #.loword(BigHero_Layout_WeaponA)
+        sty z:DP_HERO_LAYOUT_PTR
+        bra @StartDraw
+
 
 @CheckMovement:
         lda BigHero + BigHeroStruct::Anim_Frame
@@ -279,15 +295,17 @@ CheckAttackButton:
         ; Herói olhando para a DIREITA: Avança a arma para frente do peito
         lda BigHero + BigHeroStruct::X_Pos
         clc
-        adc #24                      ; Offset X para a direita
+        adc #16                      ; Offset X para a direita
         sta WeaponA + WeaponStruct::X_Pos
+
         bra @AjustarY
 
 @ArrasteEsquerda:
         ; Herói olhando para a ESQUERDA: Recua a arma para o lado esquerdo
         lda BigHero + BigHeroStruct::X_Pos
-        sec
-        sbc #8                       ; Offset X para a esquerda (compensa os 16px do sprite)
+       clc
+        adc #01                      ; Offset X para a direita
+        
         sta WeaponA + WeaponStruct::X_Pos
 
 @AjustarY:
