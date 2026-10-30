@@ -47,8 +47,13 @@ REST_TIME = 30 ;
 .proc   MoveVaderCrab
     ; 1. Reduz o timer de animacao
  
+    lda VaderCrab + VaderCrabStruct::HurtTimer
+    beq @ProcessIA                  ; Se for 0, o Vader está livre para agir e pensar
+    
+    dec VaderCrab + VaderCrabStruct::HurtTimer ; Decrementa o tempo travado de dano
+    brl Done   
 
-
+@ProcessIA:
 AttackFrameUpdate:
     lda VaderCrab + VaderCrabStruct::State
     cmp #STATE_ATACKING
@@ -380,61 +385,55 @@ RestFrameUpdate:
 
 DesistirMover:
 Done:
+    jsr UpdateVaderGeometry
     rts
                
                                
 .endproc
+
+
+
+.proc UpdateVaderGeometry
+        lda VaderCrab + VaderCrabStruct::X_Pos
+        sta VaderCrab + VaderCrabStruct::Hurtbox_X1
+        clc
+        adc #48                             ; Aumentado para 48px para casar com a arte do caranguejo grande
+        sta VaderCrab + VaderCrabStruct::Hurtbox_X2
+
+        lda VaderCrab + VaderCrabStruct::Y_Pos
+        sta VaderCrab + VaderCrabStruct::Hurtbox_Y1
+        clc
+        adc #64                             ; Altura real dos 4 blocos verticais (4 * 16px = 64)
+        sta VaderCrab + VaderCrabStruct::Hurtbox_Y2
+        rts
+.endproc
 ;-------------------------------------------------------------------------------
 
 ; Formato por linha: Offset_X, Offset_Y, Tile_ID, Atributos(Paleta/Flip)
+; =============================================================================
+; BANCO DE MATRIZES DE ANIMAÇÃO DO VADERCRAB
+; =============================================================================
+; FRAME: Neutro / Parado
 VaderCrab_Layout:
-    ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $00, $01     ; pedaco 1-1
-    .byte 16,  0,  $02, $01     ; pedaco 1-2
-    .byte 32,  0,  $04, $01     ; pedaco 1-3
-    .byte 48,  0,  $06, $01     ; pedaco 1-4
-    
-    .byte 0,  16,  $20, $01     ; pedaco 2-1
-    .byte 16,  16,  $22, $01     ; pedaco 2-2
-    .byte 32,  16,  $24, $01     ; pedaco 2-3
-    .byte 48,  16,  $26, $01     ; pedaco 2-4
+    .byte 0,  0,$00,$01, 16,  0,$02,$01, 32,  0,$04,$01, 48,  0,$06,$01
+    .byte 0, 16,$20,$01, 16, 16,$22,$01, 32, 16,$24,$01, 48, 16,$26,$01
+    .byte 0, 32,$40,$01, 16, 32,$42,$01, 32, 32,$44,$01, 48, 32,$46,$01
+    .byte 0, 48,$60,$01, 16, 48,$62,$01, 32, 48,$64,$01, 48, 48,$66,$01
 
-    ; === CORPO (4x2 de 16) ===
-    .byte 0,  32,  $40, $01     ; pedaco 1-1
-    .byte 16,  32,  $42, $01     ; pedaco 1-2
-    .byte 32,  32,  $44, $01     ; pedaco 1-3
-    .byte 48,  32,  $46, $01     ; pedaco 1-4
-    
-    .byte 0,  48,  $60, $01     ; pedaco 2-1
-    .byte 16,  48,  $62, $01     ; pedaco 2-2
-    .byte 32,  48,  $64, $01     ; pedaco 2-3
-    .byte 48,  48,  $66, $01     ; pedaco 2-4
-
-; =============================================================================
-; FRAME 1: INIMIGO ANDANDO (Proximas posicoes livres de Tile)
-; =============================================================================
+; FRAME: Andando
 VaderCrab_Layout_Frame1:
-    ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $00, $01     ; pedaco 1-1
-    .byte 16,  0,  $02, $01     ; pedaco 1-2
-    .byte 32,  0,  $04, $01     ; pedaco 1-3
-    .byte 48,  0,  $06, $01     ; pedaco 1-4
-    
-    .byte 0,  16,  $20, $01     ; pedaco 2-1
-    .byte 16,  16,  $22, $01     ; pedaco 2-2
-    .byte 32,  16,  $24, $01     ; pedaco 2-3
-    .byte 48,  16,  $26, $01     ; pedaco 2-4
+    .byte 0,  0,$00,$01, 16,  0,$02,$01, 32,  0,$04,$01, 48,  0,$06,$01
+    .byte 0, 16,$20,$01, 16, 16,$22,$01, 32, 16,$24,$01, 48, 16,$26,$01
+    .byte 0, 32,$48,$01, 16, 32,$42,$01, 32, 32,$44,$01, 48, 32,$4E,$01
+    .byte 0, 48,$68,$01, 16, 48,$6A,$01, 32, 48,$6C,$01, 48, 48,$6E,$01
 
-    ; === CORPO (4x2 de 16) ===
-    .byte 0,  32,  $48, $01     ; pedaco 1-1
-    .byte 16,  32,  $42, $01     ; pedaco 1-2
-    .byte 32,  32,  $44, $01     ; pedaco 1-3
-    .byte 48,  32,  $4E, $01     ; pedaco 1-4
-    
-    .byte 0,  48,  $68, $01     ; pedaco 2-1
-    .byte 16,  48,  $6A, $01     ; pedaco 2-2
-    .byte 32,  48,  $6C, $01     ; pedaco 2-3
-    .byte 48,  48,  $6E, $01     ; pedaco 2-4
+; FRAME: Tomando Dano / Hitstun (Cabeça e olhos mudam para os blocos $08-$0E)
+VaderCrab_Layout_Hurt:
+    .byte 0,  0,$08,$01, 16,  0,$A8,$01, 32,  0,$AA,$01, 48,  0,$0E,$01
+    .byte 0, 16,$28,$01, 16, 16,$C8,$01, 32, 16,$CA,$01, 48, 16,$2E,$01
+    .byte 0, 32,$48,$01, 16, 32,$4A,$01, 32, 32,$4C,$01, 48, 32,$4E,$01
+    .byte 0, 48,$68,$01, 16, 48,$6A,$01, 32, 48,$6C,$01, 48, 48,$6E,$01
+
 
 ; =============================================================================
 ; FRAME 0: INIMIGO Preparing 
@@ -610,145 +609,142 @@ VaderCrab_Layout_FrameAttacking1:
 ;-------------------------------------------------------------------------------
 ;   DrawVaderCrab
 ;-------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
+;   DrawVaderCrab (Pipeline de Layout Dinâmico via Direct Page - COMPLETA)
+;-------------------------------------------------------------------------------
 .proc DrawVaderCrab
+        ; --- PIPELINE HIERÁRQUICO DE SELEÇÃO DE MATRIZ ---
+        ; 1. Prioridade Máxima: Está em Hitstun (Tomando Dano)?
+        lda VaderCrab + VaderCrabStruct::HurtTimer
+        beq @CheckStates
 
-        ldy #$0000              ; Indice Y vai caminhar pela tabela de Layout
+        ; Carrega a tabela de dano na Direct Page
+        ldy #.loword(VaderCrab_Layout_Hurt)
+        sty z:DP_WEAPON_POOL_PTR        ; Reutilizando slot livre de 16-bit na DP
+        bra @StartDraw
+
+@CheckStates:
+        ; 2. Estado: Preparando Ataque
+        lda VaderCrab + VaderCrabStruct::State
+        cmp #STATE_PREPARING
+        bne @CheckAttacking
+
+        ; Seleção do frame de PREPARE (0 a 3)
+        lda VaderCrab + VaderCrabStruct::Preparing_Anim_Frame
+        cmp #1
+        beq @Prep1
+        cmp #2
+        beq @Prep2
+        cmp #3
+        beq @Prep3
+
+@Prep0: 
+        ldy #.loword(VaderCrab_Layout_FramePreparing0)
+        bra @SavePtr
+@Prep1: 
+        ldy #.loword(VaderCrab_Layout_FramePreparing1)
+        bra @SavePtr
+@Prep2: 
+        ldy #.loword(VaderCrab_Layout_FramePreparing2)
+        bra @SavePtr
+@Prep3: 
+        ldy #.loword(VaderCrab_Layout_FramePreparing3)
+        bra @SavePtr
+
+@CheckAttacking:
+        ; 3. Estado: Atacando
+        cmp #STATE_ATACKING
+        bne @CheckWalking
+
+        lda VaderCrab + VaderCrabStruct::Attacking_Anim_Frame
+        bne @Attack1
+@Attack0: 
+        ldy #.loword(VaderCrab_Layout_FrameAttacking0)
+        bra @SavePtr
+@Attack1: 
+        ldy #.loword(VaderCrab_Layout_FrameAttacking1)
+        bra @SavePtr
+
+@CheckWalking:
+        ; 4. Estado padrão: Caminhada / Idle
+        lda VaderCrab + VaderCrabStruct::Anim_Frame
+        bne @Walk1
+@Walk0: 
+        ldy #.loword(VaderCrab_Layout)
+        bra @SavePtr
+@Walk1: 
+        ldy #.loword(VaderCrab_Layout_Frame1)
+
+@SavePtr:
+        sty z:DP_WEAPON_POOL_PTR
+
+@StartDraw:
+        ldy #$0000              ; Indexador de bytes lidos do layout (0 a 63)
 
 DrawLoop:
         ; === 1. PROCESSAR POSIÇÃO X COM ESPELHAMENTO ===
         lda VaderCrab + VaderCrabStruct::Facing
-        bne DrawXNormal         ; Se Facing != 0 (Direita/Padrão), pula para o cálculo normal
+        bne DrawXNormal         
 
 DrawXInverted:
-        ; Se estiver olhando para a esquerda, aplica a inversão de colunas:
-        ; X_Global + (Largura_Total - 16) - Offset_X_Do_Bloco
-        ; Para 64px de largura, (Largura_Total - 16) = 48
+        ; Inversão de colunas baseada no ponteiro dinâmico da DP
         lda #48
         sec
-        sbc VaderCrab_Layout, Y ; Subtrai o Offset X atual (0, 16, 32 ou 48)
+        sbc (DP_WEAPON_POOL_PTR),y 
         clc
-        adc VaderCrab + VaderCrabStruct::X_Pos ; Soma a ancoragem global
+        adc VaderCrab + VaderCrabStruct::X_Pos 
         sta OAMMIRROR, X
         bra ProcessY
 
 DrawXNormal:
+        lda (DP_WEAPON_POOL_PTR),y
         clc
-        lda VaderCrab + VaderCrabStruct::X_Pos    
-        adc VaderCrab_Layout, Y ; Le o Offset X padrão (Y + 0)
+        adc VaderCrab + VaderCrabStruct::X_Pos    
         sta OAMMIRROR, X                          
 
 ProcessY:
         inx                                       
-        iny                     ; Aponta para o Offset Y (Y + 1)
+        iny                     ; Aponta para o Offset Y
 
-; === 2. PROCESSAR POSIÇÃO Y ===
+        ; === 2. PROCESSAR POSIÇÃO Y ===
+        lda (DP_WEAPON_POOL_PTR),y
         clc
-        lda VaderCrab + VaderCrabStruct::Y_Pos    
-        adc VaderCrab_Layout, Y ; Le o Offset Y (Y + 1)
+        adc VaderCrab + VaderCrabStruct::Y_Pos    
         sta OAMMIRROR, X                          
         inx
-        iny                     ; Aponta para o Tile ID (Y + 2)
+        iny                     ; Aponta para o Tile ID
 
-; === 3. SELEÇÃO DINÂMICA DE TILE ID BASEADO NO FRAME ===
-
-        lda VaderCrab + VaderCrabStruct::State
-        cmp #STATE_PREPARING
-        beq DrawPreparing
-        cmp #STATE_ATACKING
-        beq DrawAttacking
-        bra DrawWalking
-
-DrawPreparing:        
-        lda VaderCrab + VaderCrabStruct::Preparing_Anim_Frame
-        cmp #1
-        beq JumpToFramePreparing1
-        cmp #2
-        beq JumpToFramePreparing2
-        cmp #3
-        beq JumpToFramePreparing3
-
-FramePreparing0:
-        lda VaderCrab_Layout_FramePreparing0, Y
-        bra WriteTile
-
-JumpToFramePreparing1:
-        lda VaderCrab_Layout_FramePreparing1, Y
-        bra WriteTile
-
-JumpToFramePreparing2:
-        lda VaderCrab_Layout_FramePreparing2, Y
-        bra WriteTile
-
-JumpToFramePreparing3:
-        lda VaderCrab_Layout_FramePreparing3, Y
-        bra WriteTile
-
-
-DrawAttacking:
-
-        stz VaderCrab + VaderCrabStruct::Preparing_Anim_Frame
-        lda VaderCrab + VaderCrabStruct::Attacking_Anim_Frame
-        beq FrameAttacking0
-
-FrameAttacking1:
-        lda VaderCrab_Layout_FrameAttacking1, Y        ; Le o Tile ID do Layout 1 (Y + 2)
-        bra WriteTile
-
-FrameAttacking0:
-        lda VaderCrab_Layout_FrameAttacking0, Y               ; Le o Tile ID do Layout 0 (Y + 2)
-        bra WriteTile
-
-DrawWalking:
-        stz VaderCrab + VaderCrabStruct::Preparing_Anim_Frame
-        stz VaderCrab + VaderCrabStruct::Attacking_Anim_Frame
-        
-        lda VaderCrab + VaderCrabStruct::Anim_Frame
-        beq Frame0
-    
-Frame1:
-        lda VaderCrab_Layout_Frame1, Y        ; Le o Tile ID do Layout 1 (Y + 2)
-        bra WriteTile
-
-Frame0:
-        lda VaderCrab_Layout, Y               ; Le o Tile ID do Layout 0 (Y + 2)
-
-WriteTile:
+        ; === 3. PROCESSAR TILE ID DIRETO DO PONTEIRO ATIVO ===
+        lda (DP_WEAPON_POOL_PTR),y
         sta OAMMIRROR, X
         inx
-        iny                     ; Aponta para os Atributos (Y + 3)
+        iny                     ; Aponta para os Atributos
 
         ; === 4. PROCESSAR ATRIBUTOS E INJETAR H-FLIP HIERÁRQUICO ===
-        lda VaderCrab_Layout, Y ; Le o Atributo original (Y + 3)
-        
-        ; Protege o registrador Y empilhando-o para não quebrar o loop de leitura
-        phy                     
+        lda (DP_WEAPON_POOL_PTR),y
+        sta z:DP_TEMP_00        ; Rascunho rápido em RAM
         
         lda VaderCrab + VaderCrabStruct::Facing
-        bne @NoFlip             ; Se Facing != 0 (Direita), mantém a paleta padrão intacta
+        bne @NoFlip             ; Se for 1 (Direita), não flipa por hardware
 
 @ApplyFlip:
-        lda VaderCrab_Layout, Y ; Recarrega o atributo original no acumulador
-        ora #%01000000          ; Injeta o Bit 6 (Horizontal Flip) via hardware da PPU
-        bra @SaveAttributes
+        lda z:DP_TEMP_00
+        ora #%01000000          ; Injeta o Bit 6 de Flip Horizontal na PPU
+        sta z:DP_TEMP_00
 
 @NoFlip:
-        lda VaderCrab_Layout, Y ; Garante o atributo limpo original se estiver para a direita
-
-@SaveAttributes:
-        ply                     ; Restaura o ponteiro Y original de volta para o registrador
-        sta OAMMIRROR, X        ; Grava na OAM física do espelho
+        lda z:DP_TEMP_00
+        sta OAMMIRROR, X        
         
         inx
-        iny                     ; Avança para o proximo bloco (X do proximo sprite)
+        iny                     ; Avança para o próximo bloco
 
-        
-        ; Checa se ja desenhou todos os 16 blocos do inimigo (16 * 4 = 64 bytes lidos)
-        cpy #64                 
-        beq Finish
-        brl DrawLoop ; tinha que ser somengte bne, mas da erro de range, entao tem que fazer essa gambiarra
-Finish:
+        cpy #64                 ; Desenhou os 16 blocos (16 * 4 bytes)?
+        bne DrawLoop 
+
         rts
 .endproc
+
 
 
 

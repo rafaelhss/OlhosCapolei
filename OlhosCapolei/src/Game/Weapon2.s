@@ -33,9 +33,7 @@
 ;MAX_PROJECTILES     = 4         
 ;WEAPON_ROW_SIZE     = 6        
  ;
-WEAPON_STATE_EQUIPPED = 0  ; Coletada, colada na mão do herói
-WEAPON_STATE_GROUND   = 1  ; Esperando no chão para ser coletada
-WEAPON_STATE_THROWN   = 2  ; Voando pelo ar em parábola
+
 
 ; =============================================================================
 ; TABELA DE DEFINIÇÃO DE ARMAS (Injetada diretamente no segmento CODE para segurança)

@@ -76,13 +76,18 @@ _ResetAlign:
 ;-------------------------------------------------------------------------------
 ;   ENGINE GAME LOOP (Pipeline Limpo de Alta Performance)
 ;-------------------------------------------------------------------------------
-.proc   GameLoop
-        wai                     ; Dorme eficientemente até o próximo V-Blank / NMI
+; (Mantenha o topo, ResetHandler e as primeiras linhas do GameLoop idênticas)
 
-        ; 1. INPUT PIPELINE (Direto via Registradores de Hardware - Sem sujeira na Pilha)
+; -------------------------------------------------------------------------------
+;   ENGINE GAME LOOP (Pipeline Limpo de Alta Performance)
+; -------------------------------------------------------------------------------
+.proc   GameLoop
+        wai                     
+
+        ; 1. INPUT PIPELINE
         jsr ReadJoypad1
 
-        ; 2. SESSÃO DE FÍSICA E MOVIMENTAÇÃO (Leitura direta dos buffers de RAM)
+        ; 2. SESSÃO DE FÍSICA E MOVIMENTAÇÃO
         jsr MoveHero
         jsr MoveEnemy1
         jsr MoveBigHero
@@ -90,32 +95,129 @@ _ResetAlign:
         jsr MoveVaderCrab
         jsr UpdateProjectiles
 
-
         ; 3. FILTRO DE COLISÕES & REGRAS DE GAMEPLAY
         jsr ApplyEdgeCollisions
         jsr ApplyDamageToHero
-        
+        jsr ApplyWeaponCollisions       ; ◄ ADICIONADO: O gerenciador central testa a pedrada aqui!
 
-
-        ; =====================================================================
-        ; 4. SISTEMA DE RENDERIZAÇÃO FINAL (Injeção síncrona na OAMMIRROR)
-        ; =====================================================================
-        ldx #$0000                ; X inicia em 0 como offset do primeiro Sprite na OAM
-       
-        ;jsr DrawProjectiles       ; Desenha e devolve X atualizado em 16-bit
-        jsr DrawDroppedWeapon     ; Desenha e devolve X atualizado
-       
-        ; Como DrawBigHero consome X mas não atualizava o fluxo para a Main,
-        ; vamos amarrar o tráfego salvando o progresso do registrador gráfico.
+        ; 4. SISTEMA DE RENDERIZAÇÃO FINAL
+        ldx #$0000                
+        jsr DrawDroppedWeapon     
         jsr DrawBigHero          
-        
-        ; Se o VaderCrab sumia ou piscava no Everdrive, era porque o X chegava 
-        ; corrompido aqui. Agora o pipeline gráfico corre limpo de ponta a ponta.
         jsr DrawVaderCrab
 
         jmp GameLoop
-
 .endproc
+
+;-------------------------------------------------------------------------------
+;   ApplyWeaponCollisions (AABB CENTRALIZADO: WeaponA vs VaderCrab)
+;-------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
+;   ApplyWeaponCollisions (AABB CENTRALIZADO: WeaponA vs VaderCrab)
+;   Processado puramente em 8-bit com aplicação imediata de Bounce Back
+;-------------------------------------------------------------------------------
+.proc ApplyWeaponCollisions
+        ; 1. Filtro preliminar: Só checa colisão se a pedra estiver voando (STATE_THROWN = 2)
+        lda WeaponA + WeaponStruct::Active
+        cmp #WEAPON_STATE_THROWN
+        beq @CheckVaderVulnerable
+        rts
+
+@CheckVaderVulnerable:
+        ; 2. Se o VaderCrab já estiver em Hitstun/Dano, aborta para evitar múltiplos hits
+        lda VaderCrab + VaderCrabStruct::HurtTimer
+        beq @StartAABB
+        rts
+
+@StartAABB:
+        ; --- TESTE DO EIXO X ---
+        lda WeaponA + WeaponStruct::X_Pos
+        clc
+        adc #16                 ; Largura estimada da pedra
+        cmp VaderCrab + VaderCrabStruct::Hurtbox_X1
+        bcc NoCollision
+        beq NoCollision
+
+        lda WeaponA + WeaponStruct::X_Pos
+        cmp VaderCrab + VaderCrabStruct::Hurtbox_X2
+        bcs NoCollision
+
+        ; --- TESTE DO EIXO Y ---
+        lda WeaponA + WeaponStruct::Y_Pos
+        clc
+        adc #16                 ; Altura estimada da pedra
+        cmp VaderCrab + VaderCrabStruct::Hurtbox_Y1
+        bcc NoCollision
+        beq NoCollision
+
+        lda WeaponA + WeaponStruct::Y_Pos
+        cmp VaderCrab + VaderCrabStruct::Hurtbox_Y2
+        bcs NoCollision
+
+        ; =====================================================================
+        ; IMPACTO CONFIRMADO: A PEDRA ACERTOU O VADER!
+        ; =====================================================================
+        
+        ; 1. Força o VaderCrab a entrar em estado de Hitstun (30 frames)
+        lda #30
+        sta VaderCrab + VaderCrabStruct::HurtTimer
+
+        ; =====================================================================
+        ; 🦀 BOUNCE BACK / KNOCKBACK DO VADERCRAB
+        ; =====================================================================
+        ; Força do empurrão em pixels
+        VADER_KNOCKBACK = 12
+
+        ; Verifica para qual lado a pedra estava viajando para empurrar o Vader na direção correta
+        lda WeaponA + WeaponStruct::Speed_X
+        bmi @PedraIndoParaEsquerda
+
+@PedraIndoParaDireita:
+        ; Se a pedra viajava para a direita, o Vader é empurrado para a DIREITA
+        lda VaderCrab + VaderCrabStruct::X_Pos
+        clc
+        adc #VADER_KNOCKBACK
+        sta VaderCrab + VaderCrabStruct::X_Pos
+
+        ; Proteção contra estouro da borda direita da tela (Largura do Vader: 48px)
+        cmp #(SCREEN_RIGHT - 48)
+        bcc @ApplyRicochet
+        lda #(SCREEN_RIGHT - 48)
+        sta VaderCrab + VaderCrabStruct::X_Pos
+        bra @ApplyRicochet
+
+@PedraIndoParaEsquerda:
+        ; Se a pedra viajava para a esquerda (Sinal negativo), o Vader é empurrado para a ESQUERDA
+        lda VaderCrab + VaderCrabStruct::X_Pos
+        sec
+        sbc #VADER_KNOCKBACK
+        sta VaderCrab + VaderCrabStruct::X_Pos
+
+        ; Proteção contra underflow na borda esquerda da tela
+        cmp #SCREEN_LEFT
+        bcs @ApplyRicochet
+        lda #SCREEN_LEFT
+        sta VaderCrab + VaderCrabStruct::X_Pos
+
+@ApplyRicochet:
+        ; =====================================================================
+        ; 2. RICOCHETE DA PEDRA
+        ; =====================================================================
+        ; Inversão matemática do vetor horizontal (Soma <-> Subtração)
+        lda WeaponA + WeaponStruct::Speed_X
+        eor #$FF
+        clc
+        adc #1
+        sta WeaponA + WeaponStruct::Speed_X
+
+        ; 3. Impulso Vertical: Faz a pedra "quicar" para cima mudando a velocidade Y
+        lda #$FC                ; Equivale a <-4 em byte assinado de 8 bits
+        sta WeaponA + WeaponStruct::Speed_Y
+
+NoCollision:
+        rts
+.endproc
+
 ;-------------------------------------------------------------------------------
 
 .proc ApplyDamageToHero
@@ -151,7 +253,7 @@ _ResetAlign:
         lda BigHero + BigHeroStruct::Hurtbox_X1
         and #$00FF
         cmp $00
-        bcs @NoCollision        ; Se Hurtbox_X1 >= Hitbox_X2, não há colisão!
+        bcs NoCollision        ; Se Hurtbox_X1 >= Hitbox_X2, não há colisão!
 
         ; Teste 2: Se Hitbox_X1 >= Hurtbox_X2 (Inimigo totalmente à direita) -> SAI
         lda VaderCrab + VaderCrabStruct::Hitbox_X1
@@ -160,8 +262,8 @@ _ResetAlign:
         lda BigHero + BigHeroStruct::Hurtbox_X2
         and #$00FF
         cmp $00
-        bcc @NoCollision        ; Se Hurtbox_X2 <= Hitbox_X1, não há colisão! Se for igual, apenas raspou
-        beq @NoCollision
+        bcc NoCollision        ; Se Hurtbox_X2 <= Hitbox_X1, não há colisão! Se for igual, apenas raspou
+        beq NoCollision
 
         ; --- TESTE DO EIXO Y ---
         
@@ -172,7 +274,7 @@ _ResetAlign:
         lda BigHero + BigHeroStruct::Hurtbox_Y1
         and #$00FF
         cmp $00
-        bcs @NoCollision        ; Se Hurtbox_Y1 >= Hitbox_Y2, não há colisão!
+        bcs NoCollision        ; Se Hurtbox_Y1 >= Hitbox_Y2, não há colisão!
 
         ; Teste 4: Se Hitbox_Y1 >= Hurtbox_Y2 (Inimigo totalmente abaixo) -> SAI
         lda VaderCrab + VaderCrabStruct::Hitbox_Y1
@@ -181,8 +283,8 @@ _ResetAlign:
         lda BigHero + BigHeroStruct::Hurtbox_Y2
         and #$00FF
         cmp $00
-        bcc @NoCollision        ; Se Hurtbox_Y2 <= Hitbox_Y1, não há colisão!
-        beq @NoCollision
+        bcc NoCollision        ; Se Hurtbox_Y2 <= Hitbox_Y1, não há colisão!
+        beq NoCollision
 
         ; =====================================================================
         ; COLISÃO DETECTADA: O RETÂNGULO INTERSECTOU EM AMBOS OS EIXOS!
@@ -199,7 +301,7 @@ _ResetAlign:
         jsr TriggerHeroDamageEffect
         rts
 
-@NoCollision:
+NoCollision:
         sep #$20                ; Restaura o Acumulador para 8 bits antes de sair (.a8)
         .a8
         rts

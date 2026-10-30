@@ -21,6 +21,11 @@ STATE_RESTING   = 3
 STATE_HURT_NOT  = 0
 STATE_HURT      = 1
 
+
+WEAPON_STATE_EQUIPPED = 0  ; Coletada, colada na mão do herói
+WEAPON_STATE_GROUND   = 1  ; Esperando no chão para ser coletada
+WEAPON_STATE_THROWN   = 2  ; Voando pelo ar em parábola
+
 ; --- Configurações de Sprites e Velocidade ---
 SPRITE_SIZE     = $08   ; Sprites base são 8x8 pixels
 SPRITE_SPEED    = $03   ; Velocidade base do herói
@@ -162,7 +167,13 @@ WEAPON_ID_BAZOOKA      = 6
     Hitbox_X1            .byte   
     Hitbox_X2            .byte   
     Hitbox_Y1            .byte   
-    Hitbox_Y2            .byte   
+    Hitbox_Y2            .byte 
+    Hurtbox_X1            .byte   
+    Hurtbox_X2            .byte   
+    Hurtbox_Y1            .byte   
+    Hurtbox_Y2            .byte 
+    HurtTimer            .byte 
+      
 .endstruct
 
 ; ======== Registro do Pool de Projéteis Dinâmicos
