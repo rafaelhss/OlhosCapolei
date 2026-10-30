@@ -14,7 +14,7 @@
 
 .import BigHero
 
-.import     WeaponA
+.import     WeaponA, WeaponB
 
 
 .export DrawBigHero, MoveBigHero
@@ -253,6 +253,10 @@ CheckPickupButton:
 
         sep #$20                    
         .a8
+
+        ldy #.loword(WeaponA) 
+        jsr CheckWeaponPickup       ; Dispara o motor tridimensional de coleta do chão
+        ldy #.loword(WeaponB) 
         jsr CheckWeaponPickup       ; Dispara o motor tridimensional de coleta do chão
 
 CheckAttackButton:                  
@@ -350,6 +354,7 @@ MoveDone:
 ;   CheckWeaponPickup / DropWeapon
 ;   Gerencia a coleta (se a arma estiver no chão) ou o descarte (se estiver na mão)
 ;-------------------------------------------------------------------------------
+
 .proc CheckWeaponPickup
         ; === VIA 1: SE O HERÓI JÁ ESTIVER COM A PEDRA NA MÃO, ELE LARGA ===
         lda BigHero + BigHeroStruct::Current_Weapon_ID
@@ -363,38 +368,39 @@ MoveDone:
 
         ; 2. Devolve o estado físico da arma para o CHÃO (WEAPON_STATE_GROUND = 1)
         lda #WEAPON_STATE_GROUND
-        sta WeaponA + WeaponStruct::Active
+         sta a:WeaponStruct::Active, y
+
 
         ; 3. Atualiza o Target_Y da arma para a linha atual do solo onde ela foi solta
         ; Isso garante que ela se alinhe perfeitamente com os pés atuais do herói
         lda BigHero + BigHeroStruct::Y_Pos
         clc
         adc #48                         
-        sta WeaponA + WeaponStruct::Target_Y
-        sta WeaponA + WeaponStruct::Y_Pos
+        sta a:WeaponStruct::Target_Y, y
+        sta a:WeaponStruct::Y_Pos, y
 
         ; 4. Ajusta a posição X para ela cair ligeiramente à frente ou no pé do herói
         lda BigHero + BigHeroStruct::X_Pos
         clc
         adc #8                          ; Centraliza um pouco no pé
-        sta WeaponA + WeaponStruct::X_Pos
+        sta a:WeaponStruct::X_Pos, y
 
         ; 5. Restaura o Tile ID padrão da pedra no chão
         lda #$6D
-        sta WeaponA + WeaponStruct::Tile_ID
+        sta a:WeaponStruct::Tile_ID, y
         rts
 
 @CheckPickupFromGround:
         ; === VIA 2: ARQUITETURA PADRÃO DE COLETA ===
         ; Garante que a arma está no chão (WEAPON_STATE_GROUND = 1) antes de tentar coletar
-        lda WeaponA + WeaponStruct::Active
+        lda a:WeaponStruct::Active, y
         cmp #WEAPON_STATE_GROUND
         bne @NoPickup
 
         ; --- Cálculo de Distância Absoluta no Eixo X ---
         lda BigHero + BigHeroStruct::X_Pos
         sec
-        sbc WeaponA + WeaponStruct::X_Pos
+        sbc a:WeaponStruct::X_Pos, y
         bcs @DiffXPositive
         eor #$FF                
         clc
@@ -406,7 +412,7 @@ MoveDone:
         ; --- Cálculo de Distância Absoluta no Eixo Y ---
         lda BigHero + BigHeroStruct::Y_Pos
         sec
-        sbc WeaponA + WeaponStruct::Y_Pos
+        sbc a:WeaponStruct::Y_Pos, y
         bcs @DiffYPositive
         eor #$FF
         clc
@@ -420,11 +426,11 @@ MoveDone:
         sta BigHero + BigHeroStruct::Current_Weapon_ID
         
         lda #$8D                        ; Sprite/Tile ID dela na mão (ou segurando)
-        sta WeaponA + WeaponStruct::Tile_ID
+        sta a:WeaponStruct::Tile_ID, y
 
         ; Seta o estado físico da arma para EQUIPPED (0)
         lda #WEAPON_STATE_EQUIPPED
-        sta WeaponA + WeaponStruct::Active
+        sta a:WeaponStruct::Active, y
 
 @NoPickup:
         rts

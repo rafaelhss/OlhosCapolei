@@ -105,8 +105,14 @@ _ResetAlign:
         jsr ApplyWeaponCollisions       ; ◄ ADICIONADO: O gerenciador central testa a pedrada aqui!
 
         ; 4. SISTEMA DE RENDERIZAÇÃO FINAL
-        ldx #$0000                
+        ldx #$0000     
+        
+        ldy #.loword(WeaponA)            ; Garante que aponta para a WeaponA padrão
         jsr DrawDroppedWeapon     
+         ; --- DESENHA A WEAPON B (NOVA ARMA) ---
+        ldy #.loword(WeaponB)     ; Passa o endereço de WRAM da WeaponB por parâmetro
+        jsr DrawDroppedWeapon     ; Desenha reutilizando o mesmo código!
+
         jsr DrawBigHero          
         jsr DrawVaderCrab
 
@@ -459,6 +465,7 @@ CollisionDone:
 .export PennyCrab
 .export VaderCrab
 .export WeaponA
+.export WeaponB
 
 Hero:            .tag HeroStruct
 InimigoGrande:   .tag EnemyStruct
@@ -467,6 +474,7 @@ BigHero:         .tag BigHeroStruct
 PennyCrab:       .tag PennyCrabStruct
 VaderCrab:       .tag VaderCrabStruct
 WeaponA:         .tag WeaponStruct
+WeaponB:         .tag WeaponStruct
 
 FrameCounter:    .res 1    ; Contador global de frames (0 a 255)
 .export FrameCounter

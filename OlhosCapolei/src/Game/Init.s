@@ -21,7 +21,8 @@
 .include "Registers.inc"
 ;-------------------------------------------------------------------------------
 
-.import Hero, InimigoGrande, InimigoGrande2, BigHero, PennyCrab, VaderCrab, WeaponA
+.import Hero, InimigoGrande, InimigoGrande2
+.import  BigHero, PennyCrab, VaderCrab, WeaponA, WeaponB
 .import InitRNG
 
 .segment "CODE"
@@ -118,6 +119,26 @@
 
         stz WeaponA + WeaponStruct::Speed_X
         stz WeaponA + WeaponStruct::Speed_Y
+
+;------------fim weaponA---------
+
+;----------  WeaponA ----------------
+
+        lda #$01
+        sta WeaponB + WeaponStruct::Active
+        lda #$00
+        sta WeaponB + WeaponStruct::Weapon_ID
+        lda #$AD
+        sta WeaponB + WeaponStruct::Tile_ID
+        
+        lda #$80
+        sta WeaponB + WeaponStruct::X_Pos
+
+        lda #(SCREEN_BOTTOM / 4) 
+        sta WeaponB + WeaponStruct::Y_Pos
+
+        stz WeaponB + WeaponStruct::Speed_X
+        stz WeaponB + WeaponStruct::Speed_Y
 
 ;------------fim weaponA---------
 

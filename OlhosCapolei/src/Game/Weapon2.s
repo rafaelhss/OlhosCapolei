@@ -22,6 +22,7 @@
 .import     VaderCrab
 .import     BigHero
 .import     WeaponA
+.import     WeaponB
 .import     rand                ; Invocando o seu LFSR puro de src/common/Util.s
 
 ;----- Includes ----------------------------------------------------------------
@@ -204,26 +205,7 @@ Exit:
 .endproc
 
 
-; =============================================================================
-; SUBSISTEMA DE COLETA DE ARMAS NO CHÃO (PICKUP SYSTEM)
-; =============================================================================
-.proc SpawnWeaponOnGround
-        lda WeaponA + WeaponStruct::X_Pos
-        sta OAMMIRROR, x
-        inx
-        lda WeaponA + WeaponStruct::Y_Pos
-        sta OAMMIRROR, x
-        inx
-        lda WeaponA + WeaponStruct::Tile_ID ;tile
-        sta OAMMIRROR, x
-        inx
-        lda $01 ; atributos
-        sta OAMMIRROR, x
-        inx
 
-        rts      
-
-.endproc
 
 
 
@@ -232,25 +214,39 @@ Exit:
 ;   DrawDroppedWeapon
 ;   Responsabilidade: Renderizar o item e aplicar H-Flip baseado no herói se equipado
 ;-------------------------------------------------------------------------------
+; =============================================================================
+; SUBSISTEMA DE RENDERIZAÇÃO DE ARMAS PARAMETRIZADO VIA REGISTRADOR Y (16-bit)
+; =============================================================================
+
+;-------------------------------------------------------------------------------
+;   DrawDroppedWeapon (Versão Universal Reutilizável)
+;   Entrada: Y = Endereço absoluto de 16-bit da WeaponStruct (WeaponA ou WeaponB)
+;   Saída:   X = Incrementado automaticamente na OAMMIRROR
+;-------------------------------------------------------------------------------
 .proc DrawDroppedWeapon
-        lda WeaponA + WeaponStruct::X_Pos
-        sta OAMMIRROR, x
-        inx
-        lda WeaponA + WeaponStruct::Y_Pos
-        sta OAMMIRROR, x
-        inx
-        lda WeaponA + WeaponStruct::Tile_ID 
+        ; --- POSIÇÃO X ---
+        lda a:WeaponStruct::X_Pos, y
         sta OAMMIRROR, x
         inx
         
-        ; --- SISTEMA DE FLIP DINÂMICO PARA ITEM EQUIPADO ---
-        lda WeaponA + WeaponStruct::Active
+        ; --- POSIÇÃO Y ---
+        lda a:WeaponStruct::Y_Pos, y
+        sta OAMMIRROR, x
+        inx
+        
+        ; --- TILE ID ---
+        lda a:WeaponStruct::Tile_ID, y
+        sta OAMMIRROR, x
+        inx
+        
+        ; --- ATRIBUTOS COM SISTEMA DE FLIP DINÂMICO ---
+        lda a:WeaponStruct::Active, y
         cmp #WEAPON_STATE_EQUIPPED
-        bne @UseDefaultAttributes        ; Se estiver no chão, usa o atributo padrão ($01)
+        bne @UseDefaultAttributes        ; Se estiver no chão ou voando, usa o atributo padrão ($01)
 
-        ; Se estiver na mão, checa a direção do BigHero
+        ; Se estiver na mão, checa a direção do herói para espelhar
         lda BigHero + BigHeroStruct::Facing
-        beq @UseDefaultAttributes        ; Se Facing = 0 (Direita), não aplica flip
+        beq @UseDefaultAttributes        ; Se Facing = 0 (Olhando para a Direita), mantém padrão
 
 @ApplyHeroFlip:
         lda #$00                         ; Atributo original (Página 1 da VRAM)
@@ -260,10 +256,18 @@ Exit:
         rts
 
 @UseDefaultAttributes:
-        lda #$00                         ; Atributo padrão sem espelhamento
+        lda #$00                         ; Atributo padrão apontando para a Página 1 da VRAM
         sta OAMMIRROR, x
         inx
         rts
 .endproc
 
-
+;-------------------------------------------------------------------------------
+;   SpawnWeaponOnGround
+;   Mantida apenas por compatibilidade com sua Main.s anterior, redirecionando o fluxo
+;-------------------------------------------------------------------------------
+.proc SpawnWeaponOnGround
+        ldy #.loword(WeaponA)            ; Garante que aponta para a WeaponA padrão
+        jsr DrawDroppedWeapon
+        rts      
+.endproc
