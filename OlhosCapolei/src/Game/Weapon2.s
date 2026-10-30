@@ -114,11 +114,7 @@ Weapon_Data_Table:
 
 ;-------------------------------------------------------------------------------
 ;   UpdateProjectiles
-;   Responsabilidade: Processar a física da parábola e gravidade da pedra no ar
-;-------------------------------------------------------------------------------
-;-------------------------------------------------------------------------------
-;   UpdateProjectiles
-;   Responsabilidade: Processar a física da parábola e quique nas paredes laterais
+;   Responsabilidade: Processar a física da parábola e quique seguro nas paredes
 ;-------------------------------------------------------------------------------
 .proc UpdateProjectiles
         ; Só processa se a WeaponA estiver no estado de voo (WEAPON_STATE_THROWN = 2)
@@ -134,15 +130,25 @@ Weapon_Data_Table:
 
         ; --- CHECAGEM DE COLISÃO LATERAL (PAREDES DA TELA) ---
 CheckWallRight:
+        lda WeaponA + WeaponStruct::X_Pos
         cmp #(SCREEN_RIGHT - 16)        ; Pedra tem 16px de largura
-        bcs TocouNaParede              ; Se X >= limite direito, inverte trajetória
-        
-CheckWallLeft:
-        cmp #(SCREEN_LEFT + 4)
-        bcc TocouNaParede              ; Se X < limite esquerdo, inverte trajetória
-        bra ProcessVertical
+        bcc CheckWallLeft               ; Se X < limite direito, checa a esquerda
 
-TocouNaParede:
+        ; --- RICOCHETE NA DIREITA (DESCOLA PARA A ESQUERDA) ---
+        lda #(SCREEN_RIGHT - 17)        ; Força uma posição segura 1px para fora da parede
+        sta WeaponA + WeaponStruct::X_Pos
+        bra AplicarFisicaRicochete
+
+CheckWallLeft:
+        lda WeaponA + WeaponStruct::X_Pos
+        cmp #(SCREEN_LEFT + 4)
+        bcs ProcessVertical            ; Se X >= limite esquerdo, segue para o eixo Y
+
+        ; --- RICOCHETE NA ESQUERDA (DESCOLA PARA A DIREITA) ---
+        lda #(SCREEN_LEFT + 5)          ; Força uma posição segura 1px para fora da parede
+        sta WeaponA + WeaponStruct::X_Pos
+
+AplicarFisicaRicochete:
         ; Inverte matematicamente a direção horizontal (Soma <-> Subtração) via Complemento de 2
         lda WeaponA + WeaponStruct::Speed_X
         eor #$FF
@@ -151,14 +157,8 @@ TocouNaParede:
         sta WeaponA + WeaponStruct::Speed_X
 
         ; Aplica um quique vertical para cima para dar peso ao impacto na parede
-        lda #$FC                        ; Força Y = -4 (Impulso para cima)
+        lda #$FC                        ; Força Speed_Y = -4 (Impulso para cima)
         sta WeaponA + WeaponStruct::Speed_Y
-
-        ; Ajusta ligeiramente a posição para tirá-la de dentro da parede e evitar loops infinitos
-        lda WeaponA + WeaponStruct::X_Pos
-        clc
-        adc WeaponA + WeaponStruct::Speed_X
-        sta WeaponA + WeaponStruct::X_Pos
 
 ProcessVertical:
         ; 2. Movimentação Vertical (Eixo Y) + Gravidade
@@ -173,7 +173,7 @@ ProcessVertical:
         adc #$01
         sta WeaponA + WeaponStruct::Speed_Y
 
-        ; 3. Verificação Dinâmica de Queda (BMI = Subindo)
+        ; 3. Verificação Dinâmica de Queda (BMI = Subindo/Y negativo)
         lda WeaponA + WeaponStruct::Speed_Y
         bmi Exit                       
 
@@ -196,7 +196,6 @@ ProcessVertical:
 Exit:
         rts
 .endproc
-
 ;-------------------------------------------------------------------------------
 ;   DrawProjectiles (Versão Pura - Sem nenhuma correção ou blindagem)
 ;-------------------------------------------------------------------------------

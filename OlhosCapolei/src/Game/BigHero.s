@@ -328,23 +328,62 @@ MoveDone:
 ;   CheckWeaponPickup
 ;   Calcula a proximidade entre BigHero e WeaponA. Se perto, equipa
 ;-------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
+;   CheckWeaponPickup / DropWeapon
+;   Gerencia a coleta (se a arma estiver no chão) ou o descarte (se estiver na mão)
+;-------------------------------------------------------------------------------
 .proc CheckWeaponPickup
+        ; === VIA 1: SE O HERÓI JÁ ESTIVER COM A PEDRA NA MÃO, ELE LARGA ===
+        lda BigHero + BigHeroStruct::Current_Weapon_ID
+        cmp #WEAPON_ID_ROCK
+        bne @CheckPickupFromGround       ; Se não tem a pedra na mão, tenta pegar do chão
 
-        ; Se a arma já foi coletada (Active = 0), ignora a checagem
+@DropWeapon:
+        ; 1. Limpa o inventário local do herói imediatamente
+        lda #WEAPON_ID_UNARMED
+        sta BigHero + BigHeroStruct::Current_Weapon_ID
+
+        ; 2. Devolve o estado físico da arma para o CHÃO (WEAPON_STATE_GROUND = 1)
+        lda #WEAPON_STATE_GROUND
+        sta WeaponA + WeaponStruct::Active
+
+        ; 3. Atualiza o Target_Y da arma para a linha atual do solo onde ela foi solta
+        ; Isso garante que ela se alinhe perfeitamente com os pés atuais do herói
+        lda BigHero + BigHeroStruct::Y_Pos
+        clc
+        adc #48                         
+        sta WeaponA + WeaponStruct::Target_Y
+        sta WeaponA + WeaponStruct::Y_Pos
+
+        ; 4. Ajusta a posição X para ela cair ligeiramente à frente ou no pé do herói
+        lda BigHero + BigHeroStruct::X_Pos
+        clc
+        adc #8                          ; Centraliza um pouco no pé
+        sta WeaponA + WeaponStruct::X_Pos
+
+        ; 5. Restaura o Tile ID padrão da pedra no chão
+        lda #$6D
+        sta WeaponA + WeaponStruct::Tile_ID
+        rts
+
+@CheckPickupFromGround:
+        ; === VIA 2: ARQUITETURA PADRÃO DE COLETA ===
+        ; Garante que a arma está no chão (WEAPON_STATE_GROUND = 1) antes de tentar coletar
         lda WeaponA + WeaponStruct::Active
-        beq @NoPickup
+        cmp #WEAPON_STATE_GROUND
+        bne @NoPickup
 
         ; --- Cálculo de Distância Absoluta no Eixo X ---
         lda BigHero + BigHeroStruct::X_Pos
         sec
         sbc WeaponA + WeaponStruct::X_Pos
         bcs @DiffXPositive
-        eor #$FF                ; Inverte os bits (Complemento de 1)
+        eor #$FF                
         clc
-        adc #1                  ; Transforma em valor absoluto positivo
+        adc #1                  
 @DiffXPositive:
         cmp #PICKUP_DISTANCE
-        bcs @NoPickup           ; Muito longe no eixo X
+        bcs @NoPickup           
 
         ; --- Cálculo de Distância Absoluta no Eixo Y ---
         lda BigHero + BigHeroStruct::Y_Pos
@@ -356,22 +395,17 @@ MoveDone:
         adc #1
 @DiffYPositive:
         cmp #PICKUP_DISTANCE
-        bcs @NoPickup           ; Muito longe no eixo Y
+        bcs @NoPickup           
 
-        rep #$20                    
-        .a16
-        
         ; --- Coleta Concluída com Sucesso ---
-        ; Coloca um ID válido no inventário do herói para indicar que ele está armado
-        lda #$04 ; ID de exemplo (Pedra/Arma)
+        lda #WEAPON_ID_ROCK
         sta BigHero + BigHeroStruct::Current_Weapon_ID
         
-        ;debug
-        lda #$8D
+        lda #$8D                        ; Sprite/Tile ID dela na mão (ou segurando)
         sta WeaponA + WeaponStruct::Tile_ID
 
-        ; "Desativa" a arma do chão 
-        lda #$00
+        ; Seta o estado físico da arma para EQUIPPED (0)
+        lda #WEAPON_STATE_EQUIPPED
         sta WeaponA + WeaponStruct::Active
 
 @NoPickup:
