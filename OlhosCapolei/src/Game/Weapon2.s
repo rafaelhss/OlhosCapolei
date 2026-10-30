@@ -116,11 +116,15 @@ Weapon_Data_Table:
 ;   UpdateProjectiles
 ;   Responsabilidade: Processar a física da parábola e gravidade da pedra no ar
 ;-------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
+;   UpdateProjectiles
+;   Responsabilidade: Processar a física da parábola e quique nas paredes laterais
+;-------------------------------------------------------------------------------
 .proc UpdateProjectiles
-        ; Só processa se a WeaponA estiver no estado de voo (WEAPON_STATE_THROWN)
+        ; Só processa se a WeaponA estiver no estado de voo (WEAPON_STATE_THROWN = 2)
         lda WeaponA + WeaponStruct::Active
         cmp #WEAPON_STATE_THROWN
-        bne @Exit
+        bne Exit
 
         ; 1. Movimentação Horizontal (Eixo X)
         lda WeaponA + WeaponStruct::X_Pos
@@ -128,12 +132,35 @@ Weapon_Data_Table:
         adc WeaponA + WeaponStruct::Speed_X
         sta WeaponA + WeaponStruct::X_Pos
 
-        ; Proteção de bordas laterais da tela
-        cmp #SCREEN_RIGHT - 8
-        bcs @TocouOChao
-        cmp #SCREEN_LEFT + 4
-        bcc @TocouOChao
+        ; --- CHECAGEM DE COLISÃO LATERAL (PAREDES DA TELA) ---
+CheckWallRight:
+        cmp #(SCREEN_RIGHT - 16)        ; Pedra tem 16px de largura
+        bcs TocouNaParede              ; Se X >= limite direito, inverte trajetória
+        
+CheckWallLeft:
+        cmp #(SCREEN_LEFT + 4)
+        bcc TocouNaParede              ; Se X < limite esquerdo, inverte trajetória
+        bra ProcessVertical
 
+TocouNaParede:
+        ; Inverte matematicamente a direção horizontal (Soma <-> Subtração) via Complemento de 2
+        lda WeaponA + WeaponStruct::Speed_X
+        eor #$FF
+        clc
+        adc #1
+        sta WeaponA + WeaponStruct::Speed_X
+
+        ; Aplica um quique vertical para cima para dar peso ao impacto na parede
+        lda #$FC                        ; Força Y = -4 (Impulso para cima)
+        sta WeaponA + WeaponStruct::Speed_Y
+
+        ; Ajusta ligeiramente a posição para tirá-la de dentro da parede e evitar loops infinitos
+        lda WeaponA + WeaponStruct::X_Pos
+        clc
+        adc WeaponA + WeaponStruct::Speed_X
+        sta WeaponA + WeaponStruct::X_Pos
+
+ProcessVertical:
         ; 2. Movimentação Vertical (Eixo Y) + Gravidade
         lda WeaponA + WeaponStruct::Y_Pos
         clc
@@ -146,31 +173,29 @@ Weapon_Data_Table:
         adc #$01
         sta WeaponA + WeaponStruct::Speed_Y
 
-        ; 3. Verificação Dinâmica de Queda (Compara com a Target_Y salva no início)
-        ; Se a velocidade vertical for para baixo (positiva) e Y passou ou igualou o chão:
+        ; 3. Verificação Dinâmica de Queda (BMI = Subindo)
         lda WeaponA + WeaponStruct::Speed_Y
-        bmi @Exit                       ; Se Speed_Y for negativa, a pedra ainda está subindo. Pula checagem.
+        bmi Exit                       
 
         lda WeaponA + WeaponStruct::Y_Pos
         cmp WeaponA + WeaponStruct::Target_Y                       
-        bcc @Exit                       ; Se Y < Target_Y, ainda está caindo no ar. Continua.
+        bcc Exit                       
 
 @TocouOChao:
-        ; Trava a pedra exatamente na linha do pé calculada no início do tiro
+        ; Trava a pedra exatamente na linha do solo alvo
         lda WeaponA + WeaponStruct::Target_Y
         sta WeaponA + WeaponStruct::Y_Pos
 
-        ; Reseta o estado físico para "No Chão" (WEAPON_STATE_GROUND)
+        ; Reseta o estado físico para "No Chão" (WEAPON_STATE_GROUND = 1)
         lda #WEAPON_STATE_GROUND
         sta WeaponA + WeaponStruct::Active
 
-        lda #$6D
+        lda #$6D                        ; Sprite estático da pedra no solo
         sta WeaponA + WeaponStruct::Tile_ID
 
-@Exit:
+Exit:
         rts
 .endproc
-
 
 ;-------------------------------------------------------------------------------
 ;   DrawProjectiles (Versão Pura - Sem nenhuma correção ou blindagem)

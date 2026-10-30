@@ -24,6 +24,7 @@
 
 .import VaderCrab
 .import BigHero
+.import FrameCounter
 
 
 WALK_SPEED = $01
@@ -52,6 +53,16 @@ REST_TIME = 30 ;
     
     dec VaderCrab + VaderCrabStruct::HurtTimer ; Decrementa o tempo travado de dano
     brl Done   
+
+
+@CheckFrameFilter:
+    ; Filtro de velocidade: Só se move a cada 2 frames (Velocidade 0.5px)
+    lda FrameCounter
+    and #%00000001          ; Testa o bit 0 do contador de frames
+    beq @ProcessIA          ; Se for frame par (0), vai processar a IA normalmente
+    brl Done                ; Se for frame ímpar (1), dá um salto longo seguro até o fim da rotina!
+
+
 
 @ProcessIA:
 AttackFrameUpdate:
@@ -227,6 +238,13 @@ PreparingAnim:
 ;=== logica para mover
 ;=== logica para mover
 Move:
+    ; Se for frame ímpar (1), impede o avanço das coordenadas, pulando a física
+    lda FrameCounter
+    and #%00000001
+    beq @ProcessFisica          ; Se for frame par (0), calcula o movimento normal
+    brl Done                    ; Se for frame ímpar, pula a adição de pixels e vai direto atualizar geometry
+
+@ProcessFisica:
     ; 1. Calcular a distância absoluta em X: |VaderCrab_X - BigHero_X|
     lda VaderCrab + VaderCrabStruct::X_Pos
     clc

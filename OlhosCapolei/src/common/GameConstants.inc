@@ -28,7 +28,7 @@ WEAPON_STATE_THROWN   = 2  ; Voando pelo ar em parábola
 
 ; --- Configurações de Sprites e Velocidade ---
 SPRITE_SIZE     = $08   ; Sprites base são 8x8 pixels
-SPRITE_SPEED    = $03   ; Velocidade base do herói
+SPRITE_SPEED    = $01   ; Velocidade base do herói
 
 ENEMY_ATTACK_DISTANCE = $32   ; Distância de engajamento do ataque da IA   
 ENEMY_ATTACK_Y_RANGE  = $08   ; Tolerância no eixo Y para alinhamento tridimensional

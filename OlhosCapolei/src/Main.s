@@ -84,6 +84,10 @@ _ResetAlign:
 .proc   GameLoop
         wai                     
 
+ ; === INCREMENTA O CONTADOR GLOBAL DE FRAMES ===
+        inc FrameCounter
+
+
         ; 1. INPUT PIPELINE
         jsr ReadJoypad1
 
@@ -372,40 +376,51 @@ NoCollision:
 ;-------------------------------------------------------------------------------
 ;   ROTINA CENTRALIZADA DE COLISÃO COM AS BORDAS (Aritmética de Underflow)
 ;-------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
+;   ROTINA CENTRALIZADA DE COLISÃO COM AS BORDAS (Blindagem Absoluta Anti-Underflow)
+;-------------------------------------------------------------------------------
 .proc ApplyEdgeCollisions
-        ; === TRAVAS DO HEROI ===
+        ; === BLINDAGEM DO EIXO X (ESQUERDA / DIREITA) ===
 CheckHeroLeft:
         lda BigHero + BigHeroStruct::X_Pos
-        cmp #HERO_SCREEN_SAFE_LIMIT                    
-        bcc CheckHeroRight          
+        ; Se o herói passou da esquerda (underflow), o valor capotou para perto de $FF (ex: $FD, $FE, $FF)
+        ; Se o valor for maior que 240 e ele estava perto do zero, ele cruzou a borda esquerda.
+        cmp #240
+        bcc CheckHeroRight          ; Se X < 240, está em uma posição normal da tela. Checa a direita.
         
+        ; Se caiu aqui, houve underflow (X >= 240 vindo do zero). Força na borda esquerda!
         lda #SCREEN_LEFT            
         sta BigHero + BigHeroStruct::X_Pos
         bra CheckHeroTop            
 
 CheckHeroRight:
+        ; Limite físico da direita: SCREEN_RIGHT (255) - largura do sprite (32px) = 223
         lda BigHero + BigHeroStruct::X_Pos
-        cmp #(SCREEN_RIGHT - 16)
-        bcc CheckHeroTop            
+        cmp #223
+        bcc CheckHeroTop            ; Se X < 223, está seguro dentro da tela. Vai pro teto.
         
-        lda #(SCREEN_RIGHT - 16)    
+        lda #223                    ; Se X >= 223, satura na borda direita
         sta BigHero + BigHeroStruct::X_Pos
 
+        ; === BLINDAGEM DO EIXO Y (TETO / BASE) ===
 CheckHeroTop:
         lda BigHero + BigHeroStruct::Y_Pos
-        cmp #HERO_SCREEN_SAFE_LIMIT                    
-        bcc CheckHeroBottom         
+        ; Se o herói passou do teto (underflow), o valor capotou para perto de $FF
+        cmp #240
+        bcc CheckHeroBottom         ; Se Y < 240, altura está normal. Checa a base.
         
+        ; Se caiu aqui, houve underflow no teto. Força na borda superior!
         lda #SCREEN_TOP             
         sta BigHero + BigHeroStruct::Y_Pos
         bra CollisionDone          
 
 CheckHeroBottom:
+        ; Limite físico da base: SCREEN_BOTTOM (223) - altura do sprite (64px) = 159
         lda BigHero + BigHeroStruct::Y_Pos
-        cmp #(SCREEN_BOTTOM - 32)
-        bcc CollisionDone          
+        cmp #159
+        bcc CollisionDone          ; Se Y < 159, está seguro dentro do cenário.
         
-        lda #(SCREEN_BOTTOM - 32)    
+        lda #159                    ; Se Y >= 159, satura no limite inferior do cenário
         sta BigHero + BigHeroStruct::Y_Pos
 
 CollisionDone:
@@ -418,6 +433,8 @@ CollisionDone:
 .proc   NMIHandler
         lda RDNMI               ; Lê e limpa o flag indicador de interrupção de NMI
 
+
+       
         tsx                     ; Preserva o ponteiro de pilha atual
         pea OAMMIRROR           ; Injeta o endereço do espelho da RAM
         jsr UpdateOAMRAM        ; Envia os dados para a OAM real via DMA
@@ -450,3 +467,6 @@ BigHero:         .tag BigHeroStruct
 PennyCrab:       .tag PennyCrabStruct
 VaderCrab:       .tag VaderCrabStruct
 WeaponA:         .tag WeaponStruct
+
+FrameCounter:    .res 1    ; Contador global de frames (0 a 255)
+.export FrameCounter
