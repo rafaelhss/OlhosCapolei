@@ -49,8 +49,8 @@ def converter_yychr_para_snes(arquivo_entrada, arquivo_saida):
 
 if __name__ == "__main__":
     # Configuração dos arquivos (mude os nomes se necessário)
-    PALETA_YYCHR = "Sprites10.pal"  # O arquivo de 768 bytes que você salva no YY-CHR
-    PALETA_SNES  = "Sprites10.pal"      # O arquivo de 32 bytes que seu Assets.s vai ler
+    PALETA_YYCHR = "SpritesBig5.pal"  # O arquivo de 768 bytes que você salva no YY-CHR
+    PALETA_SNES  = "SpritesBig5c.pal"      # O arquivo de 32 bytes que seu Assets.s vai ler
 
     converter_yychr_para_snes(PALETA_YYCHR, PALETA_SNES)
 
