@@ -27,7 +27,7 @@
 .include "BigHero.inc"
 .include "PennyCrab.inc"
 .include "VaderCrab.inc"
-.include "Weapon.inc"
+.include "Weapon2.inc"
 
 ;-------------------------------------------------------------------------------
 
@@ -54,7 +54,7 @@ _ResetAlign:
         ldx #$1fff              ; Aponta a Pilha para o topo da página espelho
         txs
 
-        jsr ClearProjectilePool 
+        ;jsr ClearProjectilePool 
         
         jsr ClearRegisters
         jsr ClearVRAM
@@ -102,7 +102,7 @@ _ResetAlign:
         ; =====================================================================
         ldx #$0000                ; X inicia em 0 como offset do primeiro Sprite na OAM
        
-        jsr DrawProjectiles       ; Desenha e devolve X atualizado em 16-bit
+        ;jsr DrawProjectiles       ; Desenha e devolve X atualizado em 16-bit
         jsr DrawDroppedWeapon     ; Desenha e devolve X atualizado
        
         ; Como DrawBigHero consome X mas não atualizava o fluxo para a Main,
@@ -339,10 +339,12 @@ CollisionDone:
 .export BigHero 
 .export PennyCrab
 .export VaderCrab
+.export WeaponA
 
-Hero:          .tag HeroStruct
-InimigoGrande: .tag EnemyStruct
-InimigoGrande2: .tag EnemyStruct
-BigHero:        .tag BigHeroStruct
+Hero:            .tag HeroStruct
+InimigoGrande:   .tag EnemyStruct
+InimigoGrande2:  .tag EnemyStruct
+BigHero:         .tag BigHeroStruct
 PennyCrab:       .tag PennyCrabStruct
 VaderCrab:       .tag VaderCrabStruct
+WeaponA:         .tag WeaponStruct

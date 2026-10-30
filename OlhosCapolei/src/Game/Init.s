@@ -21,7 +21,7 @@
 .include "Registers.inc"
 ;-------------------------------------------------------------------------------
 
-.import Hero, InimigoGrande, InimigoGrande2, BigHero, PennyCrab, VaderCrab
+.import Hero, InimigoGrande, InimigoGrande2, BigHero, PennyCrab, VaderCrab, WeaponA
 .import InitRNG
 
 .segment "CODE"
@@ -100,6 +100,26 @@
         txs                             ; Restaura o Stack perfeitamente
 
         ; --- 4. INICIALIZAÇÃO DAS STRUCTS (8-BIT PURO E SEGURO) ---
+
+
+;----------  WeaponA ----------------
+
+        lda #$01
+        sta WeaponA + WeaponStruct::Active
+        lda #$00
+        sta WeaponA + WeaponStruct::Weapon_ID
+        lda #$6D
+        sta WeaponA + WeaponStruct::Tile_ID
+        
+        lda #$AA
+        sta WeaponA + WeaponStruct::X_Pos
+        lda #(SCREEN_BOTTOM / 4) 
+        sta WeaponA + WeaponStruct::Y_Pos
+
+        stz WeaponA + WeaponStruct::Speed_X
+        stz WeaponA + WeaponStruct::Speed_Y
+
+;------------fim weaponA---------
 
 
 
@@ -185,7 +205,7 @@
         lda #0                          ; Começa com o frame de pé parado (guarda)
         sta BigHero + BigHeroStruct::Anim_Frame
 
-        lda #0                          ; Começa com o sem arma
+        lda #00                          ; Começa com o sem arma
         sta BigHero + BigHeroStruct::Current_Weapon_ID
 
  ;       lda #STATE_HURT_NOT

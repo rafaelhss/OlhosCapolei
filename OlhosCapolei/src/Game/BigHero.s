@@ -10,11 +10,11 @@
 .include "GameConstants.inc"
 .include "MemoryMapWRAM.inc"
 .include "Registers.inc"
-.include "Weapon.inc"
+.include "Weapon2.inc"
 
 .import BigHero
-.import GetWeaponData       
-.import Weapon_Data_Table  
+
+.import     WeaponA
 
 
 .export DrawBigHero, MoveBigHero
@@ -22,6 +22,9 @@
 
 ; --- Alocação de Ponteiro na Direct Page ---
 ;DP_HERO_LAYOUT_PTR = $04 ;comentada pq foi para o gameconstants
+
+
+PICKUP_DISTANCE  = 64        ; Tolerância em pixels para conseguir pegar a arma
 
 .segment "CODE"
 
@@ -51,12 +54,6 @@ BigHero_Layout_Hurt:
     .byte 0,32,$60,$30, 16,32,$62,$30
     .byte 0,48,$80,$30, 16,48,$82,$30
 
-; --- Tabela de Offsets Locais da Mão do BigHero por Frame ---
-; Define onde a arma deve ser colada em relação ao X_Pos e Y_Pos globais
-Hero_Hand_Offsets:
-    .byte 24, 20    ; Frame 0 (Idle): Mão avança 24px em X, desce 20px em Y
-    .byte 24, 18    ; Frame 1 (Walk): Mão avança 24px em X, desce 18px em Y
-    .byte 12, 24    ; Frame 2 (Hurt): Mão recua para 12px em X devido ao hitstun
 
 ;-------------------------------------------------------------------------------
 ;   DrawBigHero
@@ -83,63 +80,6 @@ Hero_Hand_Offsets:
         sty z:DP_HERO_LAYOUT_PTR
 
 @StartDraw:
-        ; =====================================================================
-        ; CRÍTICO: ACOPLAMENTO FRONTAL DA ARMA EQUIPADA (ORDEM HIERÁRQUICA OAM)
-        ; =====================================================================
-        ; Desenhamos a arma PRIMEIRO. Assim ela pega um índice mais baixo na OAM
-        ; e a PPU do SNES a renderiza na frente do peito do herói automaticamente!
-        lda BigHero + BigHeroStruct::Current_Weapon_ID
-        beq @DrawHeroBody               ; Se ID for 0 (Desarmado), vai direto para o corpo
-
-        sta z:DP_TEMP_00                       ; Guarda temporariamente o ID em $00 da DP
-
-        ; Descobre qual índice de frame da mão ler (0=Idle, 1=Walk, 2=Hurt)
-        lda BigHero + BigHeroStruct::HurtTimer
-        beq @CheckHandWalk
-        lda #2                          ; Força frame da mão em Hurt
-        bra @CalcularOffsetsMao
-
-@CheckHandWalk:
-        lda BigHero + BigHeroStruct::Anim_Frame ; Pega 0 ou 1 da caminhada
-
-@CalcularOffsetsMao:
-        asl a                           ; Multiplica por 2 (cada entrada tem 2 bytes: X e Y)
-        tay                             ; Transfere para Y para indexar a Hero_Hand_Offsets
-
-        lda Hero_Hand_Offsets, y     
-        sta z:DP_TEMP_02                       ; Guarda Offset X local da mão em $02 da DP
-        lda Hero_Hand_Offsets + 1, y 
-        sta z:DP_TEMP_03                       ; Guarda Offset Y local da mão em $03 da DP
-
-        ; Preserva o offset OAM (X) antes de chamar a rotina de dados státicos da ROM
-        stx z:DP_HERO_OAM_BACKUP
-
-        lda z:DP_TEMP_00                       ; Recarrega o ID da arma
-        jsr GetWeaponData               ; Retorna em Y o offset exato da arma na ROM
-        
-        ldx z:DP_HERO_OAM_BACKUP                       ; Recupera o offset OAM limpo
-
-        ; Injeta o sprite da arma acoplada na OAMMIRROR
-        lda BigHero + BigHeroStruct::X_Pos
-        clc
-        adc z:DP_TEMP_02                       ; Posição X Global da arma
-        sta OAMMIRROR, x
-        inx
-
-        lda BigHero + BigHeroStruct::Y_Pos
-        clc
-        adc z:DP_TEMP_03                       ; Posição Y Global da arma
-        sta OAMMIRROR, x
-        inx
-
-        lda Weapon_Data_Table, y        ; Carrega o Tile_ID correto da arma vindo da ROM
-        sta OAMMIRROR, x
-        inx
-
-        lda Weapon_Data_Table + 1, y    ; Carrega os Atributos de paleta/prioridade da arma
-        sta OAMMIRROR, x
-        inx                             ; Avança OAM de forma cumulativa
-
 @DrawHeroBody:
         ldy #$0000              ; Reseta Y para indexar os 8 blocos do corpo do herói
 
@@ -308,12 +248,54 @@ CheckAttackButton:
 
         sep #$20                    
         .a8
-        jsr ProcessWeaponAttack     ; Invoca o motor de ataque (tiro ou arremesso de pedra)
+        
+    ; --- GERENCIAMENTO DE INVENTÁRIO (Responsabilidade do Herói) ---
+        lda BigHero + BigHeroStruct::Current_Weapon_ID
+        cmp #WEAPON_ID_ROCK             ; É a pedra consumível?
+        bne @DispararAtaqueComum        ; Se for outra arma infinita (faca/cano), vai direto
+
+        ; O herói zera o seu inventário local imediatamente antes do arremesso
+        lda #WEAPON_ID_UNARMED
+        sta BigHero + BigHeroStruct::Current_Weapon_ID
+
+@DispararAtaqueComum:
+        jsr ProcessWeaponAttack         ; Invoca a inteligência da arma para agir no mundo
 
 
 @PickupDone:
         sep #$20                    
         .a8
+
+        ; === SISTEMA DE ARRASTE DA ARMA EQUIPADA ===
+        ; === SISTEMA DE ARRASTE DA ARMA EQUIPADA COM FACING ===
+        lda WeaponA + WeaponStruct::Active
+        bne MoveDone                 ; Se != 0, a arma ainda está no chão. Pula.
+
+        ; Verifica a direção do Herói
+        lda BigHero + BigHeroStruct::Facing
+        bne @ArrasteEsquerda
+
+@ArrasteDireita:
+        ; Herói olhando para a DIREITA: Avança a arma para frente do peito
+        lda BigHero + BigHeroStruct::X_Pos
+        clc
+        adc #24                      ; Offset X para a direita
+        sta WeaponA + WeaponStruct::X_Pos
+        bra @AjustarY
+
+@ArrasteEsquerda:
+        ; Herói olhando para a ESQUERDA: Recua a arma para o lado esquerdo
+        lda BigHero + BigHeroStruct::X_Pos
+        sec
+        sbc #8                       ; Offset X para a esquerda (compensa os 16px do sprite)
+        sta WeaponA + WeaponStruct::X_Pos
+
+@AjustarY:
+        ; O eixo Y (altura) permanece idêntico em ambas as direções
+        lda BigHero + BigHeroStruct::Y_Pos
+        clc
+        adc #24                      
+        sta WeaponA + WeaponStruct::Y_Pos
 
 MoveDone:
         ; --- SISTEMA DE MANUTENÇÃO DE GEOMETRIA & INVENCIBILIDADE ---
@@ -341,6 +323,62 @@ MoveDone:
         sta BigHero + BigHeroStruct::Hurtbox_Active
         rts
 .endproc
+
+;-------------------------------------------------------------------------------
+;   CheckWeaponPickup
+;   Calcula a proximidade entre BigHero e WeaponA. Se perto, equipa
+;-------------------------------------------------------------------------------
+.proc CheckWeaponPickup
+
+        ; Se a arma já foi coletada (Active = 0), ignora a checagem
+        lda WeaponA + WeaponStruct::Active
+        beq @NoPickup
+
+        ; --- Cálculo de Distância Absoluta no Eixo X ---
+        lda BigHero + BigHeroStruct::X_Pos
+        sec
+        sbc WeaponA + WeaponStruct::X_Pos
+        bcs @DiffXPositive
+        eor #$FF                ; Inverte os bits (Complemento de 1)
+        clc
+        adc #1                  ; Transforma em valor absoluto positivo
+@DiffXPositive:
+        cmp #PICKUP_DISTANCE
+        bcs @NoPickup           ; Muito longe no eixo X
+
+        ; --- Cálculo de Distância Absoluta no Eixo Y ---
+        lda BigHero + BigHeroStruct::Y_Pos
+        sec
+        sbc WeaponA + WeaponStruct::Y_Pos
+        bcs @DiffYPositive
+        eor #$FF
+        clc
+        adc #1
+@DiffYPositive:
+        cmp #PICKUP_DISTANCE
+        bcs @NoPickup           ; Muito longe no eixo Y
+
+        rep #$20                    
+        .a16
+        
+        ; --- Coleta Concluída com Sucesso ---
+        ; Coloca um ID válido no inventário do herói para indicar que ele está armado
+        lda #$04 ; ID de exemplo (Pedra/Arma)
+        sta BigHero + BigHeroStruct::Current_Weapon_ID
+        
+        ;debug
+        lda #$8D
+        sta WeaponA + WeaponStruct::Tile_ID
+
+        ; "Desativa" a arma do chão 
+        lda #$00
+        sta WeaponA + WeaponStruct::Active
+
+@NoPickup:
+        rts
+.endproc
+
+
 
 ;-------------------------------------------------------------------------------
 ;   DrawBigHeroHurtboxDebug

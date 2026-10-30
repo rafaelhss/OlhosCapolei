@@ -132,10 +132,10 @@ CMakeFiles/OlhosCapolei.dir/src/Game/VaderCrab.s.o: /home/rafa/Documents/Projeto
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building CA65816 object CMakeFiles/OlhosCapolei.dir/src/Game/VaderCrab.s.o"
 	/usr/bin/ca65 --cpu 65816                               $(CA65816_FLAGS)                               -s                               -o CMakeFiles/OlhosCapolei.dir/src/Game/VaderCrab.s.o                               /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/VaderCrab.s
 
-CMakeFiles/OlhosCapolei.dir/src/Game/Weapon.s.o: CMakeFiles/OlhosCapolei.dir/flags.make
-CMakeFiles/OlhosCapolei.dir/src/Game/Weapon.s.o: /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Weapon.s
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building CA65816 object CMakeFiles/OlhosCapolei.dir/src/Game/Weapon.s.o"
-	/usr/bin/ca65 --cpu 65816                               $(CA65816_FLAGS)                               -s                               -o CMakeFiles/OlhosCapolei.dir/src/Game/Weapon.s.o                               /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Weapon.s
+CMakeFiles/OlhosCapolei.dir/src/Game/Weapon2.s.o: CMakeFiles/OlhosCapolei.dir/flags.make
+CMakeFiles/OlhosCapolei.dir/src/Game/Weapon2.s.o: /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Weapon2.s
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building CA65816 object CMakeFiles/OlhosCapolei.dir/src/Game/Weapon2.s.o"
+	/usr/bin/ca65 --cpu 65816                               $(CA65816_FLAGS)                               -s                               -o CMakeFiles/OlhosCapolei.dir/src/Game/Weapon2.s.o                               /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Weapon2.s
 
 CMakeFiles/OlhosCapolei.dir/src/PPU/PPU.s.o: CMakeFiles/OlhosCapolei.dir/flags.make
 CMakeFiles/OlhosCapolei.dir/src/PPU/PPU.s.o: /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/PPU/PPU.s
@@ -161,7 +161,7 @@ OlhosCapolei_OBJECTS = \
 "CMakeFiles/OlhosCapolei.dir/src/Game/BigHero.s.o" \
 "CMakeFiles/OlhosCapolei.dir/src/Game/PennyCrab.s.o" \
 "CMakeFiles/OlhosCapolei.dir/src/Game/VaderCrab.s.o" \
-"CMakeFiles/OlhosCapolei.dir/src/Game/Weapon.s.o" \
+"CMakeFiles/OlhosCapolei.dir/src/Game/Weapon2.s.o" \
 "CMakeFiles/OlhosCapolei.dir/src/PPU/PPU.s.o" \
 "CMakeFiles/OlhosCapolei.dir/src/Main.s.o"
 
@@ -180,7 +180,7 @@ OlhosCapolei.smc: CMakeFiles/OlhosCapolei.dir/src/Game/Hero.s.o
 OlhosCapolei.smc: CMakeFiles/OlhosCapolei.dir/src/Game/BigHero.s.o
 OlhosCapolei.smc: CMakeFiles/OlhosCapolei.dir/src/Game/PennyCrab.s.o
 OlhosCapolei.smc: CMakeFiles/OlhosCapolei.dir/src/Game/VaderCrab.s.o
-OlhosCapolei.smc: CMakeFiles/OlhosCapolei.dir/src/Game/Weapon.s.o
+OlhosCapolei.smc: CMakeFiles/OlhosCapolei.dir/src/Game/Weapon2.s.o
 OlhosCapolei.smc: CMakeFiles/OlhosCapolei.dir/src/PPU/PPU.s.o
 OlhosCapolei.smc: CMakeFiles/OlhosCapolei.dir/src/Main.s.o
 OlhosCapolei.smc: CMakeFiles/OlhosCapolei.dir/build.make

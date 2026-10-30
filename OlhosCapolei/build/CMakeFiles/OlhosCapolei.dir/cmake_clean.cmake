@@ -7,7 +7,7 @@ file(REMOVE_RECURSE
   "CMakeFiles/OlhosCapolei.dir/src/Game/Input.s.o"
   "CMakeFiles/OlhosCapolei.dir/src/Game/PennyCrab.s.o"
   "CMakeFiles/OlhosCapolei.dir/src/Game/VaderCrab.s.o"
-  "CMakeFiles/OlhosCapolei.dir/src/Game/Weapon.s.o"
+  "CMakeFiles/OlhosCapolei.dir/src/Game/Weapon2.s.o"
   "CMakeFiles/OlhosCapolei.dir/src/Main.s.o"
   "CMakeFiles/OlhosCapolei.dir/src/PPU/PPU.s.o"
   "CMakeFiles/OlhosCapolei.dir/src/common/InitSNES.s.o"

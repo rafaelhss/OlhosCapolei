@@ -100,7 +100,7 @@ WEAPON_ID_BAZOOKA      = 6
     Hurtbox_Y1          .byte   ; Retângulo AABB - Topo
     Hurtbox_Y2          .byte   ; Retângulo AABB - Base
     HurtTimer           .byte   ; Contador de hitstun (cara amassada)
-    Current_Weapon_ID   .byte   ; ID da arma atualmente equipada (0 a 6)
+    Current_Weapon_ID   .byte   ; Endereco da arma atualmente equipada (0 a 6)
 .endstruct
 
 ; ======== Enemy Padrão (8-bit)
@@ -177,11 +177,16 @@ WEAPON_ID_BAZOOKA      = 6
 .endstruct
 
 ; ======== Registro de Itens Soltos no Cenário
-.struct DroppedWeaponEntity
+.struct WeaponStruct
     Active      .byte   ; 0 = Vazio, 1 = Visível no chão esperando coleta
     Weapon_ID   .byte   ; ID associado à Weapon_Data_Table (1 a 6)
+    Tile_ID     .byte   ; Grafismo correto indexado da ROM 
     X_Pos       .byte   
     Y_Pos       .byte   
+    Speed_X   .byte   ; Velocidade horizontal assinada do arremesso
+    Speed_Y   .byte   ; Força vertical/parábola assinada
+    Target_Y  .byte   ; Guarda o pixel exato do chão onde a pedra deve pousar
+
 .endstruct
 
 .endif

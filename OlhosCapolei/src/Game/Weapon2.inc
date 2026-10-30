@@ -9,7 +9,6 @@ WEAPON_INC = 1
 .import UpdateProjectiles
 .import DrawProjectiles
 .import SpawnWeaponOnGround
-.import CheckWeaponPickup
 .import DrawDroppedWeapon
 .import ProcessWeaponAttack
 .import ClearProjectilePool 
