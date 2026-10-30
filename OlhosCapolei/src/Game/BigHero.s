@@ -13,18 +13,16 @@
 .include "Weapon2.inc"
 
 .import BigHero
-
-.import     WeaponA, WeaponB
-
+.import WeaponA, WeaponB
+.import FrameCounter
+.import LoadActiveWeaponToY
+.import ProcessWeaponAttack
 
 .export DrawBigHero, MoveBigHero
 .export DrawBigHeroHurtboxDebug
 
-; --- Alocação de Ponteiro na Direct Page ---
-;DP_HERO_LAYOUT_PTR = $04 ;comentada pq foi para o gameconstants
-
-
 PICKUP_DISTANCE  = 48        ; Tolerância em pixels para conseguir pegar a arma
+WALK_ANIM_SPEED  = 8         ; Frequência de troca de pernas (a cada 8 frames da PPU)
 
 .segment "CODE"
 
@@ -40,32 +38,51 @@ BigHero_Layout_Idle:
     .byte 0,32,$60,$30, 16,32,$62,$30
     .byte 0,48,$80,$30, 16,48,$82,$30
 
-; FRAME 1: Caminhada (Passo Aberto)
+; FRAME 1: Caminhada (Passo Aberto A)
 BigHero_Layout_Walk:
     .byte 0, 0,$20,$30, 16, 0,$22,$30
     .byte 0,16,$40,$30, 16,16,$42,$30
-    .byte 0,32,$60,$30, 16,32,$62,$30
-    .byte 0,48,$A0,$30, 16,48,$A2,$30
+    .byte 0,32,$A8,$30, 16,32,$AA,$30
+    .byte 0,48,$C8,$30, 16,48,$CA,$30
 
-; FRAME 2: Estado de Dano / Hitstun (Cabeça muda para Tiles $A0/$A2)
+; FRAME 2: Caminhada (Passo Aberto B)
+BigHero_Layout_Walk2:
+    .byte 0, 0,$20,$30, 16, 0,$22,$30
+    .byte 0,16,$40,$30, 16,16,$42,$30
+    .byte 0,32,$2C,$30, 16,32,$2E,$30
+    .byte 0,48,$4C,$30, 16,48,$4E,$30
+
+; FRAME 3: Estado de Dano / Hitstun
 BigHero_Layout_Hurt:
     .byte 0, 0,$A0,$30, 16, 0,$A2,$30
     .byte 0,16,$40,$30, 16,16,$42,$30
     .byte 0,32,$60,$30, 16,32,$62,$30
     .byte 0,48,$80,$30, 16,48,$82,$30
 
-BigHero_Layout_WeaponA:
+BigHero_Layout_Weapon0:
     .byte 0, 0,$20,$30, 16, 0,$22,$30
     .byte 0,16,$40,$30, 16,16,$42,$30
     .byte 0,32,$A4,$30, 16,32,$A6,$30
     .byte 0,48,$80,$30, 16,48,$82,$30
 
+BigHero_Layout_Weapon1:
+    .byte 0, 0,$20,$30, 16, 0,$22,$30
+    .byte 0,16,$40,$30, 16,16,$42,$30
+    .byte 0,32,$A4,$30, 16,32,$A6,$30
+    .byte 0,48,$C8,$30, 16,48,$CA,$30
+
+BigHero_Layout_Weapon2:
+    .byte 0, 0,$20,$30, 16, 0,$22,$30
+    .byte 0,16,$40,$30, 16,16,$42,$30
+    .byte 0,32,$A4,$30, 16,32,$A6,$30
+     .byte 0,48,$4C,$30, 16,48,$4E,$30
 
 ;-------------------------------------------------------------------------------
 ;   DrawBigHero
 ;-------------------------------------------------------------------------------
 .proc DrawBigHero
         ; --- PIPELINE DE SELEÇÃO DE ANIMAÇÃO HIERÁRQUICA ---
+        ; 1. Prioridade Máxima: Estado de Dano / Hitstun
         lda BigHero + BigHeroStruct::HurtTimer
         beq @CheckWeapon
 
@@ -74,39 +91,63 @@ BigHero_Layout_WeaponA:
         bra @StartDraw
 
 @CheckWeapon:
+        ; 2. Verifica se o herói está armado para selecionar a sub-árvore de animações
         lda BigHero + BigHeroStruct::Current_Weapon_ID
         cmp #WEAPON_ID_UNARMED
-        beq @CheckMovement
+        beq @CheckMovementNormal
 
-        ldy #.loword(BigHero_Layout_WeaponA)
+        ; --- ÁRVORE DE ANIMAÇÃO COM ARMA ---
+        lda BigHero + BigHeroStruct::Anim_Frame
+        cmp #0
+        beq @WeaponIdle
+        cmp #1
+        beq @WeaponWalk1
+        cmp #2
+        beq @WeaponWalk2
+
+@WeaponIdle:
+        ldy #.loword(BigHero_Layout_Weapon0)
+        sty z:DP_HERO_LAYOUT_PTR
+        bra @StartDraw
+@WeaponWalk1:
+        ldy #.loword(BigHero_Layout_Weapon1)
+        sty z:DP_HERO_LAYOUT_PTR
+        bra @StartDraw
+@WeaponWalk2:
+        ldy #.loword(BigHero_Layout_Weapon2)
         sty z:DP_HERO_LAYOUT_PTR
         bra @StartDraw
 
-
-@CheckMovement:
+@CheckMovementNormal:
+        ; --- ÁRVORE DE ANIMAÇÃO DESARMADO ---
         lda BigHero + BigHeroStruct::Anim_Frame
-        bne @WalkFrame
-        
+        cmp #0
+        beq @Idle
+        cmp #1
+        beq @Walk1
+        cmp #2
+        beq @Walk2
+
+@Idle: 
         ldy #.loword(BigHero_Layout_Idle)
         sty z:DP_HERO_LAYOUT_PTR
         bra @StartDraw
-
-@WalkFrame:
+@Walk1: 
         ldy #.loword(BigHero_Layout_Walk)
         sty z:DP_HERO_LAYOUT_PTR
-
+        bra @StartDraw
+@Walk2: 
+        ldy #.loword(BigHero_Layout_Walk2)
+        sty z:DP_HERO_LAYOUT_PTR
 @StartDraw:
 @DrawHeroBody:
-        ldy #$0000              ; Reseta Y para indexar os 8 blocos do corpo do herói
+        ldy #$0000              
 
 DrawLoop:
         ; --- EIXO X (Com suporte a espelhamento) ---
         lda BigHero + BigHeroStruct::Facing
         beq @NoXFlip
 
-        ; Se estiver olhando para a esquerda, nós invertemos o deslocamento X do bloco
-        ; O herói tem 32px de largura, e cada bloco tem 16px. 
-        ; Para espelhar a matriz de 2 colunas: Novo_Offset = 16 - Offset_Original
         lda #16
         sec
         sbc (DP_HERO_LAYOUT_PTR),y
@@ -136,15 +177,15 @@ DrawLoop:
         inx
         iny                     
 
-        ; --- ATRIBUTOS (Injeta o Flip se Facing = 1) ---
+        ; --- ATRIBUTOS ---
         lda (DP_HERO_LAYOUT_PTR),y
-        sta z:$00                       ; Guarda o atributo original da ROM em $00
+        sta z:$00                       
         
         lda BigHero + BigHeroStruct::Facing
-        beq @WriteAttributes            ; Se for 0 (Direita), pula o flip
+        beq @WriteAttributes            
         
         lda z:$00
-        eor #$40                        ; Aplica Flip Horizontal via Hardware (Bit 6)
+        eor #$40                        
         sta z:$00
 
 @WriteAttributes:
@@ -155,7 +196,6 @@ DrawLoop:
 
         cpy #32
         bne DrawLoop
-
         rts
 .endproc
 
@@ -163,6 +203,8 @@ DrawLoop:
 ;   MoveBigHero
 ;-------------------------------------------------------------------------------
 .proc MoveBigHero
+        stz z:$02               ; Rascunho na DP ($02): 0 = Parado, 1 = Em movimento
+        
         lda #SPRITE_SPEED
         sta HOR_SPEED
         sta VER_SPEED
@@ -189,11 +231,13 @@ CheckRight:
         sep #$20                
         .a8
 MoveRight:
-        stz BigHero + BigHeroStruct::Facing     ; ◄ $00 = Olhando para a DIREITA
+        stz BigHero + BigHeroStruct::Facing     
         lda BigHero + BigHeroStruct::X_Pos
         clc
         adc HOR_SPEED               
         sta BigHero + BigHeroStruct::X_Pos 
+        lda #1
+        sta z:$02               ; Ativa flag de movimento
 
 CheckLeft:
         rep #$20                
@@ -206,12 +250,13 @@ CheckLeft:
         .a8
 MoveLeft:
         lda #$01
-        sta BigHero + BigHeroStruct::Facing     ; ◄ $01 = Olhando para a ESQUERDA
+        sta BigHero + BigHeroStruct::Facing     
         lda BigHero + BigHeroStruct::X_Pos
         sec
         sbc HOR_SPEED               
         sta BigHero + BigHeroStruct::X_Pos
-
+        lda #1
+        sta z:$02               ; Ativa flag de movimento
 
 CheckUp:
         rep #$20                
@@ -227,6 +272,8 @@ MoveUp:
         sec
         sbc VER_SPEED               
         sta BigHero + BigHeroStruct::Y_Pos
+        lda #1
+        sta z:$02               ; Ativa flag de movimento
 
 CheckDown:
         rep #$20                
@@ -242,23 +289,22 @@ MoveDown:
         clc
         adc VER_SPEED                       
         sta BigHero + BigHeroStruct::Y_Pos
+        lda #1
+        sta z:$02               ; Ativa flag de movimento
 
 CheckPickupButton:
-        ; === CENTRALIZAÇÃO DE INPUT: BOTÃO X PARA COLETAR ARMA ===
         rep #$20                    
         .a16
-        lda JOYTRIGGER1             ; Captura o clique atômico do frame
-        and #X_BUTTON                  ; Máscara de hardware do botão X
+        lda JOYTRIGGER1             
+        and #X_BUTTON                  
         beq CheckAttackButton             
 
         sep #$20                    
         .a8
-
         ldy #.loword(WeaponA) 
-        jsr CheckWeaponPickup       ; Dispara o motor tridimensional de coleta do chão
+        jsr CheckWeaponPickup       
         ldy #.loword(WeaponB) 
-        jsr CheckWeaponPickup       ; Dispara o motor tridimensional de coleta do chão
-
+        jsr CheckWeaponPickup       
 
 CheckAttackButton:                  
         rep #$20
@@ -270,10 +316,16 @@ CheckAttackButton:
         sep #$20                    
         .a8
         
-        ; 1. Localiza o slot físico ANTES de zerar o inventário do herói
+        ; === FILTRO DE SEGURANÇA CONTRA ATAQUE FANTASMA ===
+        ; Se o herói estiver desarmado, ignora o botão Y completamente e aborta
+        lda BigHero + BigHeroStruct::Current_Weapon_ID
+        cmp #WEAPON_ID_UNARMED
+        beq @PickupDone
+
+        ; Localiza com segurança qual slot físico está na mão do herói
         jsr LoadActiveWeaponToY
         
-        ; 2. Gerenciamento de Inventário Consumível
+        ; Gerenciamento de Inventário Consumível (Mapeia se a arma vai sumir da mão)
         lda BigHero + BigHeroStruct::Current_Weapon_ID
         cmp #WEAPON_ID_ROCK             
         beq @Arremessar        
@@ -282,27 +334,55 @@ CheckAttackButton:
         bra @DispararAtaqueComum
 
 @Arremessar:
+        ; Como a pedra/martelo são consumíveis, limpa o inventário do herói antes do voo
         lda #WEAPON_ID_UNARMED
         sta BigHero + BigHeroStruct::Current_Weapon_ID
 
 @DispararAtaqueComum:
-        ; Executa o arremesso passando o Y preservado com o endereço da arma ativa
-        jsr ProcessWeaponAttack         
-
+        ; Executa o arremesso passando o Y validado com o endereço da arma ativa
+        jsr ProcessWeaponAttack     
 
 @PickupDone:
         sep #$20                    
         .a8
+
+        ; === ENGINE DE ATUALIZAÇÃO DO ANIM_FRAME DO PROTAGONISTA ===
+        lda z:$02               ; Carrega o estado de movimento lido do D-Pad
+        bne @UpdateWalkAnimation
+
+        ; Se não está se movendo, força o frame de Idle (0) imediatamente
+        stz BigHero + BigHeroStruct::Anim_Frame
+        bra @ProcessarArrastePipeline
+
+@UpdateWalkAnimation:
+        ; Taxa de amostragem: Só alterna o passo a cada N frames globais do clock da PPU
+        lda FrameCounter
+        and #(WALK_ANIM_SPEED - 1) ; Filtra o bit operacional (Módulo 8)
+        bne @ProcessarArrastePipeline
+
+        ; Avança dinamicamente entre Passo 1 e Passo 2
+        lda BigHero + BigHeroStruct::Anim_Frame
+        cmp #1
+        beq @SetPasso2
+
+@SetPasso1:
+        lda #1
+        sta BigHero + BigHeroStruct::Anim_Frame
+        bra @ProcessarArrastePipeline
+
+@SetPasso2:
+        lda #2
+        sta BigHero + BigHeroStruct::Anim_Frame
+
+@ProcessarArrastePipeline:
         lda BigHero + BigHeroStruct::Current_Weapon_ID
         cmp #WEAPON_ID_UNARMED
         beq MoveDone
         
-        ; Sincroniza o slot de arraste para a caminhada
         jsr LoadActiveWeaponToY
-        ldy z:DP_HERO_OAM_BACKUP     ; Recupera o ponteiro salvo da DP para garantir
+        ldy z:DP_HERO_OAM_BACKUP     
 
 @ProcessarArraste:
-        ; --- CALCULO DO ARRASTE GEOMÉTRICO USANDO O PONTEIRO Y ---
         lda BigHero + BigHeroStruct::Facing
         bne @ArrasteEsquerda
 
@@ -324,6 +404,7 @@ CheckAttackButton:
         clc
         adc #24                      
         sta a:WeaponStruct::Y_Pos, y 
+
 MoveDone:
         ; --- SISTEMA DE MANUTENÇÃO DE GEOMETRIA & INVENCIBILIDADE ---
         lda BigHero + BigHeroStruct::X_Pos
@@ -332,130 +413,101 @@ MoveDone:
         adc #32                             
         sta BigHero + BigHeroStruct::Hurtbox_X2
 
-        lda BigHero + BigHeroStruct::Y_Pos
-        sta BigHero + BigHeroStruct::Hurtbox_Y1
-        clc
-        adc #64                             
-        sta BigHero + BigHeroStruct::Hurtbox_Y2
-
-        lda BigHero + BigHeroStruct::HurtTimer
-        beq @Vulnerable
-        
-        dec BigHero + BigHeroStruct::HurtTimer
-        stz BigHero + BigHeroStruct::Hurtbox_Active 
-        rts
-
+lda BigHero + BigHeroStruct::Y_Pos
+sta BigHero + BigHeroStruct::Hurtbox_Y1
+clc
+adc #64
+sta BigHero + BigHeroStruct::Hurtbox_Y2
+lda BigHero + BigHeroStruct::HurtTimer
+beq @Vulnerable
+dec BigHero + BigHeroStruct::HurtTimer
+stz BigHero + BigHeroStruct::Hurtbox_Active
+stz BigHero + BigHeroStruct::Anim_Frame ; Trava pernas estáticas se atingido
+rts
 @Vulnerable:
-        lda #$01 
-        sta BigHero + BigHeroStruct::Hurtbox_Active
-        rts
+lda #$01
+sta BigHero + BigHeroStruct::Hurtbox_Active
+rts
 .endproc
-
-;-------------------------------------------------------------------------------
-;   CheckWeaponPickup
-;   Calcula a proximidade entre BigHero e WeaponA. Se perto, equipa
-;-------------------------------------------------------------------------------
 ;-------------------------------------------------------------------------------
 ;   CheckWeaponPickup / DropWeapon (Versão Corrigida Parametrizada)
 ;-------------------------------------------------------------------------------
 .proc CheckWeaponPickup
-        ; 1. Se a arma enviada por Y já estiver equipada por este herói, o botão X dropa ela
-        lda a:WeaponStruct::Active, y
-        cmp #WEAPON_STATE_EQUIPPED
-        beq @DropWeapon
-
-        ; 2. Se a arma está no chão, checa proximidade para ver se o jogador está em cima dela
-        lda a:WeaponStruct::Active, y
-        cmp #WEAPON_STATE_GROUND
-        bne @Exit
-
-        ; --- Cálculo de Distância Absoluta no Eixo X ---
-        lda BigHero + BigHeroStruct::X_Pos
-        sec
-        sbc a:WeaponStruct::X_Pos, y
-        bcs @DiffXPositive
-        eor #$FF                
-        clc
-        adc #1                  
+lda a:WeaponStruct::Active, y
+cmp #WEAPON_STATE_EQUIPPED
+beq @DropWeapon
+lda a:WeaponStruct::Active, y
+cmp #WEAPON_STATE_GROUND
+bne @Exit
+lda BigHero + BigHeroStruct::X_Pos
+sec
+sbc a:WeaponStruct::X_Pos, y
+bcs @DiffXPositive
+eor #$FF
+clc
+adc #1
 @DiffXPositive:
-        cmp #PICKUP_DISTANCE
-        bcs @Exit           
-
-        ; --- Cálculo de Distância Absoluta no Eixo Y ---
-        lda BigHero + BigHeroStruct::Y_Pos
-        sec
-        sbc a:WeaponStruct::Y_Pos, y
-        bcs @DiffYPositive
-        eor #$FF
-        clc
-        adc #1
+cmp #PICKUP_DISTANCE
+bcs @Exit
+lda BigHero + BigHeroStruct::Y_Pos
+sec
+sbc a:WeaponStruct::Y_Pos, y
+bcs @DiffYPositive
+eor #$FF
+clc
+adc #1
 @DiffYPositive:
-        cmp #PICKUP_DISTANCE
-        bcs @Exit           
-
-        ; --- SE PASSOU NOS TESTES: COLETA ESTA ARMA ESPECÍFICA ---
-        lda a:WeaponStruct::Weapon_ID, y
-        sta BigHero + BigHeroStruct::Current_Weapon_ID
-        
-        lda #WEAPON_STATE_EQUIPPED
-        sta a:WeaponStruct::Active, y
-        rts
-
+cmp #PICKUP_DISTANCE
+bcs @Exit
+lda a:WeaponStruct::Weapon_ID, y
+sta BigHero + BigHeroStruct::Current_Weapon_ID
+lda #WEAPON_STATE_EQUIPPED
+sta a:WeaponStruct::Active, y
+rts
 @DropWeapon:
-        ; Desequipa rigidamente a arma que estava na mão
-        lda #WEAPON_ID_UNARMED
-        sta BigHero + BigHeroStruct::Current_Weapon_ID
-
-        lda #WEAPON_STATE_GROUND
-        sta a:WeaponStruct::Active, y
-
-        ; Alinha o repouso no chão com os pés atuais do herói
-        lda BigHero + BigHeroStruct::Y_Pos
-        clc
-        adc #48                         
-        sta a:WeaponStruct::Target_Y, y
-        sta a:WeaponStruct::Y_Pos, y
-
-        lda BigHero + BigHeroStruct::X_Pos
-        clc
-        adc #8                          
-        sta a:WeaponStruct::X_Pos, y
-
-        ;lda #$6D                        ; Restaura tile original de chão
-        ;sta a:WeaponStruct::Tile_ID, y
-
+lda #WEAPON_ID_UNARMED
+sta BigHero + BigHeroStruct::Current_Weapon_ID
+lda #WEAPON_STATE_GROUND
+sta a:WeaponStruct::Active, y
+lda BigHero + BigHeroStruct::Y_Pos
+clc
+adc #48
+sta a:WeaponStruct::Target_Y, y
+sta a:WeaponStruct::Y_Pos, y
+lda BigHero + BigHeroStruct::X_Pos
+clc
+adc #8
+sta a:WeaponStruct::X_Pos, y
 @Exit:
-        rts
+rts
 .endproc
-
 ;-------------------------------------------------------------------------------
 ;   DrawBigHeroHurtboxDebug
 ;-------------------------------------------------------------------------------
 .proc DrawBigHeroHurtboxDebug
-        lda BigHero + BigHeroStruct::Hurtbox_X1
-        sta a:OAMMIRROR, X
-        inx
-        lda BigHero + BigHeroStruct::Hurtbox_Y1
-        sta a:OAMMIRROR, X
-        inx
-        lda #$A0            
-        sta a:OAMMIRROR, X
-        inx
-        lda #$31      
-        sta a:OAMMIRROR, X
-        inx
-
-        lda BigHero + BigHeroStruct::Hurtbox_X2
-        sta a:OAMMIRROR, X
-        inx
-        lda BigHero + BigHeroStruct::Hurtbox_Y2
-        sta a:OAMMIRROR, X
-        inx
-        lda #$A2            
-        sta a:OAMMIRROR, X
-        inx
-        lda #$31      
-        sta OAMMIRROR, X    
-        inx
-        rts
+lda BigHero + BigHeroStruct::Hurtbox_X1
+sta a:OAMMIRROR, X
+inx
+lda BigHero + BigHeroStruct::Hurtbox_Y1
+sta a:OAMMIRROR, X
+inx
+lda #$A0
+sta a:OAMMIRROR, X
+inx
+lda #$31
+sta a:OAMMIRROR, X
+inx
+lda BigHero + BigHeroStruct::Hurtbox_X2
+sta a:OAMMIRROR, X
+inx
+lda BigHero + BigHeroStruct::Hurtbox_Y2
+sta a:OAMMIRROR, X
+inx
+lda #$A2
+sta a:OAMMIRROR, X
+inx
+lda #$31
+sta OAMMIRROR, X
+inx
+rts
 .endproc
