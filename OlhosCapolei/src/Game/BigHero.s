@@ -13,10 +13,11 @@
 .include "Weapon2.inc"
 
 .import BigHero
-.import WeaponA, WeaponB
+.import WeaponA, WeaponB, WeaponC
 .import FrameCounter
 .import LoadActiveWeaponToY
 .import ProcessWeaponAttack
+.import ProcessMeleeAttack
 
 .export DrawBigHero, MoveBigHero
 .export DrawBigHeroHurtboxDebug
@@ -303,7 +304,11 @@ CheckPickupButton:
         .a8
         ldy #.loword(WeaponA) 
         jsr CheckWeaponPickup       
+
         ldy #.loword(WeaponB) 
+        jsr CheckWeaponPickup  
+
+        ldy #.loword(WeaponC) 
         jsr CheckWeaponPickup       
 
 CheckAttackButton:                  
@@ -317,30 +322,30 @@ CheckAttackButton:
         .a8
         
         ; === FILTRO DE SEGURANÇA CONTRA ATAQUE FANTASMA ===
-        ; Se o herói estiver desarmado, ignora o botão Y completamente e aborta
         lda BigHero + BigHeroStruct::Current_Weapon_ID
         cmp #WEAPON_ID_UNARMED
         beq @PickupDone
 
-        ; Localiza com segurança qual slot físico está na mão do herói
+        ; Localiza com segurança qual slot físico de arma está na mão do herói em Y
         jsr LoadActiveWeaponToY
         
-        ; Gerenciamento de Inventário Consumível (Mapeia se a arma vai sumir da mão)
+        ; === ◄ NOVO FILTRO DE COMPORTAMENTO MELEE vs THROW ===
+        ; Se o herói estiver segurando a madeira (WEAPON_ID_WOOD = 3), pula o arremesso!
         lda BigHero + BigHeroStruct::Current_Weapon_ID
-        cmp #WEAPON_ID_ROCK             
-        beq @Arremessar        
-        cmp #WEAPON_ID_HAMMER             
-        beq @Arremessar        
-        bra @DispararAtaqueComum
+        cmp #WEAPON_ID_WOOD             
+        beq @DispararAtaqueMelee        
 
 @Arremessar:
-        ; Como a pedra/martelo são consumíveis, limpa o inventário do herói antes do voo
+        ; Se for Pedra ou Martelo, segue o fluxo de esvaziar inventário e arremessar
         lda #WEAPON_ID_UNARMED
         sta BigHero + BigHeroStruct::Current_Weapon_ID
-
-@DispararAtaqueComum:
-        ; Executa o arremesso passando o Y validado com o endereço da arma ativa
         jsr ProcessWeaponAttack     
+        bra @PickupDone
+
+@DispararAtaqueMelee:
+        ; Se for madeira, NÃO limpa o inventário (ela fica na mão) e chama o ataque físico
+        jsr ProcessMeleeAttack
+
 
 @PickupDone:
         sep #$20                    
@@ -432,55 +437,74 @@ rts
 ;-------------------------------------------------------------------------------
 ;   CheckWeaponPickup / DropWeapon (Versão Corrigida Parametrizada)
 ;-------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
+;   CheckWeaponPickup / DropWeapon (Versão Corrigida e Enxuta)
+;-------------------------------------------------------------------------------
 .proc CheckWeaponPickup
-lda a:WeaponStruct::Active, y
-cmp #WEAPON_STATE_EQUIPPED
-beq @DropWeapon
-lda a:WeaponStruct::Active, y
-cmp #WEAPON_STATE_GROUND
-bne @Exit
-lda BigHero + BigHeroStruct::X_Pos
-sec
-sbc a:WeaponStruct::X_Pos, y
-bcs @DiffXPositive
-eor #$FF
-clc
-adc #1
+        lda a:WeaponStruct::Active, y
+        cmp #WEAPON_STATE_EQUIPPED
+        beq @DropWeapon
+        lda a:WeaponStruct::Active, y
+        cmp #WEAPON_STATE_GROUND
+        bne @Exit
+        lda BigHero + BigHeroStruct::X_Pos
+        sec
+        sbc a:WeaponStruct::X_Pos, y
+        bcs @DiffXPositive
+        eor #$FF
+        clc
+        adc #1
 @DiffXPositive:
-cmp #PICKUP_DISTANCE
-bcs @Exit
-lda BigHero + BigHeroStruct::Y_Pos
-sec
-sbc a:WeaponStruct::Y_Pos, y
-bcs @DiffYPositive
-eor #$FF
-clc
-adc #1
+        cmp #PICKUP_DISTANCE
+        bcs @Exit
+        lda BigHero + BigHeroStruct::Y_Pos
+        sec
+        sbc a:WeaponStruct::Y_Pos, y
+        bcs @DiffYPositive
+        eor #$FF
+        clc
+        adc #1
 @DiffYPositive:
-cmp #PICKUP_DISTANCE
-bcs @Exit
-lda a:WeaponStruct::Weapon_ID, y
-sta BigHero + BigHeroStruct::Current_Weapon_ID
-lda #WEAPON_STATE_EQUIPPED
-sta a:WeaponStruct::Active, y
-rts
+        cmp #PICKUP_DISTANCE
+        bcs @Exit
+        lda a:WeaponStruct::Weapon_ID, y
+        sta BigHero + BigHeroStruct::Current_Weapon_ID
+        lda #WEAPON_STATE_EQUIPPED
+        sta a:WeaponStruct::Active, y
+        rts
+
 @DropWeapon:
-lda #WEAPON_ID_UNARMED
-sta BigHero + BigHeroStruct::Current_Weapon_ID
-lda #WEAPON_STATE_GROUND
-sta a:WeaponStruct::Active, y
-lda BigHero + BigHeroStruct::Y_Pos
-clc
-adc #48
-sta a:WeaponStruct::Target_Y, y
-sta a:WeaponStruct::Y_Pos, y
-lda BigHero + BigHeroStruct::X_Pos
-clc
-adc #8
-sta a:WeaponStruct::X_Pos, y
+        ; ◄ ESCUDO: Se o slot testado não for o que está na mão, ignora e preserva no chão!
+        lda a:WeaponStruct::Active, y
+        cmp #WEAPON_STATE_EQUIPPED
+        bne @Exit
+
+        ; Desequipa o herói limpando o inventário
+        lda #WEAPON_ID_UNARMED
+        sta BigHero + BigHeroStruct::Current_Weapon_ID
+        
+        ; Coloca o estado do slot atual de volta para o solo
+        lda #WEAPON_STATE_GROUND
+        sta a:WeaponStruct::Active, y
+        
+        ; --- CONFIGURAÇÃO DA POSIÇÃO DE SOLTURA CORRETA ---
+        ; Alinhamento Vertical (Chão do cenário)
+        lda BigHero + BigHeroStruct::Y_Pos
+        clc
+        adc #48
+        sta a:WeaponStruct::Target_Y, y
+        sta a:WeaponStruct::Y_Pos, y
+        
+        ; Alinhamento Horizontal (Cai exatamente rente ao Herói + 8 pixels à frente)
+        lda BigHero + BigHeroStruct::X_Pos
+        clc
+        adc #8                          
+        sta a:WeaponStruct::X_Pos, y
+        
 @Exit:
-rts
+        rts
 .endproc
+
 ;-------------------------------------------------------------------------------
 ;   DrawBigHeroHurtboxDebug
 ;-------------------------------------------------------------------------------

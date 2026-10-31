@@ -22,7 +22,7 @@
 ;-------------------------------------------------------------------------------
 
 .import Hero, InimigoGrande, InimigoGrande2
-.import  BigHero, PennyCrab, VaderCrab, WeaponA, WeaponB
+.import  BigHero, PennyCrab, VaderCrab, WeaponA, WeaponB, WeaponC
 .import InitRNG
 
 .segment "CODE"
@@ -105,12 +105,16 @@
 
 ;----------  WeaponA ----------------
 
-        lda #$01
+        lda #WEAPON_STATE_GROUND
         sta WeaponA + WeaponStruct::Active
         lda #WEAPON_ID_ROCK
         sta WeaponA + WeaponStruct::Weapon_ID
         lda #$6D
         sta WeaponA + WeaponStruct::Tile_ID
+
+        lda #$01
+        sta WeaponA + WeaponStruct::Tile_Size
+        
         
         lda #$AA
         sta WeaponA + WeaponStruct::X_Pos
@@ -124,12 +128,16 @@
 
 ;----------  WeaponB ----------------
 
-        lda #$01
+        lda #WEAPON_STATE_GROUND
         sta WeaponB + WeaponStruct::Active
         lda #WEAPON_ID_HAMMER
         sta WeaponB + WeaponStruct::Weapon_ID
         lda #$AD
         sta WeaponB + WeaponStruct::Tile_ID
+        
+        lda #$01
+        sta WeaponB + WeaponStruct::Tile_Size
+        
         
         lda #$80
         sta WeaponB + WeaponStruct::X_Pos
@@ -141,6 +149,31 @@
         stz WeaponB + WeaponStruct::Speed_Y
 
 ;------------fim weaponB---------
+
+
+;----------  WeaponC ----------------
+
+        lda #WEAPON_STATE_GROUND
+        sta WeaponC + WeaponStruct::Active
+        lda #WEAPON_ID_WOOD
+        sta WeaponC + WeaponStruct::Weapon_ID
+        lda #$06
+        sta WeaponC + WeaponStruct::Tile_ID
+
+        lda #$04
+        sta WeaponC + WeaponStruct::Tile_Size
+        
+
+        lda #$30
+        sta WeaponC + WeaponStruct::X_Pos
+
+        lda #(SCREEN_BOTTOM / 4) 
+        sta WeaponC + WeaponStruct::Y_Pos
+
+        stz WeaponC + WeaponStruct::Speed_X
+        stz WeaponC + WeaponStruct::Speed_Y
+
+;------------fim WeaponC---------
 
 
 

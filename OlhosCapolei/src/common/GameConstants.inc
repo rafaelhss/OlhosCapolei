@@ -194,12 +194,15 @@ WEAPON_ID_HAMMER       = 7
 .struct WeaponStruct
     Active      .byte   ; 0 = Vazio, 1 = Visível no chão esperando coleta
     Weapon_ID   .byte   ; ID associado à Weapon_Data_Table (1 a 6)
-    Tile_ID     .byte   ; Grafismo correto indexado da ROM 
+    Tile_ID     .byte   ; Vamos remover quando migrarmos patra frames
+    Tile_Size   .byte   ; Quantidade de tiles que compoem o weapon. Usado para desenhar
     X_Pos       .byte   
     Y_Pos       .byte   
     Speed_X   .byte   ; Velocidade horizontal assinada do arremesso
     Speed_Y   .byte   ; Força vertical/parábola assinada
     Target_Y  .byte   ; Guarda o pixel exato do chão onde a pedra deve pousar
+    Melee_Timer .byte   ; Contador de frames de duração da porretada
+    Melee_Frame .byte   ; ID do frame visual da animação (0, 1 ou 2)
 
 .endstruct
 

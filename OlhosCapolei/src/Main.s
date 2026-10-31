@@ -54,7 +54,7 @@ _ResetAlign:
         ldx #$1fff              ; Aponta a Pilha para o topo da página espelho
         txs
 
-        ;jsr ClearProjectilePool 
+        jsr ClearProjectilePool 
         
         jsr ClearRegisters
         jsr ClearVRAM
@@ -107,6 +107,9 @@ _ResetAlign:
         ldy #.loword(WeaponB)
         jsr UpdateProjectiles
 
+        ldy #.loword(WeaponC)
+        jsr UpdateProjectiles
+
         ; 3. FILTRO DE COLISÕES & REGRAS DE GAMEPLAY
         jsr ApplyEdgeCollisions
         jsr ApplyDamageToHero
@@ -118,14 +121,25 @@ _ResetAlign:
 
         ldy #.loword(WeaponB)
         jsr ApplyWeaponCollisions       ; Testa se a arma do Slot B acertou o Vader
+       
+        ldy #.loword(WeaponC)
+        jsr ApplyWeaponCollisions       ; Testa se a arma do Slot C acertou o Vader
+        
+        
+        
         ; 4. SISTEMA DE RENDERIZAÇÃO FINAL
         ldx #$0000     
         
         ldy #.loword(WeaponA)            ; Garante que aponta para a WeaponA padrão
         jsr DrawDroppedWeapon     
-         ; --- DESENHA A WEAPON B (NOVA ARMA) ---
+        
         ldy #.loword(WeaponB)     ; Passa o endereço de WRAM da WeaponB por parâmetro
         jsr DrawDroppedWeapon     ; Desenha reutilizando o mesmo código!
+
+        ldy #.loword(WeaponC)     ; Passa o endereço de WRAM da WeaponC por parâmetro
+        jsr DrawDroppedWeapon     ; Desenha reutilizando o mesmo código!
+
+
 
         jsr DrawBigHero          
         jsr DrawVaderCrab
@@ -471,6 +485,7 @@ CollisionDone:
 .export VaderCrab
 .export WeaponA
 .export WeaponB
+.export WeaponC
 
 Hero:            .tag HeroStruct
 InimigoGrande:   .tag EnemyStruct
@@ -480,6 +495,7 @@ PennyCrab:       .tag PennyCrabStruct
 VaderCrab:       .tag VaderCrabStruct
 WeaponA:         .tag WeaponStruct
 WeaponB:         .tag WeaponStruct
+WeaponC:         .tag WeaponStruct
 
 FrameCounter:    .res 1    ; Contador global de frames (0 a 255)
 .export FrameCounter
