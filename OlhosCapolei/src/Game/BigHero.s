@@ -302,12 +302,29 @@ CheckPickupButton:
 
         sep #$20                    
         .a8
+        
+        ; --- 1. GUARDA O ID ANTERIOR PARA TESTAR SE HOUVE AÇÃO ---
+        lda BigHero + BigHeroStruct::Current_Weapon_ID
+        sta z:DP_TEMP_01                ; Usa DP_TEMP_01 para backup rápido
+
+        ; --- 2. TESTA SLOT A ---
         ldy #.loword(WeaponA) 
         jsr CheckWeaponPickup       
+        
+        ; Se o ID mudou (coletou ou dropou), encerra o frame imediatamente!
+        lda BigHero + BigHeroStruct::Current_Weapon_ID
+        cmp z:DP_TEMP_01
+        bne CheckAttackButton
 
+        ; --- 3. TESTA SLOT B ---
         ldy #.loword(WeaponB) 
         jsr CheckWeaponPickup  
+        
+        lda BigHero + BigHeroStruct::Current_Weapon_ID
+        cmp z:DP_TEMP_01
+        bne CheckAttackButton
 
+        ; --- 4. TESTA SLOT C ---
         ldy #.loword(WeaponC) 
         jsr CheckWeaponPickup       
 

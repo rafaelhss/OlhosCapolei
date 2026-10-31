@@ -59,6 +59,12 @@ Weapon_Data_Table:
 
 
 Weapon_Layout_Hammer:
+    .byte 0, <(  0), $6A, $30  
+    .byte 16, <(-8), $4A, $30
+    .byte 32, <(-16), $2A, $30  
+    .byte 48, <(-24), $0A, $30
+
+Weapon_Layout_Hammer_Picked:
     .byte 0, <(  0), $66, $30  
     .byte 0, <(-16), $46, $30
     .byte 0, <(-32), $26, $30  
@@ -108,6 +114,11 @@ Weapon_Layout_Hammer_Attack_Frame2:
         sta a:WeaponStruct::Target_Y, y
         sta a:WeaponStruct::Melee_Timer, y
         sta a:WeaponStruct::Melee_Frame, y
+         sta a:WeaponStruct::Hitbox_Active, y
+        sta a:WeaponStruct::Hitbox_X1, y
+        sta a:WeaponStruct::Hitbox_X2, y
+        sta a:WeaponStruct::Hitbox_Y1, y
+        sta a:WeaponStruct::Hitbox_Y2, y
 
         ; --- SANITIZAÇÃO DA WEAPON B ---
         ldy #.loword(WeaponB)
@@ -121,6 +132,11 @@ Weapon_Layout_Hammer_Attack_Frame2:
         sta a:WeaponStruct::Target_Y, y
         sta a:WeaponStruct::Melee_Timer, y
         sta a:WeaponStruct::Melee_Frame, y
+        sta a:WeaponStruct::Hitbox_Active, y
+        sta a:WeaponStruct::Hitbox_X1, y
+        sta a:WeaponStruct::Hitbox_X2, y
+        sta a:WeaponStruct::Hitbox_Y1, y
+        sta a:WeaponStruct::Hitbox_Y2, y
 
         ; --- SANITIZAÇÃO DA WEAPON C ---
         ldy #.loword(WeaponC)
@@ -134,6 +150,11 @@ Weapon_Layout_Hammer_Attack_Frame2:
         sta a:WeaponStruct::Target_Y, y
         sta a:WeaponStruct::Melee_Timer, y
         sta a:WeaponStruct::Melee_Frame, y
+        sta a:WeaponStruct::Hitbox_Active, y
+        sta a:WeaponStruct::Hitbox_X1, y
+        sta a:WeaponStruct::Hitbox_X2, y
+        sta a:WeaponStruct::Hitbox_Y1, y
+        sta a:WeaponStruct::Hitbox_Y2, y
 
         plp                     ; Restaura o estado anterior dos flags da CPU
         rts
@@ -221,21 +242,66 @@ Weapon_Layout_Hammer_Attack_Frame2:
 @SetFrame2:
         lda #2
         sta a:WeaponStruct::Melee_Frame, y
+        lda #$00
+        sta a:WeaponStruct::Hitbox_Active, y    ; Desliga hitbox na recuperação
         rts
-
+        
 @SetFrame0:
         lda #$00
         sta a:WeaponStruct::Melee_Frame, y      
+        sta a:WeaponStruct::Hitbox_Active, y    ; Desliga hitbox na preparação
         rts
+
+
 
 @SetFrame1:
         lda #1
         sta a:WeaponStruct::Melee_Frame, y  ; Frame 1 (Janela de Dano)
+        
+        ; --- LIGA E GERA A HITBOX DA PORRETADA ---
+        lda #1
+        sta a:WeaponStruct::Hitbox_Active, y
+
+        ; --- LIMITES VERTICAIS (EIXO Y tridimensional) ---
+        ; Alinha a área de dano na altura da cintura/mão do herói
+        lda BigHero + BigHeroStruct::Y_Pos
+        clc
+        adc #16                                 ; Margem superior da colisão
+        sta a:WeaponStruct::Hitbox_Y1, y
+        clc
+        adc #32                                 ; Caixa com 32px de altura vertical
+        sta a:WeaponStruct::Hitbox_Y2, y
+
+        ; --- LIMITES HORIZONTAIS (EIXO X baseado no Facing) ---
+        lda BigHero + BigHeroStruct::Facing
+        bne @HitboxEsquerda
+
+@HitboxDireita:
+        ; Ataque para a direita: Projeta a caixa à frente do corpo do Herói (32px de largura)
+        lda BigHero + BigHeroStruct::X_Pos
+        clc
+        adc #24                                 ; Começa perto do fim do corpo
+        sta a:WeaponStruct::Hitbox_X1, y
+        clc
+        adc #32                                 ; Alcance horizontal do ataque (32 pixels)
+        sta a:WeaponStruct::Hitbox_X2, y
+        rts
+
+@HitboxEsquerda:
+        ; Ataque para a esquerda: Projeta a caixa recuada à esquerda do herói
+        lda BigHero + BigHeroStruct::X_Pos
+        sec
+        sbc #24                                 ; Estica o alcance para trás do X_Pos
+        sta a:WeaponStruct::Hitbox_X1, y
+        clc
+        adc #32                                 ; Encerra colisão rente ao corpo
+        sta a:WeaponStruct::Hitbox_X2, y
         rts
 
 @MeleeFinished:
         lda #$00
         sta a:WeaponStruct::Melee_Frame, y
+        sta a:WeaponStruct::Hitbox_Active, y    ; Garante hitbox desligada no fim do golpe
 @Exit:
         rts
 
@@ -418,10 +484,28 @@ Weapon_Layout_Hammer_Attack_Frame2:
         .a8
         bra @StartLoop
 
+
 @LoadDefaultLayout:
+        ; --- TESTA SE O MARTELO ESTÁ NO CHÃO OU NA MÃO ---
+        lda a:WeaponStruct::Active, y
+        cmp #WEAPON_STATE_EQUIPPED
+        beq @LoadHammerPicked           ; Se estiver equipado, usa o layout com inclinação de posse
+
+@LoadHammerGround:
+        ; Se estiver no chão, usa o layout padrão totalmente vertical
         rep #$20
         .a16
         lda #.loword(Weapon_Layout_Hammer)
+        sta z:DP_HERO_LAYOUT_PTR
+        sep #$20
+        .a8
+        bra @StartLoop
+
+@LoadHammerPicked:
+        ; Se estiver na mão, usa a sua nova struct inclinada Weapon_Layout_Hammer_Picked
+        rep #$20
+        .a16
+        lda #.loword(Weapon_Layout_Hammer_Picked)
         sta z:DP_HERO_LAYOUT_PTR
         sep #$20
         .a8

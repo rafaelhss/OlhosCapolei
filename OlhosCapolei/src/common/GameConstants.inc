@@ -194,16 +194,22 @@ WEAPON_ID_HAMMER       = 7
 .struct WeaponStruct
     Active      .byte   ; 0 = Vazio, 1 = Visível no chão esperando coleta
     Weapon_ID   .byte   ; ID associado à Weapon_Data_Table (1 a 6)
-    Tile_ID     .byte   ; Vamos remover quando migrarmos patra frames
-    Tile_Size   .byte   ; Quantidade de tiles que compoem o weapon. Usado para desenhar
+    Tile_ID     .byte   ; Tile base do gráfico
+    Tile_Size   .byte   ; Quantidade de tiles que compõem o weapon
     X_Pos       .byte   
     Y_Pos       .byte   
-    Speed_X   .byte   ; Velocidade horizontal assinada do arremesso
-    Speed_Y   .byte   ; Força vertical/parábola assinada
-    Target_Y  .byte   ; Guarda o pixel exato do chão onde a pedra deve pousar
+    Speed_X     .byte   ; Velocidade horizontal do arremesso
+    Speed_Y     .byte   ; Força vertical/parábola
+    Target_Y    .byte   ; Guarda o pixel exato do chão onde a pedra pousa
     Melee_Timer .byte   ; Contador de frames de duração da porretada
     Melee_Frame .byte   ; ID do frame visual da animação (0, 1 ou 2)
-
+    ; ◄ NOVOS CAMPOS EXCLUSIVOS DA SOLUÇÃO 2 (HITBOX DA ARMA BRANCA):
+    Hitbox_Active       .byte   ; 1 = Janela de dano ativa, 0 = Inativa
+    Hitbox_X1           .byte   ; Limite Esquerdo
+    Hitbox_X2           .byte   ; Limite Direito
+    Hitbox_Y1           .byte   ; Limite Superior
+    Hitbox_Y2           .byte   ; Limite Inferior
 .endstruct
+
 
 .endif
