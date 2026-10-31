@@ -383,22 +383,25 @@ MeleeExit:
 
 ;-------------------------------------------------------------------------------
 
+;-------------------------------------------------------------------------------
+;   ApplyDamageToHero (Versão Arcade Premium - Proteção Atômica de Hitstun)
+;-------------------------------------------------------------------------------
 .proc ApplyDamageToHero
-
-
         ; =====================================================================
-        ; FILTROS PRELIMINARES RÁPIDOS (8-bit)
+        ; FILTROS PRELIMINARES DE HARDWARE (8-bit)
         ; =====================================================================
-        ; 1. Se a hitbox do VaderCrab não está ativa, aborta imediatamente
+        ; 1. ⚡ ESCUDO DA REALEZA: Se o Herói está em Hitstun/Recuperação, aborta imediatamente!
+        ; Isso impede fisicamente hits duplos/triplos mesmo se ele estiver dentro da garra.
+        lda BigHero + BigHeroStruct::HurtTimer
+        bne @AbortDamage
+
+        ; 2. Se a hitbox do VaderCrab não está ativa neste frame, aborta
         lda VaderCrab + VaderCrabStruct::Hitbox_Active
-        bne @CheckHurtbox
-        rts
+        beq @AbortDamage
 
-@CheckHurtbox:
-        ; 2. Se o BigHero não está vulnerável (frames de dano/invencibilidade), aborta
+        ; 3. Se a hurtbox do herói foi explicitamente desligada, aborta
         lda BigHero + BigHeroStruct::Hurtbox_Active
-        bne @StartAABB
-        rts
+        beq @AbortDamage
 
         ; =====================================================================
         ; MOTOR MATEMÁTICO POR EXCLUSÃO (Pipeline de Alta Performance 16-bit)
@@ -408,15 +411,14 @@ MeleeExit:
         .a16
 
         ; --- TESTE DO EIXO X ---
-        
         ; Teste 1: Se Hitbox_X2 <= Hurtbox_X1 (Inimigo totalmente à esquerda) -> SAI
         lda VaderCrab + VaderCrabStruct::Hitbox_X2
-        and #$00FF              ; Isola o byte baixo (limpa lixo do registrador)
-        sta $00                 ; Guarda temporariamente na Direct Page ($00) para comparar
+        and #$00FF              
+        sta $00                 
         lda BigHero + BigHeroStruct::Hurtbox_X1
         and #$00FF
         cmp $00
-        bcs NoCollision        ; Se Hurtbox_X1 >= Hitbox_X2, não há colisão!
+        bcs @NoCollision        
 
         ; Teste 2: Se Hitbox_X1 >= Hurtbox_X2 (Inimigo totalmente à direita) -> SAI
         lda VaderCrab + VaderCrabStruct::Hitbox_X1
@@ -425,11 +427,10 @@ MeleeExit:
         lda BigHero + BigHeroStruct::Hurtbox_X2
         and #$00FF
         cmp $00
-        bcc NoCollision        ; Se Hurtbox_X2 <= Hitbox_X1, não há colisão! Se for igual, apenas raspou
-        beq NoCollision
+        bcc @NoCollision        
+        beq @NoCollision
 
         ; --- TESTE DO EIXO Y ---
-        
         ; Teste 3: Se Hitbox_Y2 <= Hurtbox_Y1 (Inimigo totalmente acima) -> SAI
         lda VaderCrab + VaderCrabStruct::Hitbox_Y2
         and #$00FF
@@ -437,7 +438,7 @@ MeleeExit:
         lda BigHero + BigHeroStruct::Hurtbox_Y1
         and #$00FF
         cmp $00
-        bcs NoCollision        ; Se Hurtbox_Y1 >= Hitbox_Y2, não há colisão!
+        bcs @NoCollision        
 
         ; Teste 4: Se Hitbox_Y1 >= Hurtbox_Y2 (Inimigo totalmente abaixo) -> SAI
         lda VaderCrab + VaderCrabStruct::Hitbox_Y1
@@ -446,27 +447,31 @@ MeleeExit:
         lda BigHero + BigHeroStruct::Hurtbox_Y2
         and #$00FF
         cmp $00
-        bcc NoCollision        ; Se Hurtbox_Y2 <= Hitbox_Y1, não há colisão!
-        beq NoCollision
+        bcc @NoCollision        
+        beq @NoCollision
 
         ; =====================================================================
-        ; COLISÃO DETECTADA: O RETÂNGULO INTERSECTOU EM AMBOS OS EIXOS!
+        ; COLISÃO CONFIRMADA: O RETÂNGULO INTERSECTOU EM AMBOS OS EIXOS!
         ; =====================================================================
         sep #$20                ; Restaura o Acumulador para 8 bits (.a8)
         .a8
 
-        ; Desativa a vulnerabilidade do herói imediatamente para não tomar dano infinito
+        ; Liga o Hitstun imediatamente no relógio do Herói (30 frames de invulnerabilidade)
+        lda #30
+        sta BigHero + BigHeroStruct::HurtTimer
+        
+        ; Desativa as flags para isolamento total do frame
         stz BigHero + BigHeroStruct::Hurtbox_Active
-        ;lda #STATE_HURT
-        ;sta BigHero + BigHeroStruct::HurtState
+        stz VaderCrab + VaderCrabStruct::Hitbox_Active
 
-        ; Executa os gatilhos físicos e visuais do combate
+        ; Executa os impactos cinéticos e visuais do golpe tomado
         jsr TriggerHeroDamageEffect
         rts
 
-NoCollision:
+@NoCollision:
         sep #$20                ; Restaura o Acumulador para 8 bits antes de sair (.a8)
         .a8
+@AbortDamage:
         rts
 .endproc
 

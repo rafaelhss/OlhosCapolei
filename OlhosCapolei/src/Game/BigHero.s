@@ -435,21 +435,26 @@ MoveDone:
         adc #32                             
         sta BigHero + BigHeroStruct::Hurtbox_X2
 
-lda BigHero + BigHeroStruct::Y_Pos
-sta BigHero + BigHeroStruct::Hurtbox_Y1
-clc
-adc #64
-sta BigHero + BigHeroStruct::Hurtbox_Y2
-lda BigHero + BigHeroStruct::HurtTimer
-beq @Vulnerable
-dec BigHero + BigHeroStruct::HurtTimer
-stz BigHero + BigHeroStruct::Hurtbox_Active
-stz BigHero + BigHeroStruct::Anim_Frame ; Trava pernas estáticas se atingido
-rts
+        lda BigHero + BigHeroStruct::Y_Pos
+        sta BigHero + BigHeroStruct::Hurtbox_Y1
+        clc
+        adc #64
+        sta BigHero + BigHeroStruct::Hurtbox_Y2
+
+        lda BigHero + BigHeroStruct::HurtTimer
+        beq @Vulnerable                 ; Se o timer for 0, ele está normal. Vai para vulnerável.
+
+        ; Se o timer for maior que zero, ele tomou dano! Decrementa o relógio
+        dec BigHero + BigHeroStruct::HurtTimer
+        
+        ; BLINDAGEM: Garante que ele continue INVULNERÁVEL (0) durante todo o Hitstun!
+        stz BigHero + BigHeroStruct::Hurtbox_Active
+        stz BigHero + BigHeroStruct::Anim_Frame ; Trava pernas estáticas se atingido
+        rts
 @Vulnerable:
-lda #$01
-sta BigHero + BigHeroStruct::Hurtbox_Active
-rts
+        lda #$01
+        sta BigHero + BigHeroStruct::Hurtbox_Active
+        rts
 .endproc
 ;-------------------------------------------------------------------------------
 ;   CheckWeaponPickup / DropWeapon (Versão Corrigida Parametrizada)

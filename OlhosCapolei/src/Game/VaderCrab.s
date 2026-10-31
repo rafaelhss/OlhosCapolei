@@ -31,12 +31,12 @@ WALK_SPEED = $01
 WALK_ANIM_SPEED = $08 ; quanto menor mais rapido
 
 PREPARING_ANIM_SPEED = 30
-PREPARING_DURATION_FRAMES = 90
+PREPARING_DURATION_FRAMES = 89
 PREPARING_MAX_FRAMES = 3
 
 ;attackin speed e frames. Se for iguais o ataque tem 1 frame. Se forem um metade do outro, dois frames. e assim vai
 ATTACKING_ANIM_SPEED = 15   
-ATTACKING_DURATION_FRAMES = 30
+ATTACKING_DURATION_FRAMES = 45
 ATTACK_MAX_FRAMES = 2  ; Altere este número para quantos frames a arte tiver! (3, 4, 5...)
 
 REST_TIME = 30 ;  
@@ -77,18 +77,31 @@ AttackFrameUpdate:
     cmp #ATTACKING_DURATION_FRAMES
     bne AttackingAnim
 
-    ; --- ACABOU O ATAQUE: Limpa e Desativa a Hitbox de Dano ---
-    stz VaderCrab + VaderCrabStruct::Hitbox_Active
-    ;stz VaderCrab + VaderCrabStruct::Hitbox_X1
-    ;stz VaderCrab + VaderCrabStruct::Hitbox_X2
-    ;stz VaderCrab + VaderCrabStruct::Hitbox_Y1
-    ;stz VaderCrab + VaderCrabStruct::Hitbox_Y2
+    ; --- ACABOU O ATAQUE: Desativa a Hitbox de Dano ---
+    lda #$00
+    sta VaderCrab + VaderCrabStruct::Hitbox_Active  
 
-    ;Acabou o ataque. Volta pro prepare
-    lda #STATE_PREPARING
+    ; --- TRANSIÇÃO PARA COOLDOWN (EVITA SPAM DE GOLPE) ---
+    ; Em vez de voltar direto pro prepare, força o estado WALKING 
+    ; para ele se reajustar no cenário antes de tentar focar o herói de novo!
+    lda #STATE_WALKING
     sta VaderCrab + VaderCrabStruct::State
-    stz VaderCrab + VaderCrabStruct::Attacking_Timer ;zera o timer. Acabou o ataque ne...
-    brl Move ;Antes de voltar pro prepare, se se o maluco saiu fora
+    
+    ; Carrega o timer de descanso para ele ficar "pensando" por 60 frames antes de agir
+    lda #60
+    sta VaderCrab + VaderCrabStruct::Resting_Timer
+
+    ; Sanitização de contadores antigos
+    stz VaderCrab + VaderCrabStruct::Attacking_Timer
+    stz VaderCrab + VaderCrabStruct::Attacking_Anim_Frame
+    stz VaderCrab + VaderCrabStruct::Attacking_Anim_Timer
+    stz VaderCrab + VaderCrabStruct::Preparing_Timer
+    stz VaderCrab + VaderCrabStruct::Preparing_Anim_Frame
+    stz VaderCrab + VaderCrabStruct::Preparing_Anim_Timer
+
+    brl Move 
+
+
 
 AttackingAnim:
     dec VaderCrab + VaderCrabStruct::Attacking_Anim_Timer
@@ -183,6 +196,12 @@ PreparingFrameUpdate:
     lda #STATE_ATACKING
     sta VaderCrab + VaderCrabStruct::State
     stz VaderCrab + VaderCrabStruct::Preparing_Timer
+    stz VaderCrab + VaderCrabStruct::Attacking_Anim_Frame ; Começa estritamente no frame 0
+    
+    stz VaderCrab + VaderCrabStruct::Attacking_Timer
+    lda #ATTACKING_ANIM_SPEED
+    sta VaderCrab + VaderCrabStruct::Attacking_Anim_Timer
+
     brl Done
 
 PreparingAnim:
@@ -238,13 +257,13 @@ PreparingAnim:
 ;=== logica para mover
 ;=== logica para mover
 Move:
-    ; Se for frame ímpar (1), impede o avanço das coordenadas, pulando a física
-    lda FrameCounter
-    and #%00000001
-    beq @ProcessFisica          ; Se for frame par (0), calcula o movimento normal
-    brl Done                    ; Se for frame ímpar, pula a adição de pixels e vai direto atualizar geometry
 
-@ProcessFisica:
+    lda VaderCrab + VaderCrabStruct::State
+    cmp #STATE_ATACKING
+    bne ContinuaFisicaNormal
+    jmp Done                        ; Vai direto para o fim da rotina sem olhar mais nada!
+
+ContinuaFisicaNormal:
     ; 1. Calcular a distância absoluta em X: |VaderCrab_X - BigHero_X|
     lda VaderCrab + VaderCrabStruct::X_Pos
     clc
@@ -301,15 +320,23 @@ WalkRight:
     bra CheckVerticalMove
 
 StopHorizontalMove:
-    ; Espaço reservado: Aqui você poderá setar o State de ataque no futuro
-    ;stz VaderCrab + VaderCrabStruct::Walk_Anim_Speed
-    
-    lda #STATE_ATACKING
-    cmp VaderCrab + VaderCrabStruct::State
-    beq CheckVerticalMove
+    ; Se já estiver atacando ou preparando, não mexe no estado!
+    lda VaderCrab + VaderCrabStruct::State
+    cmp #STATE_ATACKING
+    beq @KeepStateX
+    cmp #STATE_PREPARING
+    beq @KeepStateX
     
     lda #STATE_PREPARING
     sta VaderCrab + VaderCrabStruct::State
+    stz VaderCrab + VaderCrabStruct::Preparing_Timer
+
+    stz VaderCrab + VaderCrabStruct::Preparing_Anim_Frame
+    lda #PREPARING_ANIM_SPEED
+    sta VaderCrab + VaderCrabStruct::Preparing_Anim_Timer
+
+@KeepStateX:
+    bra CheckVerticalMove
 
 CheckVerticalMove:
 
@@ -365,11 +392,12 @@ MoveDown:
 StopVerticalMove:
     ; O Y está perfeitamente dentro da janela de ataque! 
     ; Não altera a posição Y neste frame, mantendo o inimigo estável na linha.
-    
 
-
-    lda #STATE_ATACKING
-    cmp VaderCrab + VaderCrabStruct::State
+    ; Se já estiver atacando ou preparando, mantém o fluxo intacto e não deixa reverter para WALKING
+    lda VaderCrab + VaderCrabStruct::State
+    cmp #STATE_ATACKING
+    beq Done
+    cmp #STATE_PREPARING
     beq Done
 
     lda VaderCrab + VaderCrabStruct::State
@@ -378,6 +406,11 @@ StopVerticalMove:
 
     lda #STATE_PREPARING
     sta VaderCrab + VaderCrabStruct::State
+    stz VaderCrab + VaderCrabStruct::Preparing_Timer
+    
+    stz VaderCrab + VaderCrabStruct::Preparing_Anim_Frame
+    lda #PREPARING_ANIM_SPEED
+    sta VaderCrab + VaderCrabStruct::Preparing_Anim_Timer
 
 ExitMovement:
     lda VaderCrab + VaderCrabStruct::State
@@ -447,8 +480,8 @@ VaderCrab_Layout_Frame1:
 
 ; FRAME: Tomando Dano / Hitstun (Cabeça e olhos mudam para os blocos $08-$0E)
 VaderCrab_Layout_Hurt:
-    .byte 0,  0,$08,$01, 16,  0,$A8,$01, 32,  0,$AA,$01, 48,  0,$0E,$01
-    .byte 0, 16,$28,$01, 16, 16,$C8,$01, 32, 16,$CA,$01, 48, 16,$2E,$01
+    .byte 0,  10,$00,$01, 16,  10,$02,$01, 32,  10,$04,$01, 48,  10,$06,$01
+    .byte 0, 16,$20,$01, 16, 16,$22,$01, 32, 16,$24,$01, 48, 16,$26,$01
     .byte 0, 32,$48,$01, 16, 32,$4A,$01, 32, 32,$4C,$01, 48, 32,$4E,$01
     .byte 0, 48,$68,$01, 16, 48,$6A,$01, 32, 48,$6C,$01, 48, 48,$6E,$01
 
@@ -457,139 +490,43 @@ VaderCrab_Layout_Hurt:
 ; FRAME 0: INIMIGO Preparing 
 ; =============================================================================
 VaderCrab_Layout_FramePreparing0:
-    ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $08, $01     ; pedaco 1-1
-    .byte 16,  0,  $0A, $01     ; pedaco 1-2
-    .byte 32,  0,  $0C, $01     ; pedaco 1-3
-    .byte 48,  0,  $0E, $01     ; pedaco 1-4
-    
-    .byte 0,  16,  $20, $01     ; pedaco 2-1
-    .byte 16,  16,  $2A, $01     ; pedaco 2-2
-    .byte 32,  16,  $2C, $01     ; pedaco 2-3
-    .byte 48,  16,  $2E, $01     ; pedaco 2-4
-
-    ; === CORPO (4x2 de 16) ===
-    .byte 0,  32,  $48, $01     ; pedaco 1-1
-    .byte 16,  32,  $42, $01     ; pedaco 1-2
-    .byte 32,  32,  $4C, $01     ; pedaco 1-3
-    .byte 48,  32,  $4E, $01     ; pedaco 1-4
-    
-    .byte 0,  48,  $68, $01     ; pedaco 2-1
-    .byte 16,  48,  $6A, $01     ; pedaco 2-2
-    .byte 32,  48,  $64, $01     ; pedaco 2-3
-    .byte 48,  48,  $6E, $01     ; pedaco 2-4
+    .byte 0,  0,$00,$01, 16,  0,$02,$01, 32,  0,$04,$01, 48,  0,$06,$01
+    .byte 0, 16,$20,$01, 16, 16,$22,$01, 32, 16,$24,$01, 48, 16,$26,$01
+    .byte 0, 32,$48,$01, 16, 32,$4A,$01, 32, 32,$4C,$01, 48, 32,$4E,$01
+    .byte 0, 48,$C0,$01, 16, 48,$C2,$01, 32, 48,$C4,$01, 48, 48,$C6,$01
 
 ; =============================================================================
 ; FRAME 1: INIMIGO Preparing 
 ; =============================================================================
 VaderCrab_Layout_FramePreparing1:
-    ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $08, $01     ; pedaco 1-1
-    .byte 16,  0,  $0A, $01     ; pedaco 1-2
-    .byte 32,  0,  $0C, $01     ; pedaco 1-3
-    .byte 48,  0,  $0E, $01     ; pedaco 1-4
-    
-    .byte 0,  16,  $20, $01     ; pedaco 2-1
-    .byte 16,  16,  $2A, $01     ; pedaco 2-2
-    .byte 32,  16,  $2C, $01     ; pedaco 2-3
-    .byte 48,  16,  $2E, $01     ; pedaco 2-4
-
-     ; === CORPO (4x2 de 16) ===
-    .byte 0,  32,  $48, $01     ; pedaco 1-1
-    .byte 16,  32,  $4A, $01     ; pedaco 1-2
-    .byte 32,  32,  $4C, $01     ; pedaco 1-3
-    .byte 48,  32,  $4E, $01     ; pedaco 1-4
-    
-    .byte 0,  48,  $68, $01     ; pedaco 2-1
-    .byte 16,  48,  $6A, $01     ; pedaco 2-2
-    .byte 32,  48,  $6C, $01     ; pedaco 2-3
-    .byte 48,  48,  $6E, $01     ; pedaco 2-4
+    .byte 0,  0,$00,$01, 16,  0,$02,$01, 32,  0,$04,$01, 48,  0,$06,$01
+    .byte 0, 16,$20,$01, 16, 16,$22,$01, 32, 16,$24,$01, 48, 16,$26,$01
+    .byte 0, 32,$A0,$01, 16, 32,$A2,$01, 32, 32,$A4,$01, 48, 32,$A6,$01
+    .byte 0, 48,$C0,$01, 16, 48,$C2,$01, 32, 48,$C4,$01, 48, 48,$C6,$01
 
 
 ; =============================================================================
 ; FRAME 2: INIMIGO Preparing 
 ; =============================================================================
 VaderCrab_Layout_FramePreparing2:
-    ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $08, $01     ; pedaco 1-1
-    .byte 16,  0,  $0A, $01     ; pedaco 1-2
-    .byte 32,  0,  $0C, $01     ; pedaco 1-3
-    .byte 48,  0,  $0E, $01     ; pedaco 1-4
-    
-    .byte 0,  16,  $28, $01     ; pedaco 2-1
-    .byte 16,  16,  $2A, $01     ; pedaco 2-2
-    .byte 32,  16,  $2C, $01     ; pedaco 2-3
-    .byte 48,  16,  $2E, $01     ; pedaco 2-4
-
-    ; === CORPO (4x2 de 16) ===
-    .byte 0,  32,  $48, $01     ; pedaco 1-1
-    .byte 16,  32,  $4A, $01     ; pedaco 1-2
-    .byte 32,  32,  $4C, $01     ; pedaco 1-3
-    .byte 48,  32,  $4E, $01     ; pedaco 1-4
-    
-    .byte 0,  48,  $68, $01     ; pedaco 2-1
-    .byte 16,  48,  $6A, $01     ; pedaco 2-2
-    .byte 32,  48,  $6C, $01     ; pedaco 2-3
-    .byte 48,  48,  $6E, $01     ; pedaco 2-4
+ .byte 0,  0,$00,$01, 16,  0,$02,$01, 32,  0,$04,$01, 48,  0,$06,$01
+    .byte 0, 16,$80,$01, 16, 16,$22,$01, 32, 16,$24,$01, 48, 16,$26,$01
+    .byte 0, 32,$A0,$01, 16, 32,$A2,$01, 32, 32,$A4,$01, 48, 32,$A6,$01
+    .byte 0, 48,$C0,$01, 16, 48,$C2,$01, 32, 48,$C4,$01, 48, 48,$C6,$01
 
 
 
-; =============================================================================
-; FRAME 3: INIMIGO Preparing 
-; =============================================================================
-VaderCrab_Layout_FramePreparing3:
-    ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $08, $01     ; pedaco 1-1
-    .byte 16,  0,  $0A, $01     ; pedaco 1-2
-    .byte 32,  0,  $0C, $01     ; pedaco 1-3
-    .byte 48,  0,  $0E, $01     ; pedaco 1-4
-    
-    .byte 0,  16,  $28, $01     ; pedaco 2-1
-    .byte 16,  16,  $2A, $01     ; pedaco 2-2
-    .byte 32,  16,  $2C, $01     ; pedaco 2-3
-    .byte 48,  16,  $2E, $01     ; pedaco 2-4
 
-    ; === CORPO (4x2 de 16) ===
-    .byte 0,  32,  $48, $01     ; pedaco 1-1
-    .byte 16,  32,  $4A, $01     ; pedaco 1-2
-    .byte 32,  32,  $4C, $01     ; pedaco 1-3
-    .byte 48,  32,  $4E, $01     ; pedaco 1-4
-    
-    .byte 0,  48,  $68, $01     ; pedaco 2-1
-    .byte 16,  48,  $6A, $01     ; pedaco 2-2
-    .byte 32,  48,  $6C, $01     ; pedaco 2-3
-    .byte 48,  48,  $6E, $01     ; pedaco 2-4
 
 
 ; =============================================================================
 ; FRAME 0: INIMIGO Attacking 
 ; =============================================================================
 VaderCrab_Layout_FrameAttacking0:
-    ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $08, $01     ; pedaco 1-1
-    .byte 16,  0,  $0A, $01     ; pedaco 1-2
-    .byte 32,  0,  $0C, $01     ; pedaco 1-3
-    .byte 48,  0,  $0E, $01     ; pedaco 1-4
-    
-    .byte 0,  16,  $20, $01     ; pedaco 2-1
-    .byte 16,  16,  $2A, $01     ; pedaco 2-2
-    .byte 32,  16,  $2C, $01     ; pedaco 2-3
-    .byte 48,  16,  $2E, $01     ; pedaco 2-4
-
-
-   
-    ; === CORPO (4x2 de 16) ===
-    .byte 0,  32,  $48, $01     ; pedaco 1-1
-    .byte 16,  32,  $42, $01     ; pedaco 1-2
-    .byte 32,  32,  $4C, $01     ; pedaco 1-3
-    .byte 48,  32,  $8C, $01     ; pedaco 1-4
-
-
-
-    .byte 0,  48,  $68, $01     ; pedaco 2-1
-    .byte 16,  48,  $6A, $01     ; pedaco 2-2
-    .byte 32,  48,  $88, $01     ; pedaco 2-3
-    .byte 48,  48,  $8A, $01     ; pedaco 2-4
+   .byte 0,  0,$00,$01, 16,  0,$0A,$01, 32,  0,$0C,$01, 48,  0,$06,$01
+    .byte 0, 16,$80,$01, 16, 16,$2A,$01, 32, 16,$2C,$01, 48, 16,$26,$01
+     .byte 0, 32,$A0,$31, 16, 32,$A2,$31, 32, 32,$A4,$31, 48, 32,$A6,$31
+    .byte 0, 48,$C0,$31, 16, 48,$C2,$31, 32, 48,$C4,$31, 48, 48,$C6,$31
 
 
 
@@ -598,30 +535,11 @@ VaderCrab_Layout_FrameAttacking0:
 ; FRAME 1: INIMIGO Attacking 
 ; =============================================================================
 VaderCrab_Layout_FrameAttacking1:
-    ; === CABECA (4x2 de 16) ===
-    ; === CABECA (4x2 de 16) ===
-    .byte 0,  0,  $08, $01     ; pedaco 1-1
-    .byte 16,  0,  $0A, $01     ; pedaco 1-2
-    .byte 32,  0,  $0C, $01     ; pedaco 1-3
-    .byte 48,  0,  $0E, $01     ; pedaco 1-4
-    
-    .byte 0,  16,  $20, $01     ; pedaco 2-1
-    .byte 16,  16,  $2A, $01     ; pedaco 2-2
-    .byte 32,  16,  $2C, $01     ; pedaco 2-3
-    .byte 48,  16,  $2E, $01     ; pedaco 2-4
+    .byte 0,  0,$00,$01, 16,  0,$0A,$01, 32,  0,$0C,$01, 48,  0,$06,$01
+    .byte 0, 16,$20,$01, 16, 16,$2A,$01, 32, 16,$2C,$01, 48, 16,$8E,$01
+    .byte 0, 32,$A8,$01, 16, 32,$AA,$01, 32, 32,$AC,$01, 48, 32,$AE,$01
+    .byte 0, 48,$C8,$01, 16, 48,$CA,$01, 32, 48,$CC,$01, 48, 48,$CE,$01
 
-
-
-    ; === CORPO (4x2 de 16) ===
-    .byte 0,  32,  $48, $01     ; pedaco 1-1
-    .byte 16,  32,  $42, $01     ; pedaco 1-2
-    .byte 32,  32,  $4C, $01     ; pedaco 1-3
-    .byte 48,  32,  $8C, $01     ; pedaco 1-4
-    
-    .byte 0,  48,  $68, $01     ; pedaco 2-1
-    .byte 16,  48,  $6A, $01     ; pedaco 2-2
-    .byte 32,  48,  $88, $01     ; pedaco 2-3
-    .byte 48,  48,  $8A, $01     ; pedaco 2-4
 
 
 ;-------------------------------------------------------------------------------
@@ -638,7 +556,7 @@ VaderCrab_Layout_FrameAttacking1:
 
         ; Carrega a tabela de dano na Direct Page
         ldy #.loword(VaderCrab_Layout_Hurt)
-        sty z:DP_WEAPON_POOL_PTR        ; Reutilizando slot livre de 16-bit na DP
+        sty z:DP_VADER_LAYOUT_PTR        ; Reutilizando slot livre de 16-bit na DP
         bra @StartDraw
 
 @CheckStates:
@@ -653,8 +571,7 @@ VaderCrab_Layout_FrameAttacking1:
         beq @Prep1
         cmp #2
         beq @Prep2
-        cmp #3
-        beq @Prep3
+
 
 @Prep0: 
         ldy #.loword(VaderCrab_Layout_FramePreparing0)
@@ -665,9 +582,7 @@ VaderCrab_Layout_FrameAttacking1:
 @Prep2: 
         ldy #.loword(VaderCrab_Layout_FramePreparing2)
         bra @SavePtr
-@Prep3: 
-        ldy #.loword(VaderCrab_Layout_FramePreparing3)
-        bra @SavePtr
+
 
 @CheckAttacking:
         ; 3. Estado: Atacando
@@ -694,7 +609,7 @@ VaderCrab_Layout_FrameAttacking1:
         ldy #.loword(VaderCrab_Layout_Frame1)
 
 @SavePtr:
-        sty z:DP_WEAPON_POOL_PTR
+        sty z:DP_VADER_LAYOUT_PTR
 
 @StartDraw:
         ldy #$0000              ; Indexador de bytes lidos do layout (0 a 63)
@@ -708,14 +623,14 @@ DrawXInverted:
         ; Inversão de colunas baseada no ponteiro dinâmico da DP
         lda #48
         sec
-        sbc (DP_WEAPON_POOL_PTR),y 
+        sbc (DP_VADER_LAYOUT_PTR),y 
         clc
         adc VaderCrab + VaderCrabStruct::X_Pos 
         sta OAMMIRROR, X
         bra ProcessY
 
 DrawXNormal:
-        lda (DP_WEAPON_POOL_PTR),y
+        lda (DP_VADER_LAYOUT_PTR),y
         clc
         adc VaderCrab + VaderCrabStruct::X_Pos    
         sta OAMMIRROR, X                          
@@ -725,7 +640,7 @@ ProcessY:
         iny                     ; Aponta para o Offset Y
 
         ; === 2. PROCESSAR POSIÇÃO Y ===
-        lda (DP_WEAPON_POOL_PTR),y
+        lda (DP_VADER_LAYOUT_PTR),y
         clc
         adc VaderCrab + VaderCrabStruct::Y_Pos    
         sta OAMMIRROR, X                          
@@ -733,13 +648,13 @@ ProcessY:
         iny                     ; Aponta para o Tile ID
 
         ; === 3. PROCESSAR TILE ID DIRETO DO PONTEIRO ATIVO ===
-        lda (DP_WEAPON_POOL_PTR),y
+        lda (DP_VADER_LAYOUT_PTR),y
         sta OAMMIRROR, X
         inx
         iny                     ; Aponta para os Atributos
 
         ; === 4. PROCESSAR ATRIBUTOS E INJETAR H-FLIP HIERÁRQUICO ===
-        lda (DP_WEAPON_POOL_PTR),y
+        lda (DP_VADER_LAYOUT_PTR),y
         sta z:DP_TEMP_00        ; Rascunho rápido em RAM
         
         lda VaderCrab + VaderCrabStruct::Facing
@@ -747,7 +662,8 @@ ProcessY:
 
 @ApplyFlip:
         lda z:DP_TEMP_00
-        ora #%01000000          ; Injeta o Bit 6 de Flip Horizontal na PPU
+        ;ora #%01000000          ; Injeta o Bit 6 de Flip Horizontal na PPU
+        eor #%01000000          ; Injeta o Bit 6 de Flip Horizontal na PPU
         sta z:DP_TEMP_00
 
 @NoFlip:

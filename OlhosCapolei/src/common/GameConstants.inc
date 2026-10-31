@@ -67,6 +67,9 @@ DP_WEAPON_TILE_TMP      = $08   ; Ocupa $08 (Guarda o Tile_ID do item arremessá
 DP_WEAPON_OAM_BACKUP    = $0A   ; Ocupa $0A e $0B (Preserva temporariamente o reg X OAM)
 DP_WEAPON_POOL_PTR      = $0C   ; Ocupa $0C (Índice de controle de varredura da RAM do Pool)
 
+
+DP_VADER_LAYOUT_PTR = $0E ;
+
 ; --- Categorias Unificadas de Armas ---
 WEAPON_TYPE_MELEE      = $00  ; Arma Branca (Cano, Faca, Pau)
 WEAPON_TYPE_PROJECTILE = $01  ; Arma de Disparo/Arremesso (Pedra, Pistola, Bazuca)
