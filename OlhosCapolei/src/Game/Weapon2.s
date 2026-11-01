@@ -58,31 +58,31 @@ Weapon_Data_Table:
 
 
 
-Weapon_Layout_Hammer:
+Weapon_Layout_Wood:
     .byte 0, <(  0), $6A, $30  
     .byte 16, <(-8), $4A, $30
     .byte 32, <(-16), $2A, $30  
     .byte 48, <(-24), $0A, $30
 
-Weapon_Layout_Hammer_Picked:
+Weapon_Layout_Wood_Picked:
     .byte 0, <(  0), $66, $30  
     .byte 0, <(-16), $46, $30
     .byte 0, <(-32), $26, $30  
     .byte 0, <(-48), $06, $30
 
-Weapon_Layout_Hammer_Attack_Frame0:
+Weapon_Layout_Wood_Attack_Frame0:
     .byte 0, <(  0), $68, $30  
     .byte 8, <(-16), $48, $30
     .byte 16, <(-32), $28, $30  
     .byte 24, <(-48), $08, $30
 
-Weapon_Layout_Hammer_Attack_Frame1:
+Weapon_Layout_Wood_Attack_Frame1:
     .byte 0, <(  0), $6A, $30  
     .byte 16, <(-8), $4A, $30
     .byte 32, <(-16), $2A, $30  
     .byte 48, <(-24), $0A, $30
 
-Weapon_Layout_Hammer_Attack_Frame2:
+Weapon_Layout_Wood_Attack_Frame2:
     .byte 0, <(  0), $64, $30  
     .byte 16, <(  0), $44, $30
     .byte 32, <( 0), $24, $30  
@@ -460,7 +460,7 @@ Weapon_Layout_Hammer_Attack_Frame2:
 @LoadAttackFrame0:
         rep #$20                        ; Abre A para 16-bit
         .a16
-        lda #.loword(Weapon_Layout_Hammer_Attack_Frame0)
+        lda #.loword(Weapon_Layout_Wood_Attack_Frame0)
         sta z:DP_HERO_LAYOUT_PTR        
         sep #$20                        ; Retorna acumulador para 8-bit
         .a8
@@ -469,7 +469,7 @@ Weapon_Layout_Hammer_Attack_Frame2:
 @LoadAttackFrame1:
         rep #$20
         .a16
-        lda #.loword(Weapon_Layout_Hammer_Attack_Frame1)
+        lda #.loword(Weapon_Layout_Wood_Attack_Frame1)
         sta z:DP_HERO_LAYOUT_PTR
         sep #$20
         .a8
@@ -478,7 +478,7 @@ Weapon_Layout_Hammer_Attack_Frame2:
 @LoadAttackFrame2:
         rep #$20
         .a16
-        lda #.loword(Weapon_Layout_Hammer_Attack_Frame2)
+        lda #.loword(Weapon_Layout_Wood_Attack_Frame2)
         sta z:DP_HERO_LAYOUT_PTR
         sep #$20
         .a8
@@ -489,23 +489,23 @@ Weapon_Layout_Hammer_Attack_Frame2:
         ; --- TESTA SE O MARTELO ESTÁ NO CHÃO OU NA MÃO ---
         lda a:WeaponStruct::Active, y
         cmp #WEAPON_STATE_EQUIPPED
-        beq @LoadHammerPicked           ; Se estiver equipado, usa o layout com inclinação de posse
+        beq @LoadWoodPicked           ; Se estiver equipado, usa o layout com inclinação de posse
 
-@LoadHammerGround:
+@LoadWoodGround:
         ; Se estiver no chão, usa o layout padrão totalmente vertical
         rep #$20
         .a16
-        lda #.loword(Weapon_Layout_Hammer)
+        lda #.loword(Weapon_Layout_Wood)
         sta z:DP_HERO_LAYOUT_PTR
         sep #$20
         .a8
         bra @StartLoop
 
-@LoadHammerPicked:
-        ; Se estiver na mão, usa a sua nova struct inclinada Weapon_Layout_Hammer_Picked
+@LoadWoodPicked:
+        ; Se estiver na mão, usa a sua nova struct inclinada Weapon_Layout_Wood_Picked
         rep #$20
         .a16
-        lda #.loword(Weapon_Layout_Hammer_Picked)
+        lda #.loword(Weapon_Layout_Wood_Picked)
         sta z:DP_HERO_LAYOUT_PTR
         sep #$20
         .a8
