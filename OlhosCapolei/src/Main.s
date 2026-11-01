@@ -337,7 +337,7 @@ MeleeConfirmouImpacto:
         .a8
 
         ; 1. Aplica o estado de dano (Hitstun) ao caranguejo grande
-        lda #30
+        lda #10
         sta VaderCrab + VaderCrabStruct::HurtTimer
 
         ; 2. Desativa a Hitbox para este frame para garantir que dê apenas 1 hit por porretada
