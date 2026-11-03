@@ -105,6 +105,9 @@ _ResetAlign:
 
         ldy #.loword(WeaponD)
         jsr UpdateProjectiles
+ 
+        ldy #.loword(WeaponE)
+        jsr UpdateProjectiles
 
 
         ; 3. FILTRO DE COLISÕES & REGRAS DE GAMEPLAY
@@ -121,6 +124,10 @@ _ResetAlign:
        
         ldy #.loword(WeaponC)
         jsr ApplyWeaponCollisions       ; Testa se a arma do Slot C acertou o Vader
+        ldy #.loword(WeaponD)
+        jsr ApplyWeaponCollisions       ; Testa se a arma do Slot C acertou o Vader
+        ldy #.loword(WeaponE)
+        jsr ApplyWeaponCollisions       ; Testa se a arma do Slot C acertou o Vader
         
         
         ; CHECA COLISÃO CORPORAL (PORRETADA) PARA CADA SLOT
@@ -134,6 +141,9 @@ _ResetAlign:
         jsr ApplyMeleeWeaponCollisions
 
         ldy #.loword(WeaponD)
+        jsr ApplyMeleeWeaponCollisions
+
+        ldy #.loword(WeaponE)
         jsr ApplyMeleeWeaponCollisions
 
 
@@ -153,6 +163,10 @@ _ResetAlign:
         jsr DrawDroppedWeapon     ; Desenha reutilizando o mesmo código!
 
         ldy #.loword(WeaponD)     ; Passa o endereço de WRAM da WeaponC por parâmetro
+        jsr DrawDroppedWeapon     ; Desenha reutilizando o mesmo código!
+
+
+        ldy #.loword(WeaponE)     ; Passa o endereço de WRAM da WeaponC por parâmetro
         jsr DrawDroppedWeapon     ; Desenha reutilizando o mesmo código!
 
 
@@ -629,6 +643,7 @@ CollisionDone:
 .export WeaponB
 .export WeaponC
 .export WeaponD
+.export WeaponE
 
 
 BigHero:         .tag BigHeroStruct
@@ -638,6 +653,7 @@ WeaponA:         .tag WeaponStruct
 WeaponB:         .tag WeaponStruct
 WeaponC:         .tag WeaponStruct
 WeaponD:         .tag WeaponStruct
+WeaponE:         .tag WeaponStruct
 
 FrameCounter:    .res 1    ; Contador global de frames (0 a 255)
 .export FrameCounter

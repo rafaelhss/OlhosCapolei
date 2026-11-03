@@ -13,7 +13,7 @@
 .include "Weapon2.inc"
 
 .import BigHero
-.import WeaponA, WeaponB, WeaponC, WeaponD
+.import WeaponA, WeaponB, WeaponC, WeaponD, WeaponE
 .import FrameCounter
 .import LoadActiveWeaponToY
 .import ProcessWeaponAttack
@@ -23,7 +23,7 @@
 .export DrawBigHero, MoveBigHero
 .export DrawBigHeroHurtboxDebug
 
-PICKUP_DISTANCE  = 48        ; Tolerância em pixels para conseguir pegar a arma
+PICKUP_DISTANCE  = 32        ; Tolerância em pixels para conseguir pegar a arma
 WALK_ANIM_SPEED  = 8         ; Frequência de troca de pernas (a cada 8 frames da PPU)
 
 .segment "CODE"
@@ -341,6 +341,14 @@ CheckPickupButton:
         cmp z:DP_TEMP_01
         bne CheckAttackButton
 
+        ; --- 4. TESTA SLOT E ---
+        ldy #.loword(WeaponE) 
+        jsr CheckWeaponPickup  
+        
+        lda BigHero + BigHeroStruct::Current_Weapon_ID
+        cmp z:DP_TEMP_01
+        bne CheckAttackButton
+
 CheckAttackButton:                  
         rep #$20
         .a16
@@ -363,6 +371,10 @@ CheckAttackButton:
         ; Se o herói estiver segurando a madeira (WEAPON_ID_WOOD = 3), pula o arremesso!
         lda BigHero + BigHeroStruct::Current_Weapon_ID
         cmp #WEAPON_ID_WOOD             
+        beq @DispararAtaqueMelee 
+        cmp #WEAPON_ID_PISTOL             
+        beq @DispararAtaqueMelee 
+        cmp #WEAPON_ID_CHAIN             
         beq @DispararAtaqueMelee        
 
 @Arremessar:

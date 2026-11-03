@@ -57,18 +57,21 @@ DP_TEMP_00              = $00
 DP_TEMP_01              = $01
 DP_TEMP_02              = $02
 DP_TEMP_03              = $03
+DP_TEMP_CALC            = $05   ; ◄ ADICIONE ISSO: Rascunho isolado para matemática de ponteiros
+
 
 ; --- Zona Exclusiva do Subsistema do Herói (BigHero.s) ---
-DP_HERO_LAYOUT_PTR      = $04   ; Ocupa $04 e $05 (Ponteiro de 16-bit para matriz de animação na ROM)
-DP_HERO_OAM_BACKUP      = $06   ; Ocupa $06 e $07 (Preserva temporariamente o reg X OAM)
+DP_HERO_LAYOUT_PTR      = $0A   ; Ocupa $04 e $05 (Ponteiro de 16-bit para matriz de animação na ROM)
+DP_HERO_OAM_BACKUP      = $0C   ; Ocupa $06 e $07 (Preserva temporariamente o reg X OAM)
 
 ; --- Zona Exclusiva do Subsistema de Armas e Projéteis (Weapon.s) ---
-DP_WEAPON_TILE_TMP      = $08   ; Ocupa $08 (Guarda o Tile_ID do item arremessável)
-DP_WEAPON_OAM_BACKUP    = $0A   ; Ocupa $0A e $0B (Preserva temporariamente o reg X OAM)
-DP_WEAPON_POOL_PTR      = $0C   ; Ocupa $0C (Índice de controle de varredura da RAM do Pool)
+DP_WEAPON_TILE_TMP      = $10   ; Ocupa $08 (Guarda o Tile_ID do item arremessável)
+DP_WEAPON_OAM_BACKUP    = $12   ; Ocupa $0A e $0B (Preserva temporariamente o reg X OAM)
+DP_WEAPON_POOL_PTR      = $14   ; Ocupa $0C (Índice de controle de varredura da RAM do Pool)
 
 
-DP_VADER_LAYOUT_PTR = $0E ;
+
+DP_VADER_LAYOUT_PTR = $16 ;
 
 ; --- Categorias Unificadas de Armas ---
 WEAPON_TYPE_MELEE      = $00  ; Arma Branca (Cano, Faca, Pau)
@@ -83,7 +86,7 @@ WEAPON_ID_PIPE         = 2
 WEAPON_ID_WOOD         = 3
 WEAPON_ID_ROCK         = 4    ; Pedra de Arremesso oficial do jogo
 WEAPON_ID_PISTOL       = 5
-WEAPON_ID_BAZOOKA      = 6
+WEAPON_ID_CHAIN      = 6
 WEAPON_ID_HAMMER       = 7
 
 ; =============================================================================

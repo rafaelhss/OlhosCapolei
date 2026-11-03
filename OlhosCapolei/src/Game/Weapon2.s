@@ -24,6 +24,7 @@
 .import     WeaponB
 .import     WeaponC
 .import     WeaponD
+.import     WeaponE
 .import     rand                ; Invocando o seu LFSR puro de src/common/Util.s
 
 ;----- Includes ----------------------------------------------------------------
@@ -156,27 +157,120 @@ Weapon_Layout_Fire_Attack_Frame02:
     .byte 48, <(0), $E6, $30
 
 
+Weapon_Layout_Chain:
+    .byte 0, <(  0), $E8, $30  
+    .byte 16, <(0), $EA, $30
+    .byte 32, <(0), $CC, $30  
+    .byte 48, <(0), $EC, $30
+
+Weapon_Layout_Chain_Picked:
+    .byte 0, <(  0), $E8, $30  
+    .byte 16, <(0), $EA, $30
+    .byte 32, <(0), $CC, $30  
+    .byte 48, <(0), $EC, $30
+
+Weapon_Layout_Chain_Attack_Frame00:
+    .byte 0, <(  0), $E8, $30  
+    .byte 16, <(0), $EA, $30
+    .byte 32, <(0), $CC, $30  
+    .byte 48, <(0), $EC, $30
+
+Weapon_Layout_Chain_Attack_Frame01:
+    .byte 0, <(  0), $E8, $30  
+    .byte 16, <(0), $EA, $30
+    .byte 32, <(0), $CC, $30  
+    .byte 48, <(0), $EC, $30
+
+Weapon_Layout_Chain_Attack_Frame02:
+    .byte 0, <(  0), $E8, $30  
+    .byte 16, <(0), $EA, $30
+    .byte 32, <(0), $CC, $30  
+    .byte 48, <(0), $EC, $30
+
+
+; =============================================================================
+; TABELAS MESTRES PARA ARMAS EM REPOUSO (Melee_Timer == 0)
+; =============================================================================
+Weapon_Ground_Table:
+    .addr $0000, $0000, $0000        ; IDs 0, 1, 2
+    .addr Weapon_Layout_Wood         ; ID 3: Madeira no chão
+    .addr $0000                      ; ID 4: Pedra
+    .addr Weapon_Layout_Fire         ; ID 5: Pistola no chão
+    .addr Weapon_Layout_Chain        ; ID 6: corrente no chão
+
+Weapon_Picked_Table:
+    .addr $0000, $0000, $0000        ; IDs 0, 1, 2
+    .addr Weapon_Layout_Wood_Picked  ; ID 3: Madeira na mão
+    .addr $0000                      ; ID 4: Pedra
+    .addr Weapon_Layout_Fire_Picked  ; ID 5: Pistola na mão
+    .addr Weapon_Layout_Chain_Picked  ; ID 6: corrente na mão
+
+; =============================================================================
+; TABELA MESTRE DE ARMAS (Weapon_Anims_Table)
+; Indexado diretamente por Weapon_ID (Multiplicado por 2 em tempo de execução)
+; =============================================================================
+Weapon_Anims_Table:
+    .addr $0000                      ; ID 0: Desarmado (Nulo)
+    .addr $0000                      ; ID 1: Faca (Expansão)
+    .addr $0000                      ; ID 2: Cano (Expansão)
+    .addr Weapon_Wood_Anims_Table    ; ID 3: Pedaço de Pau (Madeira)
+    .addr $0000                      ; ID 4: Pedra (Single-tile, não usa sub-tabela)
+    .addr Weapon_Fire_Anims_Table    ; ID 5: Pistola / Fogo (Exemplo de expansão Multi-tile)
+    .addr Weapon_Chain_Anims_Table    ; ID 6: Corrente)
+
+
 
 ; =============================================================================
 ; TABELA DE VETORES DE ANIMAÇÃO (PONTEIROS DE 16-BIT PARA CADA FRAME)
 ; Organizada linearmente: Var0 (Fr0, Fr1, Var2), Var1 (Fr0, Fr1, Fr2), Var2 (Fr0, Fr1, Fr2)
 ; =============================================================================
+; =============================================================================
+; TABELAS DE VETORES DE ANIMAÇÃO ESPECÍFICAS POR ARMA (Matrizes Lineares 3x3)
+; =============================================================================
 Weapon_Wood_Anims_Table:
-    ; --- Variação 0 (Aperto 1) ---
+    ; --- Variação 0 (Jab 1) ---
     .addr Weapon_Layout_Wood_Attack_Frame00
     .addr Weapon_Layout_Wood_Attack_Frame01
     .addr Weapon_Layout_Wood_Attack_Frame02
-    ; --- Variação 1 (Aperto 2) ---
+    ; --- Variação 1 (Jab 2) ---
     .addr Weapon_Layout_Wood_Attack_Frame10
     .addr Weapon_Layout_Wood_Attack_Frame11
     .addr Weapon_Layout_Wood_Attack_Frame12
-    ; --- Variação 2 (Aperto 3 / Finalizador) ---
+    ; --- Variação 2 (Finalizador) ---
     .addr Weapon_Layout_Wood_Attack_Frame20
     .addr Weapon_Layout_Wood_Attack_Frame21
     .addr Weapon_Layout_Wood_Attack_Frame22
 
+Weapon_Fire_Anims_Table:
+    ; --- Variação 0 ---
+    .addr Weapon_Layout_Fire_Attack_Frame00
+    .addr Weapon_Layout_Fire_Attack_Frame01
+    .addr Weapon_Layout_Fire_Attack_Frame02
+    ; --- Variação 1 ---
+    .addr Weapon_Layout_Fire_Attack_Frame00
+    .addr Weapon_Layout_Fire_Attack_Frame01
+    .addr Weapon_Layout_Fire_Attack_Frame02
+    ; --- Variação 2 ---
+    .addr Weapon_Layout_Fire_Attack_Frame00
+    .addr Weapon_Layout_Fire_Attack_Frame01
+    .addr Weapon_Layout_Fire_Attack_Frame02
 
-;teste
+
+Weapon_Chain_Anims_Table:
+    ; --- Variação 0 ---
+    .addr Weapon_Layout_Chain_Attack_Frame00
+    .addr Weapon_Layout_Chain_Attack_Frame01
+    .addr Weapon_Layout_Chain_Attack_Frame02
+    ; --- Variação 1 ---
+    .addr Weapon_Layout_Chain_Attack_Frame00
+    .addr Weapon_Layout_Chain_Attack_Frame01
+    .addr Weapon_Layout_Chain_Attack_Frame02
+    ; --- Variação 2 ---
+    .addr Weapon_Layout_Chain_Attack_Frame00
+    .addr Weapon_Layout_Chain_Attack_Frame01
+    .addr Weapon_Layout_Chain_Attack_Frame02
+
+
 ;-------------------------------------------------------------------------------
 ;   ClearProjectilePool (Garante RAM limpa e força Y=$E0 contra Sprites Fantasmas)
 ;-------------------------------------------------------------------------------
@@ -531,93 +625,115 @@ Weapon_Wood_Anims_Table:
         inx
         rts
 
- @ProcessMultiTile:
-        sty z:DP_WEAPON_POOL_PTR        ; Salva o ponteiro do slot atual (WeaponC)
+  @ProcessMultiTile:
+        sty z:DP_WEAPON_POOL_PTR        ; Salva o ponteiro do slot atual (ex: WeaponC)
 
-        ; --- ◄ PROTEÇÃO CRÍTICA CONTRA BOOT FANTASMA ---
-        ; Verifica se o cronômetro do golpe está rodando.
+        ; --- PROTEÇÃO CRÍTICA CONTRA BOOT FANTASMA ---
         lda a:WeaponStruct::Melee_Timer, y
-        bne @Continue
-        jmp @LoadDefaultLayout          ; Se o timer for 0, a arma NÃO está atacando. Força o layout neutro!
+        bne @CalculateDynamicTable
+        jmp @LoadDefaultLayout          ; Se o timer for 0, força o layout estático de chão/mão
 
+@CalculateDynamicTable:
+        ; =====================================================================
+        ; PIPELINE DATA-DRIVEN: BUSCA INDIRETA BASEADA NO WEAPON_ID
+        ; =====================================================================
+        phy                             ; Preserva ponteiro da estrutura da arma
+        phx                             ; Preserva ponteiro do preenchimento da OAM
 
-
-@Continue:
-        ; --- CÁLCULO DE MATRIZ PURIFICADO EM 16-BIT NATIVOS (KONAMI ARCADE STYLE) ---
-        ; Salvamos Y e X na pilha para isolar completamente o motor gráfico
-        phy                             ; Salva o ponteiro original da arma (WeaponC)
-        phx                             ; Salva o ponteiro principal da OAM
-
-        ; Abrimos o acumulador para 16-bit para fazer a matemática sem perigo de bytes ímpares
-        rep #$20                        
+        rep #$20                        ; Aberto em 16-bit puro para evitar quebra de banco
         .a16
         
-        ; 1. Resgata o endereço da arma (que está na Direct Page) para o registrador X
-        ldx z:DP_WEAPON_POOL_PTR
+        ldx z:DP_WEAPON_POOL_PTR        ; X mapeia a WeaponStruct na RAM
 
-        ; 2. Carrega a variação de forma limpa em 16-bit (Zera o byte alto automaticamente)
+        ; 1. Buscar a Sub-Tabela correta através do Weapon_ID
+        lda a:WeaponStruct::Weapon_ID, x
+        and #$00FF                      ; Isola byte baixo limpo
+        asl                             ; Multiplica ID por 2 (tamanho de .addr)
+        tay                             ; Y = Índice da tabela mestre
+        
+        lda Weapon_Anims_Table, y       ; Lê o endereço base da animação desta arma específica
+        sta z:DP_VADER_LAYOUT_PTR       ; Salva no canal limpo de indicação da Direct Page
+
+        ; 2. Calcular índice interno da sub-tabela: (Anim_Variation * 3) + Melee_Frame
         lda a:WeaponStruct::Anim_Variation, x
-        and #$00FF                      ; Filtra estritamente o byte baixo
-        sta z:DP_TEMP_00                ; Rascunho temporário de 16-bit
-        
-        ; Multiplica por 3 via deslocamento de bits puro de hardware
-        asl                             ; Variação * 2
+        and #$00FF                      
+        sta z:DP_TEMP_CALC              ; Rascunho temporário de 16-bit
+        asl                             ; Variation * 2
         clc
-        adc z:DP_TEMP_00                ; (Variação * 2) + Variação = Variação * 3
+        adc z:DP_TEMP_CALC              ; (Variation * 2) + Variation = Variation * 3
+        sta z:DP_TEMP_CALC              
 
-        ; 3. Soma com o Frame atual da porretada (+ Melee_Frame)
-        sta z:DP_TEMP_00                ; Guarda o resultado intermediário
         lda a:WeaponStruct::Melee_Frame, x
-        and #$00FF                      ; Limpa lixo de 16-bit do frame
+        and #$00FF                      
         clc
-        adc z:DP_TEMP_00                ; (Variação * 3) + Melee_Frame
+        adc z:DP_TEMP_CALC              ; Índice linear final em número de frames
+        asl                             ; Multiplica por 2 para casar com o tamanho em bytes (.addr)
+        tay                             ; Y = Deslocamento final em bytes dentro da sub-tabela
 
-        ; 4. Multiplica por 2 para casar com o tamanho de 2 bytes de cada ponteiro (.addr)
-        asl                             ; Índice final absoluto calculado em 16-bit!
-        
-        ; 5. Transfere diretamente para o registrador Y (sem risco de desalinhamento ímpar)
-        tay                             
+        ; 3. Resgatar o Frame de Animação Real via Ponteiro Indireto da Direct Page
+        lda (DP_VADER_LAYOUT_PTR), y    
+        sta z:DP_HERO_LAYOUT_PTR        ; Injeta o frame final calculado no motor de desenho padrão
 
-        ; 6. Lê o ponteiro correto de 16-bit da ROM e desvia para a Direct Page
-        lda Weapon_Wood_Anims_Table, y  ; Busca o vetor exato na tabela da ROM
-        sta z:DP_HERO_LAYOUT_PTR        ; Transfere para o ponteiro dinâmico de desenho
-        
-        ; --- RESTAURAÇÃO DE CONTEXTO SEGURO ---
-        sep #$20                        ; Retorna o acumulador de forma estável para 8-bit
+        ; Restaura os registradores e flags originais com segurança
+        sep #$20                        ; Retorna acumulador estável para 8-bit
         .a8
+        plx                             ; Recupera X OAM original
+        ply                             ; Recupera Y Struct original
         
-        plx                             ; Recupera o X original da OAM principal intacto
-        ply                             ; Recupera o Y original da instância da arma (WeaponC)
-        
-        jmp @StartLoop                  ; Vai para o laço gráfico original 100% limpo!
+        jmp @StartLoop                  ; Desvia diretamente para o laço gráfico original
 
 @LoadDefaultLayout:
+        ; =====================================================================
+        ; CARGA DE LAYOUT ESTÁTICO (MÃO / CHÃO) - ISOLAMENTO DE ÍNDICE DE 16-BIT
+        ; =====================================================================
+        phx                             ; Preserva ponteiro da OAM global (Main.s)
+        phy                             ; Preserva ponteiro da WRAM da arma atual
 
-        lda a:WeaponStruct::Active, y
+        ; 1. Abre o Acumulador para 16-bit estritamente para limpar e calcular o Offset
+        rep #$20
+        .a16
+        
+        ; Lê o Weapon_ID limpando qualquer resíduo do byte alto
+        lda a:WeaponStruct::Weapon_ID, y
+        and #$00FF                      ; Força o byte alto a ser estritamente $00
+        asl                             ; Multiplica ID por 2 (Tamanho de cada .addr)
+        tay                             ; Y de 16 bits agora recebe o índice perfeito ($0000, $0002...)
+
+        ; 2. Retorna o Acumulador para 8-bit para fazer a checagem de estado segura
+        sep #$20
+        .a8
+
+        ldx z:DP_WEAPON_POOL_PTR        ; Mapeia a WeaponStruct corrente na RAM
+        lda a:WeaponStruct::Active, x   ; Lê o estado em 8-bit puro
         cmp #WEAPON_STATE_EQUIPPED
-        beq @LoadWoodPicked           ; Se estiver equipado, usa o layout com inclinação de posse
+        beq @SelectPickedTable
 
-@LoadWoodGround:
-        ; Se estiver no chão, usa o layout padrão totalmente vertical
-        rep #$20
+@SelectGroundTable:
+        rep #$20                        ; Abre em 16-bit para carregar o endereço do layout da ROM
         .a16
-        lda #.loword(Weapon_Layout_Wood)
-        sta z:DP_HERO_LAYOUT_PTR
-        sep #$20
+        lda a:Weapon_Ground_Table, y    ; Busca ponteiro correto (Sem lixo no Y)
+        sta z:DP_HERO_LAYOUT_PTR        
+        sep #$20                        ; Retorna para 8-bit
         .a8
-        bra @StartLoop
+        bra @RestoreContext
 
-@LoadWoodPicked:
-        ; Se estiver na mão, usa a sua nova struct inclinada Weapon_Layout_Wood_Picked
-        rep #$20
+@SelectPickedTable:
+        rep #$20                        ; Abre em 16-bit para carregar o endereço do layout da ROM
         .a16
-        lda #.loword(Weapon_Layout_Wood_Picked)
-        sta z:DP_HERO_LAYOUT_PTR
-        sep #$20
+        lda a:Weapon_Picked_Table, y    ; Busca ponteiro correto (Sem lixo no Y)
+        sta z:DP_HERO_LAYOUT_PTR        
+        sep #$20                        ; Retorna para 8-bit
         .a8
+
+@RestoreContext:
+        ply                             ; Restaura o Y original (Ponteiro WRAM da arma)
+        plx                             ; Restaura o X original (Ponteiro OAMMIRROR da Main.s)
+        
+        ldy #$0000                      ; Inicializa o indexador do laço multi-tile
 
 @StartLoop:
-        ldy #$0000                      ; Inicializa o indexador da tabela em Y
+        ; (O código do loop multi-tile segue idêntico aqui abaixo)
+        ldy #$0000                      ; Inicializa o indexador do laço de blocos
 
 @MultiTileLoop:
         ; --- CÁLCULO DO EIXO X COM SUPORTE A H-FLIP ---
@@ -732,9 +848,18 @@ Weapon_Wood_Anims_Table:
 @ChecarSlotD:
         lda WeaponD + WeaponStruct::Active
         cmp #WEAPON_STATE_EQUIPPED
-        bne @NenhumEquipado                     ; Se nenhum slot está equipado, limpa
+        bne @ChecarSlotE                     ; Se nenhum slot está equipado, limpa
 
         ldy #.loword(WeaponD)            ; Sucesso: O slot ativo é a WeaponC
+        sty z:DP_HERO_OAM_BACKUP
+        rts
+
+@ChecarSlotE:
+        lda WeaponE + WeaponStruct::Active
+        cmp #WEAPON_STATE_EQUIPPED
+        bne @NenhumEquipado                     ; Se nenhum slot está equipado, limpa
+
+        ldy #.loword(WeaponE)            ; Sucesso: O slot ativo é a WeaponC
         sty z:DP_HERO_OAM_BACKUP
         rts
 

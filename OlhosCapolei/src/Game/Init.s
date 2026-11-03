@@ -22,7 +22,7 @@
 ;-------------------------------------------------------------------------------
 
 
-.import  BigHero, PennyCrab, VaderCrab, WeaponA, WeaponB, WeaponC, WeaponD
+.import  BigHero, PennyCrab, VaderCrab, WeaponA, WeaponB, WeaponC, WeaponD, WeaponE
 .import InitRNG
 
 .segment "CODE"
@@ -181,7 +181,7 @@
 
         lda #WEAPON_STATE_GROUND
         sta WeaponD + WeaponStruct::Active
-        lda #WEAPON_ID_WOOD
+        lda #WEAPON_ID_PISTOL
         sta WeaponD + WeaponStruct::Weapon_ID
         lda #$06
         sta WeaponD + WeaponStruct::Tile_ID
@@ -200,6 +200,30 @@
         stz WeaponD + WeaponStruct::Speed_Y
 
 ;------------fim WeaponD---------
+
+;----------  WeaponE ----------------
+
+        lda #WEAPON_STATE_GROUND
+        sta WeaponE + WeaponStruct::Active
+        lda #WEAPON_ID_CHAIN
+        sta WeaponE + WeaponStruct::Weapon_ID
+        lda #$06
+        sta WeaponE + WeaponStruct::Tile_ID
+
+        lda #$04
+        sta WeaponE + WeaponStruct::Tile_Size
+        
+
+        lda #$10
+        sta WeaponE + WeaponStruct::X_Pos
+
+        lda #(SCREEN_BOTTOM / 2) 
+        sta WeaponE + WeaponStruct::Y_Pos
+
+        stz WeaponE + WeaponStruct::Speed_X
+        stz WeaponE + WeaponStruct::Speed_Y
+
+;------------fim WeaponE---------
 
 
 
