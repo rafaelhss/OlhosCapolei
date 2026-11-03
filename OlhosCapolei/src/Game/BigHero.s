@@ -13,7 +13,7 @@
 .include "Weapon2.inc"
 
 .import BigHero
-.import WeaponA, WeaponB, WeaponC
+.import WeaponA, WeaponB, WeaponC, WeaponD
 .import FrameCounter
 .import LoadActiveWeaponToY
 .import ProcessWeaponAttack
@@ -327,7 +327,19 @@ CheckPickupButton:
 
         ; --- 4. TESTA SLOT C ---
         ldy #.loword(WeaponC) 
-        jsr CheckWeaponPickup       
+        jsr CheckWeaponPickup     
+        
+        lda BigHero + BigHeroStruct::Current_Weapon_ID
+        cmp z:DP_TEMP_01
+        bne CheckAttackButton  
+
+        ; --- 4. TESTA SLOT D ---
+        ldy #.loword(WeaponD) 
+        jsr CheckWeaponPickup  
+        
+        lda BigHero + BigHeroStruct::Current_Weapon_ID
+        cmp z:DP_TEMP_01
+        bne CheckAttackButton
 
 CheckAttackButton:                  
         rep #$20

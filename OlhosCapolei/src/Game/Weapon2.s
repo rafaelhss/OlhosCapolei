@@ -23,6 +23,7 @@
 .import     WeaponA
 .import     WeaponB
 .import     WeaponC
+.import     WeaponD
 .import     rand                ; Invocando o seu LFSR puro de src/common/Util.s
 
 ;----- Includes ----------------------------------------------------------------
@@ -124,6 +125,36 @@ Weapon_Layout_Wood_Attack_Frame22:
 
 
     
+Weapon_Layout_Fire:
+    .byte 0, <(  0), $E0, $30  
+    .byte 16, <(0), $E2, $30
+    .byte 32, <(0), $E4, $30  
+    .byte 48, <(0), $E6, $30
+
+Weapon_Layout_Fire_Picked:
+    .byte 0, <(  0), $E0, $30  
+    .byte 16, <(0), $E2, $30
+    .byte 32, <(0), $E4, $30  
+    .byte 48, <(0), $E6, $30
+
+Weapon_Layout_Fire_Attack_Frame00:
+    .byte 0, <(  0), $E0, $30  
+    .byte 16, <(0), $E2, $30
+    .byte 32, <(0), $E4, $30  
+    .byte 48, <(0), $E6, $30
+
+Weapon_Layout_Fire_Attack_Frame01:
+    .byte 0, <(  0), $E0, $30  
+    .byte 16, <(0), $E2, $30
+    .byte 32, <(0), $E4, $30  
+    .byte 48, <(0), $E6, $30
+
+Weapon_Layout_Fire_Attack_Frame02:
+    .byte 0, <(  0), $E0, $30  
+    .byte 16, <(0), $E2, $30
+    .byte 32, <(0), $E4, $30  
+    .byte 48, <(0), $E6, $30
+
 
 
 ; =============================================================================
@@ -196,6 +227,24 @@ Weapon_Wood_Anims_Table:
 
         ; --- SANITIZAÇÃO DA WEAPON C ---
         ldy #.loword(WeaponC)
+        sta a:WeaponStruct::Active, y
+        sta a:WeaponStruct::Weapon_ID, y
+        sta a:WeaponStruct::Tile_ID, y
+        sta a:WeaponStruct::X_Pos, y
+        sta a:WeaponStruct::Y_Pos, y
+        sta a:WeaponStruct::Speed_X, y
+        sta a:WeaponStruct::Speed_Y, y
+        sta a:WeaponStruct::Target_Y, y
+        sta a:WeaponStruct::Melee_Timer, y
+        sta a:WeaponStruct::Melee_Frame, y
+        sta a:WeaponStruct::Hitbox_Active, y
+        sta a:WeaponStruct::Hitbox_X1, y
+        sta a:WeaponStruct::Hitbox_X2, y
+        sta a:WeaponStruct::Hitbox_Y1, y
+        sta a:WeaponStruct::Hitbox_Y2, y
+
+
+        ldy #.loword(WeaponD)
         sta a:WeaponStruct::Active, y
         sta a:WeaponStruct::Weapon_ID, y
         sta a:WeaponStruct::Tile_ID, y
@@ -674,9 +723,18 @@ Weapon_Wood_Anims_Table:
 @ChecarSlotC:
         lda WeaponC + WeaponStruct::Active
         cmp #WEAPON_STATE_EQUIPPED
-        bne @NenhumEquipado                     ; Se nenhum slot está equipado, limpa
+        bne @ChecarSlotD                     ; Se nenhum slot está equipado, limpa
 
         ldy #.loword(WeaponC)            ; Sucesso: O slot ativo é a WeaponC
+        sty z:DP_HERO_OAM_BACKUP
+        rts
+
+@ChecarSlotD:
+        lda WeaponD + WeaponStruct::Active
+        cmp #WEAPON_STATE_EQUIPPED
+        bne @NenhumEquipado                     ; Se nenhum slot está equipado, limpa
+
+        ldy #.loword(WeaponD)            ; Sucesso: O slot ativo é a WeaponC
         sty z:DP_HERO_OAM_BACKUP
         rts
 

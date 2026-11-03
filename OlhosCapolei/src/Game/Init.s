@@ -21,8 +21,8 @@
 .include "Registers.inc"
 ;-------------------------------------------------------------------------------
 
-.import Hero, InimigoGrande, InimigoGrande2
-.import  BigHero, PennyCrab, VaderCrab, WeaponA, WeaponB, WeaponC
+
+.import  BigHero, PennyCrab, VaderCrab, WeaponA, WeaponB, WeaponC, WeaponD
 .import InitRNG
 
 .segment "CODE"
@@ -89,7 +89,7 @@
         lda #$F2                        ; Byte Alto do Azul Puro do SNES ($7C)
         sta CGDATA                      ; Envia para a PPU (Escrita dupla finalizada)
        
-       
+
         ; Agora carrega normalmente a paleta dos sprites no índice $80
         tsx                            
         lda #$80                        ; Paleta dos Sprites inicia em $80
@@ -175,6 +175,32 @@
         stz WeaponC + WeaponStruct::Speed_Y
 
 ;------------fim WeaponC---------
+
+
+;----------  WeaponD ----------------
+
+        lda #WEAPON_STATE_GROUND
+        sta WeaponD + WeaponStruct::Active
+        lda #WEAPON_ID_WOOD
+        sta WeaponD + WeaponStruct::Weapon_ID
+        lda #$06
+        sta WeaponD + WeaponStruct::Tile_ID
+
+        lda #$04
+        sta WeaponD + WeaponStruct::Tile_Size
+        
+
+        lda #$10
+        sta WeaponD + WeaponStruct::X_Pos
+
+        lda #(SCREEN_BOTTOM / 4) 
+        sta WeaponD + WeaponStruct::Y_Pos
+
+        stz WeaponD + WeaponStruct::Speed_X
+        stz WeaponD + WeaponStruct::Speed_Y
+
+;------------fim WeaponD---------
+
 
 
 

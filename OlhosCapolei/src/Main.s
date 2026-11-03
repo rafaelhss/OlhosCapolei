@@ -103,6 +103,9 @@ _ResetAlign:
         ldy #.loword(WeaponC)
         jsr UpdateProjectiles
 
+        ldy #.loword(WeaponD)
+        jsr UpdateProjectiles
+
 
         ; 3. FILTRO DE COLISÕES & REGRAS DE GAMEPLAY
         jsr ApplyEdgeCollisions
@@ -119,6 +122,7 @@ _ResetAlign:
         ldy #.loword(WeaponC)
         jsr ApplyWeaponCollisions       ; Testa se a arma do Slot C acertou o Vader
         
+        
         ; CHECA COLISÃO CORPORAL (PORRETADA) PARA CADA SLOT
         ldy #.loword(WeaponA)
         jsr ApplyMeleeWeaponCollisions
@@ -127,6 +131,9 @@ _ResetAlign:
         jsr ApplyMeleeWeaponCollisions
 
         ldy #.loword(WeaponC)
+        jsr ApplyMeleeWeaponCollisions
+
+        ldy #.loword(WeaponD)
         jsr ApplyMeleeWeaponCollisions
 
 
@@ -143,6 +150,9 @@ _ResetAlign:
         jsr DrawDroppedWeapon     ; Desenha reutilizando o mesmo código!
 
         ldy #.loword(WeaponC)     ; Passa o endereço de WRAM da WeaponC por parâmetro
+        jsr DrawDroppedWeapon     ; Desenha reutilizando o mesmo código!
+
+        ldy #.loword(WeaponD)     ; Passa o endereço de WRAM da WeaponC por parâmetro
         jsr DrawDroppedWeapon     ; Desenha reutilizando o mesmo código!
 
 
@@ -590,7 +600,7 @@ CollisionDone:
 ;-------------------------------------------------------------------------------
 .proc   NMIHandler
         lda RDNMI               ; Lê e limpa o flag indicador de interrupção de NMI
-
+.import Hero, InimigoGrande, InimigoGrande2
 
        
         tsx                     ; Preserva o ponteiro de pilha atual
@@ -612,23 +622,22 @@ CollisionDone:
 ;   ALOCAÇÃO DE VARIÁVEIS NA WRAM 
 ;-------------------------------------------------------------------------------
 .segment "BSS"
-.export Hero, InimigoGrande, InimigoGrande2
 .export BigHero 
 .export PennyCrab
 .export VaderCrab
 .export WeaponA
 .export WeaponB
 .export WeaponC
+.export WeaponD
 
-Hero:            .tag HeroStruct
-InimigoGrande:   .tag EnemyStruct
-InimigoGrande2:  .tag EnemyStruct
+
 BigHero:         .tag BigHeroStruct
 PennyCrab:       .tag PennyCrabStruct
 VaderCrab:       .tag VaderCrabStruct
 WeaponA:         .tag WeaponStruct
 WeaponB:         .tag WeaponStruct
 WeaponC:         .tag WeaponStruct
+WeaponD:         .tag WeaponStruct
 
 FrameCounter:    .res 1    ; Contador global de frames (0 a 255)
 .export FrameCounter

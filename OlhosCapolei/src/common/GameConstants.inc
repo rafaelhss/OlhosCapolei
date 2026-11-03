@@ -90,12 +90,6 @@ WEAPON_ID_HAMMER       = 7
 ; DEFINIÇÕES DE ESTRUTURAS DE DADOS (WRAM TABLES)
 ; =============================================================================
 
-; ======== Hero Padrão (8-bit)
-.struct HeroStruct
-    X_Pos       .byte   
-    Y_Pos       .byte   
-    Tile_Count  .byte   
-.endstruct
 
 ; ======== BigHero (Estilo Beat 'em Up 32x64)
 .struct BigHeroStruct
@@ -112,16 +106,6 @@ WEAPON_ID_HAMMER       = 7
     Hurtbox_Y2          .byte   ; Retângulo AABB - Base
     HurtTimer           .byte   ; Contador de hitstun (cara amassada)
     Current_Weapon_ID   .byte   ; Endereco da arma atualmente equipada (0 a 6)
-.endstruct
-
-; ======== Enemy Padrão (8-bit)
-.struct EnemyStruct
-    X_Pos       .byte   
-    Y_Pos       .byte   
-    Tile_Count  .byte   
-    Anim_Timer  .byte   
-    Anim_Frame  .byte   
-    Anim_Ptr    .res 2  
 .endstruct
 
 ; ======== PennyCrab IA
