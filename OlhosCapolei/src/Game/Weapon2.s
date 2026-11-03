@@ -176,7 +176,7 @@ Weapon_Wood_Anims_Table:
     .addr Weapon_Layout_Wood_Attack_Frame22
 
 
-
+;teste
 ;-------------------------------------------------------------------------------
 ;   ClearProjectilePool (Garante RAM limpa e força Y=$E0 contra Sprites Fantasmas)
 ;-------------------------------------------------------------------------------
