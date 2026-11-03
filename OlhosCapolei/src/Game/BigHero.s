@@ -18,6 +18,7 @@
 .import LoadActiveWeaponToY
 .import ProcessWeaponAttack
 .import ProcessMeleeAttack
+.import rand
 
 .export DrawBigHero, MoveBigHero
 .export DrawBigHeroHurtboxDebug
@@ -361,7 +362,16 @@ CheckAttackButton:
 
 @DispararAtaqueMelee:
         ; Se for madeira, NÃO limpa o inventário (ela fica na mão) e chama o ataque físico
+@RolarDado:
+        jsr rand            ; Retorna valor em A (8-bits)
+        and #$03            ; Isola os dois primeiros bits (Gera valores: 0, 1, 2 ou 3)
+        cmp #3              ; O resultado deu 3?
+        beq @RolarDado      ; Se for IGUAL a 3, rejeita e rola de novo imediatamente!
+
+        sta a:WeaponStruct::Anim_Variation, y 
+        
         jsr ProcessMeleeAttack
+
 
 
 @PickupDone:

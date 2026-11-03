@@ -70,25 +70,59 @@ Weapon_Layout_Wood_Picked:
     .byte 0, <(-32), $26, $30  
     .byte 0, <(-48), $06, $30
 
-Weapon_Layout_Wood_Attack_Frame0:
-    .byte 0, <(  0), $68, $30  
-    .byte 8, <(-16), $48, $30
-    .byte 16, <(-32), $28, $30  
-    .byte 24, <(-48), $08, $30
-
-Weapon_Layout_Wood_Attack_Frame1:
-    .byte 0, <(  0), $6A, $30  
-    .byte 16, <(-8), $4A, $30
-    .byte 32, <(-16), $2A, $30  
-    .byte 48, <(-24), $0A, $30
-
-Weapon_Layout_Wood_Attack_Frame2:
+Weapon_Layout_Wood_Attack_Frame00:
+     .byte 0, <(  0), $6A, $F0  
+    .byte <(-16), <(8), $4A, $F0
+    .byte <(-32), <(16), $2A, $F0  
+    .byte <(-48), <(24), $0A, $F0
+    
+Weapon_Layout_Wood_Attack_Frame01:
     .byte 0, <(  0), $64, $30  
     .byte 16, <(  0), $44, $30
     .byte 32, <( 0), $24, $30  
     .byte 48, <( 0), $04, $30
 
+Weapon_Layout_Wood_Attack_Frame02:
+     .byte 0, <(  -0), $6A, $30  
+    .byte 16, <(-8), $4A, $30
+    .byte 32, <(-16), $2A, $30  
+    .byte 48, <(-24), $0A, $30
+
+Weapon_Layout_Wood_Attack_Frame10:
+    .byte 0, <(  0), $68, $30  
+    .byte 8, <(-16), $48, $30
+    .byte 16, <(-32), $28, $30  
+    .byte 24, <(-48), $08, $30
     
+Weapon_Layout_Wood_Attack_Frame11:
+    .byte 0, <(  0), $6A, $30  
+    .byte 16, <(-8), $4A, $30
+    .byte 32, <(-16), $2A, $30  
+    .byte 48, <(-24), $0A, $30
+
+Weapon_Layout_Wood_Attack_Frame12:
+    .byte 0, <(  0), $64, $30  
+    .byte 16, <(  0), $44, $30
+    .byte 32, <( 0), $24, $30  
+    .byte 48, <( 0), $04, $30
+
+Weapon_Layout_Wood_Attack_Frame20:
+    .byte  <(-32), <(0), $64, $30  
+    .byte <(-16), <(  0), $44, $30
+    .byte <(0), <( 0), $24, $30  
+    .byte <(16), <( 0), $04, $30
+    
+Weapon_Layout_Wood_Attack_Frame21:
+    .byte 0, <(  0), $64, $30  
+    .byte 16, <(  0), $44, $30
+    .byte 32, <( 0), $24, $30  
+    .byte 48, <( 0), $04, $30
+
+Weapon_Layout_Wood_Attack_Frame22:
+    .byte  <(-32), <(0), $64, $30  
+    .byte <(-16), <(  0), $44, $30
+    .byte <(0), <( 0), $24, $30  
+    .byte <(16), <( 0), $04, $30    
     
 ;-------------------------------------------------------------------------------
 ;   ClearProjectilePool (Garante RAM limpa e força Y=$E0 contra Sprites Fantasmas)
@@ -114,7 +148,7 @@ Weapon_Layout_Wood_Attack_Frame2:
         sta a:WeaponStruct::Target_Y, y
         sta a:WeaponStruct::Melee_Timer, y
         sta a:WeaponStruct::Melee_Frame, y
-         sta a:WeaponStruct::Hitbox_Active, y
+        sta a:WeaponStruct::Hitbox_Active, y
         sta a:WeaponStruct::Hitbox_X1, y
         sta a:WeaponStruct::Hitbox_X2, y
         sta a:WeaponStruct::Hitbox_Y1, y
@@ -448,45 +482,125 @@ Weapon_Layout_Wood_Attack_Frame2:
         ; --- ◄ PROTEÇÃO CRÍTICA CONTRA BOOT FANTASMA ---
         ; Verifica se o cronômetro do golpe está rodando.
         lda a:WeaponStruct::Melee_Timer, y
-        beq @LoadDefaultLayout          ; Se o timer for 0, a arma NÃO está atacando. Força o layout neutro!
+        bne @Continue
+        jmp @LoadDefaultLayout          ; Se o timer for 0, a arma NÃO está atacando. Força o layout neutro!
 
-        ; --- SE O TIMER ESTIVER ATIVO, SELECIONA O FRAME DE ATAQUE ---
+
+
+@Continue:
+        ; --- SE O TIMER ESTIVER ATIVO, SELECIONA O FRAME DE ATAQUE --
+        lda a:WeaponStruct::Anim_Variation,y ;Qual variacao executar? (0, 1 ou 2)
+        cmp #1
+        beq @LoadAttackVariation1
+        cmp #2
+        beq @LoadAttackVariation2
+
+        
+@LoadAttackVariation0:
         lda a:WeaponStruct::Melee_Frame, y   ; Pega o frame atual do ataque (0, 1 ou 2)
         cmp #1
-        beq @LoadAttackFrame1
+        beq @LoadAttackFrame01
         cmp #2
-        beq @LoadAttackFrame2
+        beq @LoadAttackFrame02
         
-@LoadAttackFrame0:
+@LoadAttackFrame00:
         rep #$20                        ; Abre A para 16-bit
         .a16
-        lda #.loword(Weapon_Layout_Wood_Attack_Frame0)
+        lda #.loword(Weapon_Layout_Wood_Attack_Frame00)
+        sta z:DP_HERO_LAYOUT_PTR        
+        sep #$20                        ; Retorna acumulador para 8-bit
+        .a8
+        jmp @StartLoop
+
+@LoadAttackFrame01:
+        rep #$20
+        .a16
+        lda #.loword(Weapon_Layout_Wood_Attack_Frame01)
+        sta z:DP_HERO_LAYOUT_PTR
+        sep #$20
+        .a8
+        bra @StartLoop
+
+@LoadAttackFrame02:
+        rep #$20
+        .a16
+        lda #.loword(Weapon_Layout_Wood_Attack_Frame02)
+        sta z:DP_HERO_LAYOUT_PTR
+        sep #$20
+        .a8
+        bra @StartLoop
+
+@LoadAttackVariation1:
+        lda a:WeaponStruct::Melee_Frame, y   ; Pega o frame atual do ataque (0, 1 ou 2)
+        cmp #1
+        beq @LoadAttackFrame11
+        cmp #2
+        beq @LoadAttackFrame12
+        
+@LoadAttackFrame10:
+        rep #$20                        ; Abre A para 16-bit
+        .a16
+        lda #.loword(Weapon_Layout_Wood_Attack_Frame10)
         sta z:DP_HERO_LAYOUT_PTR        
         sep #$20                        ; Retorna acumulador para 8-bit
         .a8
         bra @StartLoop
 
-@LoadAttackFrame1:
+@LoadAttackFrame11:
         rep #$20
         .a16
-        lda #.loword(Weapon_Layout_Wood_Attack_Frame1)
+        lda #.loword(Weapon_Layout_Wood_Attack_Frame11)
         sta z:DP_HERO_LAYOUT_PTR
         sep #$20
         .a8
         bra @StartLoop
 
-@LoadAttackFrame2:
+@LoadAttackFrame12:
         rep #$20
         .a16
-        lda #.loword(Weapon_Layout_Wood_Attack_Frame2)
+        lda #.loword(Weapon_Layout_Wood_Attack_Frame12)
         sta z:DP_HERO_LAYOUT_PTR
         sep #$20
         .a8
         bra @StartLoop
 
+
+
+@LoadAttackVariation2:
+        lda a:WeaponStruct::Melee_Frame, y   ; Pega o frame atual do ataque (0, 1 ou 2)
+        cmp #1
+        beq @LoadAttackFrame21
+        cmp #2
+        beq @LoadAttackFrame22
+        
+@LoadAttackFrame20:
+        rep #$20                        ; Abre A para 16-bit
+        .a16
+        lda #.loword(Weapon_Layout_Wood_Attack_Frame20)
+        sta z:DP_HERO_LAYOUT_PTR        
+        sep #$20                        ; Retorna acumulador para 8-bit
+        .a8
+        bra @StartLoop
+
+@LoadAttackFrame21:
+        rep #$20
+        .a16
+        lda #.loword(Weapon_Layout_Wood_Attack_Frame21)
+        sta z:DP_HERO_LAYOUT_PTR
+        sep #$20
+        .a8
+        bra @StartLoop
+
+@LoadAttackFrame22:
+        rep #$20
+        .a16
+        lda #.loword(Weapon_Layout_Wood_Attack_Frame22)
+        sta z:DP_HERO_LAYOUT_PTR
+        sep #$20
+        .a8
+        bra @StartLoop
 
 @LoadDefaultLayout:
-        ; --- TESTA SE O MARTELO ESTÁ NO CHÃO OU NA MÃO ---
         lda a:WeaponStruct::Active, y
         cmp #WEAPON_STATE_EQUIPPED
         beq @LoadWoodPicked           ; Se estiver equipado, usa o layout com inclinação de posse
@@ -652,12 +766,13 @@ Weapon_Layout_Wood_Attack_Frame2:
         bne @Exit
 
         ; Configura a porretada com 15 frames de duração total
-        lda #10
+        lda #15
         sta a:WeaponStruct::Melee_Timer, y
         
         ; Inicia no frame de animação 0
         lda #$00
         sta a:WeaponStruct::Melee_Frame, y
+
 
 @Exit:
         rts

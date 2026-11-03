@@ -206,6 +206,7 @@ WEAPON_ID_HAMMER       = 7
     Target_Y    .byte   ; Guarda o pixel exato do chão onde a pedra pousa
     Melee_Timer .byte   ; Contador de frames de duração da porretada
     Melee_Frame .byte   ; ID do frame visual da animação (0, 1 ou 2)
+    Anim_Variation .byte
     ; ◄ NOVOS CAMPOS EXCLUSIVOS DA SOLUÇÃO 2 (HITBOX DA ARMA BRANCA):
     Hitbox_Active       .byte   ; 1 = Janela de dano ativa, 0 = Inativa
     Hitbox_X1           .byte   ; Limite Esquerdo
