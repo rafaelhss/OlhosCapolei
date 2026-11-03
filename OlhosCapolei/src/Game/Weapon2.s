@@ -9,11 +9,8 @@
 .i16
 
 ;----- Exports -----------------------------------------------------------------
-.export     GetWeaponData
 .export     ProcessWeaponAttack
 .export     UpdateProjectiles
-.export     DrawProjectiles
-.export     SpawnWeaponOnGround
 .export     DrawDroppedWeapon
 .export     Weapon_Data_Table 
 .export     ClearProjectilePool
@@ -45,6 +42,7 @@
 ; =============================================================================
 .segment "CODE"
 
+;Ainda nao eh usado, mas eh uma ideia boa
 Weapon_Data_Table:
     .byte $00, $00, $00, $00, $00, $00  ; ID 0: Desarmado
     ; --- Armas Brancas ---
@@ -122,8 +120,32 @@ Weapon_Layout_Wood_Attack_Frame22:
     .byte  <(-32), <(0), $64, $30  
     .byte <(-16), <(  0), $44, $30
     .byte <(0), <( 0), $24, $30  
-    .byte <(16), <( 0), $04, $30    
+    .byte <(16), <( 0), $04, $30   
+
+
     
+
+
+; =============================================================================
+; TABELA DE VETORES DE ANIMAÇÃO (PONTEIROS DE 16-BIT PARA CADA FRAME)
+; Organizada linearmente: Var0 (Fr0, Fr1, Var2), Var1 (Fr0, Fr1, Fr2), Var2 (Fr0, Fr1, Fr2)
+; =============================================================================
+Weapon_Wood_Anims_Table:
+    ; --- Variação 0 (Aperto 1) ---
+    .addr Weapon_Layout_Wood_Attack_Frame00
+    .addr Weapon_Layout_Wood_Attack_Frame01
+    .addr Weapon_Layout_Wood_Attack_Frame02
+    ; --- Variação 1 (Aperto 2) ---
+    .addr Weapon_Layout_Wood_Attack_Frame10
+    .addr Weapon_Layout_Wood_Attack_Frame11
+    .addr Weapon_Layout_Wood_Attack_Frame12
+    ; --- Variação 2 (Aperto 3 / Finalizador) ---
+    .addr Weapon_Layout_Wood_Attack_Frame20
+    .addr Weapon_Layout_Wood_Attack_Frame21
+    .addr Weapon_Layout_Wood_Attack_Frame22
+
+
+
 ;-------------------------------------------------------------------------------
 ;   ClearProjectilePool (Garante RAM limpa e força Y=$E0 contra Sprites Fantasmas)
 ;-------------------------------------------------------------------------------
@@ -194,12 +216,6 @@ Weapon_Layout_Wood_Attack_Frame22:
         rts
 .endproc
 
-;-------------------------------------------------------------------------------
-;   GetWeaponData (Versão Blindada contra Lixo de 16-bit nos Índices)
-;-------------------------------------------------------------------------------
-.proc GetWeaponData
-        rts
-.endproc
 
 
 ;-------------------------------------------------------------------------------
@@ -268,9 +284,9 @@ Weapon_Layout_Wood_Attack_Frame22:
 
         ; Define o frame baseado exclusivamente na variável Melee_Timer porretada
         lda a:WeaponStruct::Melee_Timer, y
-        cmp #6
+        cmp #11
         bcs @SetFrame0
-        cmp #3
+        cmp #6
         bcs @SetFrame1
 
 @SetFrame2:
@@ -389,7 +405,7 @@ Weapon_Layout_Wood_Attack_Frame22:
 
         ; 3. Checagem de Solo
         lda a:WeaponStruct::Speed_Y, y
-         StructuralBMI:
+        StructuralBMI:
         bmi @Exit                       ; Se for negativo (subindo), pula teste de chão
 
         lda a:WeaponStruct::Y_Pos, y
@@ -406,16 +422,6 @@ Weapon_Layout_Wood_Attack_Frame22:
 @Exit:
         rts
 .endproc
-
-;-------------------------------------------------------------------------------
-;   DrawProjectiles (Versão Pura - Sem nenhuma correção ou blindagem)
-;-------------------------------------------------------------------------------
-.proc DrawProjectiles
-        rts                             ; Retorna deixando o X onde parou para a Main.s
-.endproc
-
-
-
 
 
 
@@ -488,119 +494,56 @@ Weapon_Layout_Wood_Attack_Frame22:
 
 
 @Continue:
-        ; --- SE O TIMER ESTIVER ATIVO, SELECIONA O FRAME DE ATAQUE --
-        lda a:WeaponStruct::Anim_Variation,y ;Qual variacao executar? (0, 1 ou 2)
-        cmp #1
-        beq @LoadAttackVariation1
-        cmp #2
-        beq @LoadAttackVariation2
+        ; --- CÁLCULO DE MATRIZ PURIFICADO EM 16-BIT NATIVOS (KONAMI ARCADE STYLE) ---
+        ; Salvamos Y e X na pilha para isolar completamente o motor gráfico
+        phy                             ; Salva o ponteiro original da arma (WeaponC)
+        phx                             ; Salva o ponteiro principal da OAM
 
+        ; Abrimos o acumulador para 16-bit para fazer a matemática sem perigo de bytes ímpares
+        rep #$20                        
+        .a16
         
-@LoadAttackVariation0:
-        lda a:WeaponStruct::Melee_Frame, y   ; Pega o frame atual do ataque (0, 1 ou 2)
-        cmp #1
-        beq @LoadAttackFrame01
-        cmp #2
-        beq @LoadAttackFrame02
+        ; 1. Resgata o endereço da arma (que está na Direct Page) para o registrador X
+        ldx z:DP_WEAPON_POOL_PTR
+
+        ; 2. Carrega a variação de forma limpa em 16-bit (Zera o byte alto automaticamente)
+        lda a:WeaponStruct::Anim_Variation, x
+        and #$00FF                      ; Filtra estritamente o byte baixo
+        sta z:DP_TEMP_00                ; Rascunho temporário de 16-bit
         
-@LoadAttackFrame00:
-        rep #$20                        ; Abre A para 16-bit
-        .a16
-        lda #.loword(Weapon_Layout_Wood_Attack_Frame00)
-        sta z:DP_HERO_LAYOUT_PTR        
-        sep #$20                        ; Retorna acumulador para 8-bit
-        .a8
-        jmp @StartLoop
+        ; Multiplica por 3 via deslocamento de bits puro de hardware
+        asl                             ; Variação * 2
+        clc
+        adc z:DP_TEMP_00                ; (Variação * 2) + Variação = Variação * 3
 
-@LoadAttackFrame01:
-        rep #$20
-        .a16
-        lda #.loword(Weapon_Layout_Wood_Attack_Frame01)
-        sta z:DP_HERO_LAYOUT_PTR
-        sep #$20
-        .a8
-        bra @StartLoop
+        ; 3. Soma com o Frame atual da porretada (+ Melee_Frame)
+        sta z:DP_TEMP_00                ; Guarda o resultado intermediário
+        lda a:WeaponStruct::Melee_Frame, x
+        and #$00FF                      ; Limpa lixo de 16-bit do frame
+        clc
+        adc z:DP_TEMP_00                ; (Variação * 3) + Melee_Frame
 
-@LoadAttackFrame02:
-        rep #$20
-        .a16
-        lda #.loword(Weapon_Layout_Wood_Attack_Frame02)
-        sta z:DP_HERO_LAYOUT_PTR
-        sep #$20
-        .a8
-        bra @StartLoop
-
-@LoadAttackVariation1:
-        lda a:WeaponStruct::Melee_Frame, y   ; Pega o frame atual do ataque (0, 1 ou 2)
-        cmp #1
-        beq @LoadAttackFrame11
-        cmp #2
-        beq @LoadAttackFrame12
+        ; 4. Multiplica por 2 para casar com o tamanho de 2 bytes de cada ponteiro (.addr)
+        asl                             ; Índice final absoluto calculado em 16-bit!
         
-@LoadAttackFrame10:
-        rep #$20                        ; Abre A para 16-bit
-        .a16
-        lda #.loword(Weapon_Layout_Wood_Attack_Frame10)
-        sta z:DP_HERO_LAYOUT_PTR        
-        sep #$20                        ; Retorna acumulador para 8-bit
-        .a8
-        bra @StartLoop
+        ; 5. Transfere diretamente para o registrador Y (sem risco de desalinhamento ímpar)
+        tay                             
 
-@LoadAttackFrame11:
-        rep #$20
-        .a16
-        lda #.loword(Weapon_Layout_Wood_Attack_Frame11)
-        sta z:DP_HERO_LAYOUT_PTR
-        sep #$20
-        .a8
-        bra @StartLoop
-
-@LoadAttackFrame12:
-        rep #$20
-        .a16
-        lda #.loword(Weapon_Layout_Wood_Attack_Frame12)
-        sta z:DP_HERO_LAYOUT_PTR
-        sep #$20
-        .a8
-        bra @StartLoop
-
-
-
-@LoadAttackVariation2:
-        lda a:WeaponStruct::Melee_Frame, y   ; Pega o frame atual do ataque (0, 1 ou 2)
-        cmp #1
-        beq @LoadAttackFrame21
-        cmp #2
-        beq @LoadAttackFrame22
+        ; 6. Lê o ponteiro correto de 16-bit da ROM e desvia para a Direct Page
+        lda Weapon_Wood_Anims_Table, y  ; Busca o vetor exato na tabela da ROM
+        sta z:DP_HERO_LAYOUT_PTR        ; Transfere para o ponteiro dinâmico de desenho
         
-@LoadAttackFrame20:
-        rep #$20                        ; Abre A para 16-bit
-        .a16
-        lda #.loword(Weapon_Layout_Wood_Attack_Frame20)
-        sta z:DP_HERO_LAYOUT_PTR        
-        sep #$20                        ; Retorna acumulador para 8-bit
+        ; --- RESTAURAÇÃO DE CONTEXTO SEGURO ---
+        sep #$20                        ; Retorna o acumulador de forma estável para 8-bit
         .a8
-        bra @StartLoop
-
-@LoadAttackFrame21:
-        rep #$20
-        .a16
-        lda #.loword(Weapon_Layout_Wood_Attack_Frame21)
-        sta z:DP_HERO_LAYOUT_PTR
-        sep #$20
-        .a8
-        bra @StartLoop
-
-@LoadAttackFrame22:
-        rep #$20
-        .a16
-        lda #.loword(Weapon_Layout_Wood_Attack_Frame22)
-        sta z:DP_HERO_LAYOUT_PTR
-        sep #$20
-        .a8
-        bra @StartLoop
+        
+        plx                             ; Recupera o X original da OAM principal intacto
+        ply                             ; Recupera o Y original da instância da arma (WeaponC)
+        
+        jmp @StartLoop                  ; Vai para o laço gráfico original 100% limpo!
 
 @LoadDefaultLayout:
+
         lda a:WeaponStruct::Active, y
         cmp #WEAPON_STATE_EQUIPPED
         beq @LoadWoodPicked           ; Se estiver equipado, usa o layout com inclinação de posse
@@ -704,18 +647,6 @@ Weapon_Layout_Wood_Attack_Frame22:
         ldy z:DP_WEAPON_POOL_PTR
         rts
 .endproc
-
-
-;-------------------------------------------------------------------------------
-;   SpawnWeaponOnGround
-;   Mantida apenas por compatibilidade com sua Main.s anterior, redirecionando o fluxo
-;-------------------------------------------------------------------------------
-.proc SpawnWeaponOnGround
-       ; ldy #.loword(WeaponA)            ; Garante que aponta para a WeaponA padrão
-       ; jsr DrawDroppedWeapon
-        rts      
-.endproc
-
 
 
 

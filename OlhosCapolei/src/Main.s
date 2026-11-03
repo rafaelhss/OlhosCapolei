@@ -22,8 +22,6 @@
 .include "MemoryMapWRAM.inc"
 .include "PPU.inc"
 .include "Registers.inc"
-.include "Enemy.inc"
-.include "Hero.inc"
 .include "BigHero.inc"
 .include "PennyCrab.inc"
 .include "VaderCrab.inc"
@@ -55,15 +53,13 @@ _ResetAlign:
         txs
 
         jsr ClearProjectilePool 
-        
         jsr ClearRegisters
         jsr ClearVRAM
         jsr ClearCGRAM
         jsr ClearOAMRAM
         jsr InitDemo            ; Executa inicialização customizada e ativa PPU
 
-        jsr SpawnWeaponOnGround ;
-
+        
         ; --- ENTRADA EM AMBIENTE DE EXECUÇÃO REAL ---
         lda #$81                ; ◄ AUTO-POLLING LIGADO: Habilita NMI ($80) + Auto-read ($01)
         sta NMITIMEN
@@ -92,9 +88,6 @@ _ResetAlign:
         jsr ReadJoypad1
 
         ; 2. SESSÃO DE FÍSICA E MOVIMENTAÇÃO
-        jsr MoveHero
-        jsr MoveEnemy1
-
 
         jsr MoveBigHero
         jsr MovePennyCrab
@@ -109,6 +102,7 @@ _ResetAlign:
 
         ldy #.loword(WeaponC)
         jsr UpdateProjectiles
+
 
         ; 3. FILTRO DE COLISÕES & REGRAS DE GAMEPLAY
         jsr ApplyEdgeCollisions

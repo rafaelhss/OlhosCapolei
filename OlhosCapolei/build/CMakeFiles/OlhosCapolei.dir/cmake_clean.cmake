@@ -1,8 +1,6 @@
 file(REMOVE_RECURSE
   "CMakeFiles/OlhosCapolei.dir/assets/Assets.s.o"
   "CMakeFiles/OlhosCapolei.dir/src/Game/BigHero.s.o"
-  "CMakeFiles/OlhosCapolei.dir/src/Game/Enemy.s.o"
-  "CMakeFiles/OlhosCapolei.dir/src/Game/Hero.s.o"
   "CMakeFiles/OlhosCapolei.dir/src/Game/Init.s.o"
   "CMakeFiles/OlhosCapolei.dir/src/Game/Input.s.o"
   "CMakeFiles/OlhosCapolei.dir/src/Game/PennyCrab.s.o"

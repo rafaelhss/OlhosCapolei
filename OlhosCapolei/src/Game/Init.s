@@ -86,8 +86,9 @@
         stz CGADD                       ; Seleciona o índice $00 da CGRAM (Cor de Fundo)
         lda #$90                        ; Byte Baixo do Azul Puro do SNES ($00)
         sta CGDATA                      ; Envia para a PPU
-        lda #$A2                        ; Byte Alto do Azul Puro do SNES ($7C)
+        lda #$F2                        ; Byte Alto do Azul Puro do SNES ($7C)
         sta CGDATA                      ; Envia para a PPU (Escrita dupla finalizada)
+       
        
         ; Agora carrega normalmente a paleta dos sprites no índice $80
         tsx                            

@@ -145,22 +145,6 @@ src/Game/BigHero.s.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/OlhosCapolei.dir/build.make CMakeFiles/OlhosCapolei.dir/src/Game/BigHero.s.o
 .PHONY : src/Game/BigHero.s.o
 
-src/Game/Enemy.o: src/Game/Enemy.s.o
-.PHONY : src/Game/Enemy.o
-
-# target to build an object file
-src/Game/Enemy.s.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/OlhosCapolei.dir/build.make CMakeFiles/OlhosCapolei.dir/src/Game/Enemy.s.o
-.PHONY : src/Game/Enemy.s.o
-
-src/Game/Hero.o: src/Game/Hero.s.o
-.PHONY : src/Game/Hero.o
-
-# target to build an object file
-src/Game/Hero.s.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/OlhosCapolei.dir/build.make CMakeFiles/OlhosCapolei.dir/src/Game/Hero.s.o
-.PHONY : src/Game/Hero.s.o
-
 src/Game/Init.o: src/Game/Init.s.o
 .PHONY : src/Game/Init.o
 
@@ -260,8 +244,6 @@ help:
 	@echo "... OlhosCapolei"
 	@echo "... assets/Assets.o"
 	@echo "... src/Game/BigHero.o"
-	@echo "... src/Game/Enemy.o"
-	@echo "... src/Game/Hero.o"
 	@echo "... src/Game/Init.o"
 	@echo "... src/Game/Input.o"
 	@echo "... src/Game/PennyCrab.o"
