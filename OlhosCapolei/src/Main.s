@@ -505,7 +505,7 @@ PushVaderLeft:
         sbc #VADER_MELEE_KNOCKBACK
         sta VaderCrab + VaderCrabStruct::X_Pos
         
-        cmp #SCREEN_LEFT
+        cmp #(SCREEN_LEFT
         bcs MeleeExit
         lda #SCREEN_LEFT
         sta VaderCrab + VaderCrabStruct::X_Pos
