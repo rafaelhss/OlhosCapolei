@@ -22,6 +22,11 @@ STATE_HURT_NOT  = 0
 STATE_HURT      = 1
 
 
+BULLET_STATE_INACTIVE = 0
+BULLET_STATE_ACTIVE = 1
+
+BULLET_SPEED = $07
+
 WEAPON_STATE_EQUIPPED = 0  ; Coletada, colada na mão do herói
 WEAPON_STATE_GROUND   = 1  ; Esperando no chão para ser coletada
 WEAPON_STATE_THROWN   = 2  ; Voando pelo ar em parábola
@@ -200,6 +205,15 @@ WEAPON_ID_HAMMER       = 7
     Hitbox_X2           .byte   ; Limite Direito
     Hitbox_Y1           .byte   ; Limite Superior
     Hitbox_Y2           .byte   ; Limite Inferior
+.endstruct
+
+
+.struct BulletStruct
+    Active      .byte   ; 0 = Vazio, 1 = Visível no chão esperando coleta
+    Tile_ID     .byte   ; Tile base do gráfico
+    X_Pos       .byte   
+    Y_Pos       .byte   
+    Speed_X     .byte   ; Velocidade horizontal do arremesso
 .endstruct
 
 

@@ -13,6 +13,7 @@ WEAPON_INC = 1
 .import ProcessWeaponAttack
 .import ClearProjectilePool 
 .import LoadActiveWeaponToY
+.import ProcessFireAttack
 ;-------------------------------------------------------------------------------
 
 .endif

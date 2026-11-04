@@ -145,6 +145,14 @@ src/Game/BigHero.s.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/OlhosCapolei.dir/build.make CMakeFiles/OlhosCapolei.dir/src/Game/BigHero.s.o
 .PHONY : src/Game/BigHero.s.o
 
+src/Game/Bullet.o: src/Game/Bullet.s.o
+.PHONY : src/Game/Bullet.o
+
+# target to build an object file
+src/Game/Bullet.s.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/OlhosCapolei.dir/build.make CMakeFiles/OlhosCapolei.dir/src/Game/Bullet.s.o
+.PHONY : src/Game/Bullet.s.o
+
 src/Game/Init.o: src/Game/Init.s.o
 .PHONY : src/Game/Init.o
 
@@ -244,6 +252,7 @@ help:
 	@echo "... OlhosCapolei"
 	@echo "... assets/Assets.o"
 	@echo "... src/Game/BigHero.o"
+	@echo "... src/Game/Bullet.o"
 	@echo "... src/Game/Init.o"
 	@echo "... src/Game/Input.o"
 	@echo "... src/Game/PennyCrab.o"

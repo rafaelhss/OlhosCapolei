@@ -18,6 +18,7 @@
 .import LoadActiveWeaponToY
 .import ProcessWeaponAttack
 .import ProcessMeleeAttack
+.import ProcessFireAttack
 .import rand
 
 .export DrawBigHero, MoveBigHero
@@ -471,7 +472,7 @@ CheckAttackButton:
         cmp #WEAPON_ID_WOOD             
         beq @DispararAtaqueMelee 
         cmp #WEAPON_ID_PISTOL             
-        beq @DispararAtaqueMelee 
+        beq @DispararAtaqueFire 
         cmp #WEAPON_ID_CHAIN             
         beq @DispararAtaqueMelee        
 
@@ -493,7 +494,12 @@ CheckAttackButton:
         sta a:WeaponStruct::Anim_Variation, y 
         
         jsr ProcessMeleeAttack
+        bra @PickupDone
 
+
+@DispararAtaqueFire:
+        jsr ProcessFireAttack
+        bra @PickupDone
 
 
 @PickupDone:

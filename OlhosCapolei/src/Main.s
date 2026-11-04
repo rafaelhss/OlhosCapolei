@@ -26,6 +26,7 @@
 .include "PennyCrab.inc"
 .include "VaderCrab.inc"
 .include "Weapon2.inc"
+.include "Bullet.inc"
 
 ;-------------------------------------------------------------------------------
 
@@ -109,6 +110,8 @@ _ResetAlign:
         ldy #.loword(WeaponE)
         jsr UpdateProjectiles
 
+        jsr MoveBullet
+
 
         ; 3. FILTRO DE COLISÕES & REGRAS DE GAMEPLAY
         jsr ApplyEdgeCollisions
@@ -153,6 +156,7 @@ _ResetAlign:
         ldx #$0000     
         
         jsr DrawVaderCrab
+        jsr DrawBullet
 
 
         lda BigHero + BigHeroStruct::Current_Weapon_ID
@@ -681,6 +685,7 @@ CollisionDone:
 .export WeaponC
 .export WeaponD
 .export WeaponE
+.export Bullet
 
 
 BigHero:         .tag BigHeroStruct
@@ -691,6 +696,7 @@ WeaponB:         .tag WeaponStruct
 WeaponC:         .tag WeaponStruct
 WeaponD:         .tag WeaponStruct
 WeaponE:         .tag WeaponStruct
+Bullet:          .tag BulletStruct
 
 FrameCounter:    .res 1    ; Contador global de frames (0 a 255)
 .export FrameCounter

@@ -16,6 +16,7 @@
 .export     ClearProjectilePool
 .export     LoadActiveWeaponToY
 .export     ProcessMeleeAttack
+.export     ProcessFireAttack
 
 ;----- Imports -----------------------------------------------------------------
 .import     VaderCrab
@@ -25,6 +26,7 @@
 .import     WeaponC
 .import     WeaponD
 .import     WeaponE
+.import     Bullet
 .import     rand                ; Invocando o seu LFSR puro de src/common/Util.s
 
 ;----- Includes ----------------------------------------------------------------
@@ -55,7 +57,6 @@ Weapon_Data_Table:
     .byte $26, $32, $01, $01, $A0, $05  ; ID 4: Pedra de Arremesso
     .byte $46, $34, $01, $03, $A2, $07  ; ID 5: Pistola 9mm
     .byte $A0, $36, $01, $09, $A4, $01  ; ID 6: Bazuca
-
 
 
 Weapon_Layout_Wood:
@@ -145,10 +146,10 @@ Weapon_Layout_Fire_Attack_Frame00:
     .byte 48, <(0), $E6, $00
 
 Weapon_Layout_Fire_Attack_Frame01:
-    .byte 0, <(  0), $E0, $00  
-    .byte 16, <(0), $E2, $00
-    .byte 32, <(0), $E4, $00  
-    .byte 48, <(0), $E6, $00
+    .byte <-(8), <(  0), $E0, $00  
+    .byte 8, <(0), $E2, $00
+    .byte 24, <(0), $E4, $00  
+    .byte 40, <(0), $E6, $00
 
 Weapon_Layout_Fire_Attack_Frame02:
     .byte 0, <(  0), $E0, $00  
@@ -884,6 +885,50 @@ Weapon_Chain_Anims_Table:
         rts
 .endproc
 
+
+
+.proc ProcessFireAttack
+        ; Só inicia se o temporizador do golpe estiver zerado (evita spam)
+        lda a:WeaponStruct::Melee_Timer, y
+        bne @Exit
+
+        ; Configura o tiro com 10 frames de duração total
+        lda #10
+        sta a:WeaponStruct::Melee_Timer, y
+        
+        ; Inicia no frame de animação 0
+        lda #$00
+        sta a:WeaponStruct::Melee_Frame, y
+
+        
+        lda  a:WeaponStruct::X_Pos, y
+        sta Bullet + BulletStruct::X_Pos
+        
+        lda  a:WeaponStruct::Y_Pos, y
+        sta Bullet + BulletStruct::Y_Pos
+        
+        lda #$01
+        sta Bullet + BulletStruct::Active
+
+        lda #$EE
+        sta Bullet + BulletStruct::Tile_ID
+
+        lda BigHero + BigHeroStruct::Facing
+        bne @BulletEsquerda
+        lda #BULLET_SPEED
+        bra @SetSpeed
+
+@BulletEsquerda:
+        lda #<(-BULLET_SPEED) 
+@SetSpeed:
+
+        sta Bullet + BulletStruct::Speed_X
+        
+
+
+@Exit:
+rts
+.endproc
 
 ;-------------------------------------------------------------------------------
 ;   ProcessMeleeAttack (Isolamento Absoluto de Variáveis)

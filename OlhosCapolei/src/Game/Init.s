@@ -23,6 +23,7 @@
 
 
 .import  BigHero, PennyCrab, VaderCrab, WeaponA, WeaponB, WeaponC, WeaponD, WeaponE
+.import Bullet
 .import InitRNG
 
 .segment "CODE"
@@ -268,6 +269,27 @@ Table_Init_Weapons:
         sta BigHero + BigHeroStruct::Hurtbox_Active
 
 ; =========== FIM BIGHERO
+
+;------------- cria BiigHero
+
+        lda #100                        ; Nasce perto do meio horizontal da tela
+        sta Bullet + BulletStruct::X_Pos
+        
+        lda #100                        ; Nasce em uma altura boa de chão (eixo Z)
+        sta Bullet + BulletStruct::Y_Pos
+
+        lda #$01
+        sta Bullet + BulletStruct::Active
+
+        lda #$EE
+        sta Bullet + BulletStruct::Tile_ID
+
+        lda #$01 
+        sta Bullet + BulletStruct::Speed_X
+                 
+
+; =========== FIM BiigHero
+
 
 
          JSR InitRNG    ; Define a semente inicial do gerador de números aleatórios
