@@ -79,26 +79,89 @@ BigHero_Layout_Weapon2:
     .byte 0,32,$A4,$30, 16,32,$A6,$30
      .byte 0,48,$4C,$30, 16,48,$4E,$30
 
+
+; FRAME: Herói Atacando - Preparação (Weapon Melee_Frame = 0)
+BigHero_Layout_Attack_Frame0:
+    .byte <(-2), 0,$20,$30, 14, 0,$22,$30
+    .byte <(-2),16,$40,$30, 14,16,$42,$30
+    .byte 0,32,$8C,$30, 16,32,$8E,$30
+    .byte 0,48,$80,$30, 16,48,$82,$30
+
+; FRAME: Herói Atacando - Janela de Impacto / Dano (Weapon Melee_Frame = 1)
+BigHero_Layout_Attack_Frame1:
+    .byte 3, 0,$20,$30, 19, 0,$22,$30
+    .byte 3,16,$40,$30, 19,16,$42,$30
+    .byte 0,32,$AC,$30, 16,32,$AE,$30
+    .byte 0,48,$80,$30, 16,48,$82,$30
+
+; FRAME: Herói Atacando - Recuperação / Cooldown (Weapon Melee_Frame = 2)
+BigHero_Layout_Attack_Frame2:
+    .byte <(-2), 0,$20,$30, 14, 0,$22,$30
+    .byte <(-2),16,$40,$30, 14,16,$42,$30
+    .byte 0,32,$8C,$30, 16,32,$8E,$30
+    .byte 0,48,$80,$30, 16,48,$82,$30
+
+
 ;-------------------------------------------------------------------------------
 ;   DrawBigHero
+;-------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
+;   DrawBigHero (Versão Atualizada com Sincronismo de Ataque)
 ;-------------------------------------------------------------------------------
 .proc DrawBigHero
         ; --- PIPELINE DE SELEÇÃO DE ANIMAÇÃO HIERÁRQUICA ---
         ; 1. Prioridade Máxima: Estado de Dano / Hitstun
         lda BigHero + BigHeroStruct::HurtTimer
-        beq @CheckWeapon
+        beq @CheckAttackState
 
         ldy #.loword(BigHero_Layout_Hurt)
         sty z:DP_HERO_LAYOUT_PTR
-        bra @StartDraw
+        jmp @StartDraw
 
-@CheckWeapon:
-        ; 2. Verifica se o herói está armado para selecionar a sub-árvore de animações
+@CheckAttackState:
+        ; 2. Nova Sub-árvore: O Herói está executando um golpe corporal?
         lda BigHero + BigHeroStruct::Current_Weapon_ID
         cmp #WEAPON_ID_UNARMED
-        beq @CheckMovementNormal
+        beq @CheckMovementNormal        ; Se desarmado, não há porretada possível
 
-        ; --- ÁRVORE DE ANIMAÇÃO COM ARMA ---
+        ; Preserva X da OAM para não chipar o preenchimento gráfico principal
+        phx
+        jsr LoadActiveWeaponToY         ; Devolve o slot ativo em Y
+        cpy #0
+        bne @ValidateWeaponTimer
+        plx
+        bra @CheckMovementNormal        ; Falha de segurança: vai pro normal se Y for nulo
+
+@ValidateWeaponTimer:
+        lda a:WeaponStruct::Melee_Timer, y
+        beq @NoAttackActive             ; Timer zerado -> não está atacando, usa pose armada padrão
+
+        ; --- SINCRONISMO ATÔMICO DE ANIMAÇÃO: Herói casado com a Arma ---
+        lda a:WeaponStruct::Melee_Frame, y ; Lê frame 0, 1 ou 2 diretamente da struct da arma
+        plx                             ; Restaura X OAM antes do desvio gráfico
+        
+        cmp #0
+        beq @HeroAttack0
+        cmp #1
+        beq @HeroAttack1
+        
+@HeroAttack2:
+        ldy #.loword(BigHero_Layout_Attack_Frame2)
+        sty z:DP_HERO_LAYOUT_PTR
+        bra @StartDraw
+@HeroAttack0:
+        ldy #.loword(BigHero_Layout_Attack_Frame0)
+        sty z:DP_HERO_LAYOUT_PTR
+        bra @StartDraw
+@HeroAttack1:
+        ldy #.loword(BigHero_Layout_Attack_Frame1)
+        sty z:DP_HERO_LAYOUT_PTR
+        bra @StartDraw
+
+@NoAttackActive:
+        plx                             ; Restaura X OAM limpo
+        
+        ; 3. ÁRVORE DE ANIMAÇÃO ARADO / REPOUSO COM ARMA
         lda BigHero + BigHeroStruct::Anim_Frame
         cmp #0
         beq @WeaponIdle
@@ -121,7 +184,7 @@ BigHero_Layout_Weapon2:
         bra @StartDraw
 
 @CheckMovementNormal:
-        ; --- ÁRVORE DE ANIMAÇÃO DESARMADO ---
+        ; --- 4. ÁRVORE DE ANIMAÇÃO DESARMADO ---
         lda BigHero + BigHeroStruct::Anim_Frame
         cmp #0
         beq @Idle
@@ -141,6 +204,7 @@ BigHero_Layout_Weapon2:
 @Walk2: 
         ldy #.loword(BigHero_Layout_Walk2)
         sty z:DP_HERO_LAYOUT_PTR
+
 @StartDraw:
 @DrawHeroBody:
         ldy #$0000              
@@ -204,9 +268,41 @@ DrawLoop:
 ;-------------------------------------------------------------------------------
 ;   MoveBigHero
 ;-------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
+;   MoveBigHero (Versão Arcade Premium - Filtro Atômico de Trava de Ataque)
+;-------------------------------------------------------------------------------
 .proc MoveBigHero
         stz z:$02               ; Rascunho na DP ($02): 0 = Parado, 1 = Em movimento
-        
+
+        ; =====================================================================
+        ; ⚔️ FILTRO DE SEGURANÇA: SE ESTIVER BATENDO, BLOQUEIA ENTRADA DO D-PAD
+        ; =====================================================================
+        lda BigHero + BigHeroStruct::Current_Weapon_ID
+        cmp #WEAPON_ID_UNARMED
+        beq @StartMovementPhysics       ; Se estiver desarmado, pula direto para a física normal
+
+        ; Salva registradores para não corromper a Main.s
+        phx
+        phy
+        jsr LoadActiveWeaponToY         ; Busca o slot da arma atual em Y
+        cpy #0
+        beq @RestoreAndMove             ; Proteção se o ponteiro falhar
+
+        lda a:WeaponStruct::Melee_Timer, y
+        beq @RestoreAndMove             ; Se o timer for 0 (não está batendo), libera movimento
+
+        ; --- IMPACTO CINÉTICO: Está batendo! Ignora o D-Pad e vai direto pro fim ---
+        ply                             ; Limpa a pilha antes de saltar
+        plx
+        stz BigHero + BigHeroStruct::Anim_Frame ; Força pés estáticos no chão ao golpear
+        jmp ProcessarArrastePipeline   ; Salta direto para manter o arraste da arma ativo
+
+@RestoreAndMove:
+        ply                             ; Restaura o contexto antes de rodar o D-Pad
+        plx
+
+@StartMovementPhysics:
+        ; --- CONFIGURAÇÃO PADRÃO DE VELOCIDADE ---
         lda #SPRITE_SPEED
         sta HOR_SPEED
         sta VER_SPEED
@@ -222,6 +318,7 @@ DrawLoop:
         lda #(SPRITE_SPEED + SPRITE_SPEED)
         sta HOR_SPEED
         sta VER_SPEED
+
 
 CheckRight:
         rep #$20                
@@ -408,13 +505,13 @@ CheckAttackButton:
 
         ; Se não está se movendo, força o frame de Idle (0) imediatamente
         stz BigHero + BigHeroStruct::Anim_Frame
-        bra @ProcessarArrastePipeline
+        bra ProcessarArrastePipeline
 
 @UpdateWalkAnimation:
         ; Taxa de amostragem: Só alterna o passo a cada N frames globais do clock da PPU
         lda FrameCounter
         and #(WALK_ANIM_SPEED - 1) ; Filtra o bit operacional (Módulo 8)
-        bne @ProcessarArrastePipeline
+        bne ProcessarArrastePipeline
 
         ; Avança dinamicamente entre Passo 1 e Passo 2
         lda BigHero + BigHeroStruct::Anim_Frame
@@ -424,13 +521,13 @@ CheckAttackButton:
 @SetPasso1:
         lda #1
         sta BigHero + BigHeroStruct::Anim_Frame
-        bra @ProcessarArrastePipeline
+        bra ProcessarArrastePipeline
 
 @SetPasso2:
         lda #2
         sta BigHero + BigHeroStruct::Anim_Frame
 
-@ProcessarArrastePipeline:
+ProcessarArrastePipeline:
         lda BigHero + BigHeroStruct::Current_Weapon_ID
         cmp #WEAPON_ID_UNARMED
         beq MoveDone

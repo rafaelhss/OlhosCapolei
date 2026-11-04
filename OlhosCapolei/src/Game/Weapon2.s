@@ -59,16 +59,16 @@ Weapon_Data_Table:
 
 
 Weapon_Layout_Wood:
-    .byte 0, <(  0), $6A, $30  
-    .byte 16, <(-8), $4A, $30
-    .byte 32, <(-16), $2A, $30  
-    .byte 48, <(-24), $0A, $30
+    .byte 0, <(  0), $6A, $00  
+    .byte 16, <(-8), $4A, $00
+    .byte 32, <(-16), $2A, $00  
+    .byte 48, <(-24), $0A, $00
 
 Weapon_Layout_Wood_Picked:
-    .byte 0, <(  0), $66, $30  
-    .byte 0, <(-16), $46, $30
-    .byte 0, <(-32), $26, $30  
-    .byte 0, <(-48), $06, $30
+    .byte 0, <(  0), $66, $00  
+    .byte 0, <(-16), $46, $00
+    .byte 0, <(-32), $26, $00  
+    .byte 0, <(-48), $06, $00
 
 Weapon_Layout_Wood_Attack_Frame00:
      .byte 0, <(  0), $6A, $F0  
@@ -77,115 +77,115 @@ Weapon_Layout_Wood_Attack_Frame00:
     .byte <(-48), <(24), $0A, $F0
     
 Weapon_Layout_Wood_Attack_Frame01:
-    .byte 0, <(  0), $64, $30  
-    .byte 16, <(  0), $44, $30
-    .byte 32, <( 0), $24, $30  
-    .byte 48, <( 0), $04, $30
+    .byte 0, <(  0), $64, $00  
+    .byte 16, <(  0), $44, $00
+    .byte 32, <( 0), $24, $00  
+    .byte 48, <( 0), $04, $00
 
 Weapon_Layout_Wood_Attack_Frame02:
-     .byte 0, <(  -0), $6A, $30  
-    .byte 16, <(-8), $4A, $30
-    .byte 32, <(-16), $2A, $30  
-    .byte 48, <(-24), $0A, $30
+     .byte 0, <(  -0), $6A, $00  
+    .byte 16, <(-8), $4A, $00
+    .byte 32, <(-16), $2A, $00  
+    .byte 48, <(-24), $0A, $00
 
 Weapon_Layout_Wood_Attack_Frame10:
-    .byte 0, <(  0), $68, $30  
-    .byte 8, <(-16), $48, $30
-    .byte 16, <(-32), $28, $30  
-    .byte 24, <(-48), $08, $30
+    .byte 0, <(  0), $68, $00  
+    .byte 8, <(-16), $48, $00
+    .byte 16, <(-32), $28, $00  
+    .byte 24, <(-48), $08, $00
     
 Weapon_Layout_Wood_Attack_Frame11:
-    .byte 0, <(  0), $6A, $30  
-    .byte 16, <(-8), $4A, $30
-    .byte 32, <(-16), $2A, $30  
-    .byte 48, <(-24), $0A, $30
+    .byte 0, <(  0), $6A, $00  
+    .byte 16, <(-8), $4A, $00
+    .byte 32, <(-16), $2A, $00  
+    .byte 48, <(-24), $0A, $00
 
 Weapon_Layout_Wood_Attack_Frame12:
-    .byte 0, <(  0), $64, $30  
-    .byte 16, <(  0), $44, $30
-    .byte 32, <( 0), $24, $30  
-    .byte 48, <( 0), $04, $30
+    .byte 0, <(  0), $64, $00  
+    .byte 16, <(  0), $44, $00
+    .byte 32, <( 0), $24, $00  
+    .byte 48, <( 0), $04, $00
 
 Weapon_Layout_Wood_Attack_Frame20:
-    .byte  <(-32), <(0), $64, $30  
-    .byte <(-16), <(  0), $44, $30
-    .byte <(0), <( 0), $24, $30  
-    .byte <(16), <( 0), $04, $30
+    .byte  <(-32), <(0), $64, $00  
+    .byte <(-16), <(  0), $44, $00
+    .byte <(0), <( 0), $24, $00  
+    .byte <(16), <( 0), $04, $00
     
 Weapon_Layout_Wood_Attack_Frame21:
-    .byte 0, <(  0), $64, $30  
-    .byte 16, <(  0), $44, $30
-    .byte 32, <( 0), $24, $30  
-    .byte 48, <( 0), $04, $30
+    .byte 0, <(  0), $64, $00  
+    .byte 16, <(  0), $44, $00
+    .byte 32, <( 0), $24, $00  
+    .byte 48, <( 0), $04, $00
 
 Weapon_Layout_Wood_Attack_Frame22:
-    .byte  <(-32), <(0), $64, $30  
-    .byte <(-16), <(  0), $44, $30
-    .byte <(0), <( 0), $24, $30  
-    .byte <(16), <( 0), $04, $30   
+    .byte  <(-32), <(0), $64, $00  
+    .byte <(-16), <(  0), $44, $00
+    .byte <(0), <( 0), $24, $00  
+    .byte <(16), <( 0), $04, $00   
 
 
     
 Weapon_Layout_Fire:
-    .byte 0, <(  0), $E0, $30  
-    .byte 16, <(0), $E2, $30
-    .byte 32, <(0), $E4, $30  
-    .byte 48, <(0), $E6, $30
+    .byte 0, <(  0), $E0, $00  
+    .byte 16, <(0), $E2, $00
+    .byte 32, <(0), $E4, $00  
+    .byte 48, <(0), $E6, $00
 
 Weapon_Layout_Fire_Picked:
-    .byte 0, <(  0), $E0, $30  
-    .byte 16, <(0), $E2, $30
-    .byte 32, <(0), $E4, $30  
-    .byte 48, <(0), $E6, $30
+    .byte 0, <(  0), $E0, $00  
+    .byte 16, <(0), $E2, $00
+    .byte 32, <(0), $E4, $00  
+    .byte 48, <(0), $E6, $00
 
 Weapon_Layout_Fire_Attack_Frame00:
-    .byte 0, <(  0), $E0, $30  
-    .byte 16, <(0), $E2, $30
-    .byte 32, <(0), $E4, $30  
-    .byte 48, <(0), $E6, $30
+    .byte 0, <(  0), $E0, $00  
+    .byte 16, <(0), $E2, $00
+    .byte 32, <(0), $E4, $00  
+    .byte 48, <(0), $E6, $00
 
 Weapon_Layout_Fire_Attack_Frame01:
-    .byte 0, <(  0), $E0, $30  
-    .byte 16, <(0), $E2, $30
-    .byte 32, <(0), $E4, $30  
-    .byte 48, <(0), $E6, $30
+    .byte 0, <(  0), $E0, $00  
+    .byte 16, <(0), $E2, $00
+    .byte 32, <(0), $E4, $00  
+    .byte 48, <(0), $E6, $00
 
 Weapon_Layout_Fire_Attack_Frame02:
-    .byte 0, <(  0), $E0, $30  
-    .byte 16, <(0), $E2, $30
-    .byte 32, <(0), $E4, $30  
-    .byte 48, <(0), $E6, $30
+    .byte 0, <(  0), $E0, $00  
+    .byte 16, <(0), $E2, $00
+    .byte 32, <(0), $E4, $00  
+    .byte 48, <(0), $E6, $00
 
 
 Weapon_Layout_Chain:
-    .byte 0, <(  0), $E8, $30  
-    .byte 16, <(0), $EA, $30
-    .byte 32, <(0), $EA, $30  
-    .byte 48, <(0), $EA, $30
+    .byte 0, <(  0), $E8, $00  
+    .byte 16, <(0), $EA, $00
+    .byte 32, <(0), $EA, $00  
+    .byte 48, <(0), $EA, $00
 
 Weapon_Layout_Chain_Picked:
-    .byte 0, <(  16), $CC, $30  
-    .byte 0, <(32), $EC, $30
-    .byte <(-16), <(32), $EA, $30  
-    .byte <(-32), <(32), $E8, $30
+    .byte 0, <(  16), $CC, $00  
+    .byte 0, <(32), $EC, $00
+    .byte <(-16), <(32), $EA, $00  
+    .byte <(-32), <(32), $E8, $00
 
 Weapon_Layout_Chain_Attack_Frame00:
-    .byte <(-16), <(0), $EA, $30  
+    .byte <(-16), <(0), $EA, $00  
     .byte <(-32), <(0), $EC, $F0
-    .byte <(-32), <(16), $CC, $30  
-    .byte <(-32), <(32), $E8, $30
+    .byte <(-32), <(16), $CC, $00  
+    .byte <(-32), <(32), $E8, $00
 
 Weapon_Layout_Chain_Attack_Frame01:
-    .byte 0, <(  0), $EA, $30  
-    .byte 16, <(0), $EA, $30
-    .byte 32, <(0), $EA, $30  
-    .byte 48, <(0), $E8, $30
+    .byte 0, <(  0), $EA, $00  
+    .byte 16, <(0), $EA, $00
+    .byte 32, <(0), $EA, $00  
+    .byte 48, <(0), $E8, $00
 
 Weapon_Layout_Chain_Attack_Frame02:
-    .byte 0, <(  16), $CC, $30  
+    .byte 0, <(  16), $CC, $00  
     .byte 0, <(32), $EC, $70
-    .byte <(16), <(32), $EA, $30  
-    .byte <(32), <(32), $E8, $30
+    .byte <(16), <(32), $EA, $00  
+    .byte <(32), <(32), $E8, $00
 
 
 ; =============================================================================
@@ -788,15 +788,30 @@ Weapon_Chain_Anims_Table:
         phx
         ldx z:DP_WEAPON_POOL_PTR
         lda a:WeaponStruct::Active, x
+        cmp #WEAPON_STATE_EQUIPPED    ;----  0 significa equipado. é, eu sei.,..
+        bne @MultiWriteAttributes     ;---  se nao estiver equipado vai pra isso. se estiver, avança aqui sem branch
+        phx
+        ldx z:DP_WEAPON_POOL_PTR
+        lda a:WeaponStruct::Active, x   ; Lê o estado real da RAM (0 = EQUIPPED)
+        plx
+        
         cmp #WEAPON_STATE_EQUIPPED
-        bne @MultiWriteAttributes
+        beq @SkipGroundPriority         ; Se estiver na mão, CURTO CIRCUITO: não mexe em nada, mantém a ROM!
 
+@ApplyGroundBack:
+        ; Se estiver no chão, limpa cirurgicamente o bit 4 (e o 5 se quiser Prioridade 0 como a corrente)
+        lda z:DP_TEMP_00
+        and #$CF                         ; Máscara atômica: limpa bits 4 e 5. Preserva VRAM (bit 0), paletas e Flips!
+        sta z:DP_TEMP_00
+
+@SkipGroundPriority:
+        ; Agora o fluxo segue direto e limpo para checar a direção do Herói
         lda BigHero + BigHeroStruct::Facing
         beq @MultiWriteAttributes
 
 @MultiApplyHardwareFlip:
         lda z:DP_TEMP_00
-        eor #$40                         
+        eor #$40                         ; Inverte estritamente o Bit 6 (H-Flip)
         sta z:DP_TEMP_00
 
 @MultiWriteAttributes:
