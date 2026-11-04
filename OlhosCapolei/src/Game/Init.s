@@ -133,7 +133,7 @@
         sta WeaponB + WeaponStruct::Active
         lda #WEAPON_ID_HAMMER
         sta WeaponB + WeaponStruct::Weapon_ID
-        lda #$AD
+        lda #$0E
         sta WeaponB + WeaponStruct::Tile_ID
         
         lda #$01
