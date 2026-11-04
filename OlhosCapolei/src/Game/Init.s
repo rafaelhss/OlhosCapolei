@@ -26,6 +26,7 @@
 .import InitRNG
 
 .segment "CODE"
+
 ;-------------------------------------------------------------------------------
 ;   This initializes the demo
 ;-------------------------------------------------------------------------------
@@ -222,6 +223,12 @@
 
         stz WeaponE + WeaponStruct::Speed_X
         stz WeaponE + WeaponStruct::Speed_Y
+
+        ; ◄ CRÍTICO: LIMPEZA ANTI-LIXO VISUAL DO BOOT DE HARDWARE REAL
+        stz WeaponE + WeaponStruct::Melee_Timer
+        stz WeaponE + WeaponStruct::Melee_Frame
+        stz WeaponE + WeaponStruct::Anim_Variation
+        stz WeaponE + WeaponStruct::Hitbox_Active
 
 ;------------fim WeaponE---------
 
