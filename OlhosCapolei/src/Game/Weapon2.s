@@ -160,32 +160,32 @@ Weapon_Layout_Fire_Attack_Frame02:
 Weapon_Layout_Chain:
     .byte 0, <(  0), $E8, $30  
     .byte 16, <(0), $EA, $30
-    .byte 32, <(0), $CC, $30  
-    .byte 48, <(0), $EC, $30
+    .byte 32, <(0), $EA, $30  
+    .byte 48, <(0), $EA, $30
 
 Weapon_Layout_Chain_Picked:
-    .byte 0, <(  0), $E8, $30  
-    .byte 16, <(0), $EA, $30
-    .byte 32, <(0), $CC, $30  
-    .byte 48, <(0), $EC, $30
+    .byte 0, <(  16), $CC, $30  
+    .byte 0, <(32), $EC, $30
+    .byte <(-16), <(32), $EA, $30  
+    .byte <(-32), <(32), $E8, $30
 
 Weapon_Layout_Chain_Attack_Frame00:
-    .byte 0, <(  0), $E8, $30  
-    .byte 16, <(0), $EA, $30
-    .byte 32, <(0), $CC, $30  
-    .byte 48, <(0), $EC, $30
+    .byte <(-16), <(0), $EA, $30  
+    .byte <(-32), <(0), $EC, $F0
+    .byte <(-32), <(16), $CC, $30  
+    .byte <(-32), <(32), $E8, $30
 
 Weapon_Layout_Chain_Attack_Frame01:
-    .byte 0, <(  0), $E8, $30  
+    .byte 0, <(  0), $EA, $30  
     .byte 16, <(0), $EA, $30
-    .byte 32, <(0), $CC, $30  
-    .byte 48, <(0), $EC, $30
+    .byte 32, <(0), $EA, $30  
+    .byte 48, <(0), $E8, $30
 
 Weapon_Layout_Chain_Attack_Frame02:
-    .byte 0, <(  0), $E8, $30  
-    .byte 16, <(0), $EA, $30
-    .byte 32, <(0), $CC, $30  
-    .byte 48, <(0), $EC, $30
+    .byte 0, <(  16), $CC, $30  
+    .byte 0, <(32), $EC, $70
+    .byte <(16), <(32), $EA, $30  
+    .byte <(32), <(32), $E8, $30
 
 
 ; =============================================================================
