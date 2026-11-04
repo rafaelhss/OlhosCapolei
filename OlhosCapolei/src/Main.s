@@ -262,6 +262,10 @@ Finish:
         ; IMPACTO CONFIRMADO: Bullet ACERTOU O VADER!
         ; =====================================================================
         
+
+        lda #BULLET_STATE_INACTIVE
+        sta Bullet + BulletStruct::Active
+
         ; 1. Força o VaderCrab a entrar em estado de Hitstun (30 frames)
         lda #30
         sta VaderCrab + VaderCrabStruct::HurtTimer
