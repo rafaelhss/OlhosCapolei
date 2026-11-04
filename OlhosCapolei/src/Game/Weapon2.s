@@ -128,35 +128,24 @@ Weapon_Layout_Wood_Attack_Frame22:
 
     
 Weapon_Layout_Fire:
-    .byte 0, <(  0), $E0, $00  
-    .byte 16, <(0), $E2, $00
-    .byte 32, <(0), $E4, $00  
-    .byte 48, <(0), $E6, $00
+    .byte 0, <( 0), $C0, $00, 16, <(0), $C2, $00
+    .byte 0, <(16), $E0, $00, 16, <(16), $E2, $00
 
 Weapon_Layout_Fire_Picked:
-    .byte 0, <(  0), $E0, $00  
-    .byte 16, <(0), $E2, $00
-    .byte 32, <(0), $E4, $00  
-    .byte 48, <(0), $E6, $00
+    .byte <(-16), <( 11), $C0, $00, 0, <(11), $C2, $00
+    .byte <(-16), <(27), $E0, $00, 0, <(27), $E2, $00
 
 Weapon_Layout_Fire_Attack_Frame00:
-    .byte 0, <(  0), $E0, $00  
-    .byte 16, <(0), $E2, $00
-    .byte 32, <(0), $E4, $00  
-    .byte 48, <(0), $E6, $00
+    .byte 0, <( 0), $C0, $00, 16, <(0), $C2, $00
+    .byte 0, <(16), $E0, $00, 16, <(16), $E2, $00
 
 Weapon_Layout_Fire_Attack_Frame01:
-    .byte <-(8), <(  0), $E0, $00  
-    .byte 8, <(0), $E2, $00
-    .byte 24, <(0), $E4, $00  
-    .byte 40, <(0), $E6, $00
+    .byte <(-8), <( 0), $C0, $00, 8, <(0), $C2, $00
+    .byte <(-8), <(16), $E0, $00, 8, <(16), $E2, $00
 
 Weapon_Layout_Fire_Attack_Frame02:
-    .byte 0, <(  0), $E0, $00  
-    .byte 16, <(0), $E2, $00
-    .byte 32, <(0), $E4, $00  
-    .byte 48, <(0), $E6, $00
-
+    .byte 0, <( 0), $C0, $00, 16, <(0), $C2, $00
+    .byte 0, <(16), $E0, $00, 16, <(16), $E2, $00
 
 Weapon_Layout_Chain:
     .byte 0, <(  0), $E8, $00  
