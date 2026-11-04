@@ -40,7 +40,7 @@ Table_Init_Weapons:
     ; WeaponC (Madeira - ID 3)
     .byte WEAPON_STATE_GROUND, WEAPON_ID_WOOD,   $06, $04, $30, (SCREEN_BOTTOM / 4)
     ; WeaponD (Pistola - ID 5)
-    .byte WEAPON_STATE_GROUND, WEAPON_ID_PISTOL, $06, $04, $10, (SCREEN_BOTTOM / 4)
+    .byte WEAPON_STATE_GROUND, WEAPON_ID_PISTOL, $06, $04, $90, (SCREEN_BOTTOM - 50)
     ; WeaponE (Corrente - ID 6)
     .byte WEAPON_STATE_GROUND, WEAPON_ID_CHAIN,  $06, $04, $10, (SCREEN_BOTTOM / 2)
 
@@ -270,7 +270,7 @@ Table_Init_Weapons:
 
 ; =========== FIM BIGHERO
 
-;------------- cria BiigHero
+;------------- cria Bullet
 
         lda #100                        ; Nasce perto do meio horizontal da tela
         sta Bullet + BulletStruct::X_Pos
