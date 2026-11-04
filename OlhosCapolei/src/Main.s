@@ -31,6 +31,10 @@
 ;-------------------------------------------------------------------------------
 
 .segment "CODE"
+
+VADER_KNOCKBACK = 12
+
+
 ;-------------------------------------------------------------------------------
 ;   PONTO DE ENTRADA DO SISTEMA (Boot seguro em Hardware Real)
 ;-------------------------------------------------------------------------------
@@ -121,10 +125,8 @@ _ResetAlign:
         ; --- CHECA COLISÃO DA PEDRADA PARA CADA SLOT DE FORMA ISOLADA ---
         ldy #.loword(WeaponA)
         jsr ApplyWeaponCollisions       ; Testa se a arma do Slot A acertou o Vader
-
         ldy #.loword(WeaponB)
         jsr ApplyWeaponCollisions       ; Testa se a arma do Slot B acertou o Vader
-       
         ldy #.loword(WeaponC)
         jsr ApplyWeaponCollisions       ; Testa se a arma do Slot C acertou o Vader
         ldy #.loword(WeaponD)
@@ -150,6 +152,7 @@ _ResetAlign:
         jsr ApplyMeleeWeaponCollisions
 
 
+        jsr ApplyBulletCollisions
 
         
         ; 4. SISTEMA DE RENDERIZAÇÃO FINAL
@@ -214,6 +217,79 @@ Finish:
 @TerminouLimpeza:
 
         jmp GameLoop
+.endproc
+
+
+
+.proc ApplyBulletCollisions
+        lda Bullet + BulletStruct::Active
+        cmp #BULLET_STATE_ACTIVE
+        beq @CheckVaderVulnerable
+        rts
+
+@CheckVaderVulnerable:
+        ; 2. Se o VaderCrab já estiver em Hitstun/Dano, aborta para evitar múltiplos hits
+        lda VaderCrab + VaderCrabStruct::HurtTimer
+        beq @StartAABB
+        rts
+
+@StartAABB:
+        ; --- TESTE DO EIXO X (Usando o slot parametrizado em Y) ---
+        lda Bullet + BulletStruct::X_Pos
+        clc
+        adc #16                 ; Largura estimada da Bullet
+        cmp VaderCrab + VaderCrabStruct::Hurtbox_X1
+        bcc NoCollision
+        beq NoCollision
+
+        lda Bullet + BulletStruct::X_Pos
+        cmp VaderCrab + VaderCrabStruct::Hurtbox_X2
+        bcs NoCollision
+
+        ; --- TESTE DO EIXO Y ---
+        lda Bullet + BulletStruct::Y_Pos
+        clc
+        adc #16                 ; Altura estimada
+        cmp VaderCrab + VaderCrabStruct::Hurtbox_Y1
+        bcc NoCollision
+        beq NoCollision
+
+        lda Bullet + BulletStruct::Y_Pos
+        cmp VaderCrab + VaderCrabStruct::Hurtbox_Y2
+        bcs NoCollision
+
+        ; =====================================================================
+        ; IMPACTO CONFIRMADO: Bullet ACERTOU O VADER!
+        ; =====================================================================
+        
+        ; 1. Força o VaderCrab a entrar em estado de Hitstun (30 frames)
+        lda #30
+        sta VaderCrab + VaderCrabStruct::HurtTimer
+
+        ; =====================================================================
+        ; 🦀 BOUNCE BACK / KNOCKBACK DO VADERCRAB
+        ; =====================================================================
+
+        ; Verifica a direção do projétil ativo para empurrar o Vader corretamente
+        lda Bullet + BulletStruct::Speed_X
+        bmi @BulletIndoParaEsquerda
+
+@BulletIndoParaDireita:
+        lda VaderCrab + VaderCrabStruct::X_Pos
+        clc
+        adc #VADER_KNOCKBACK
+        sta VaderCrab + VaderCrabStruct::X_Pos
+        bra Finish
+
+@BulletIndoParaEsquerda:
+        lda VaderCrab + VaderCrabStruct::X_Pos
+        sec
+        sbc #VADER_KNOCKBACK
+        sta VaderCrab + VaderCrabStruct::X_Pos
+
+NoCollision:
+Finish:
+        rts
 .endproc
 
 ;-------------------------------------------------------------------------------
