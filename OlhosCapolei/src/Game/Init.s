@@ -27,6 +27,23 @@
 
 .segment "CODE"
 
+; =============================================================================
+; TABELA LINEAR DE BOOT DE ITENS (6 BYTES ÚTEIS POR ARMA)
+; Formato: Active, Weapon_ID, Tile_ID, Tile_Size, X_Pos, Y_Pos
+; =============================================================================
+Table_Init_Weapons:
+    ; WeaponA (Pedra - ID 4)
+    .byte WEAPON_STATE_GROUND, WEAPON_ID_ROCK,   $6D, $01, $AA, (SCREEN_BOTTOM / 4)
+    ; WeaponB (Martelo - ID 7)
+    .byte WEAPON_STATE_GROUND, WEAPON_ID_HAMMER, $0E, $01, $80, (SCREEN_BOTTOM / 4)
+    ; WeaponC (Madeira - ID 3)
+    .byte WEAPON_STATE_GROUND, WEAPON_ID_WOOD,   $06, $04, $30, (SCREEN_BOTTOM / 4)
+    ; WeaponD (Pistola - ID 5)
+    .byte WEAPON_STATE_GROUND, WEAPON_ID_PISTOL, $06, $04, $10, (SCREEN_BOTTOM / 4)
+    ; WeaponE (Corrente - ID 6)
+    .byte WEAPON_STATE_GROUND, WEAPON_ID_CHAIN,  $06, $04, $10, (SCREEN_BOTTOM / 2)
+
+
 ;-------------------------------------------------------------------------------
 ;   This initializes the demo
 ;-------------------------------------------------------------------------------
@@ -103,134 +120,58 @@
         txs                             ; Restaura o Stack perfeitamente
 
         ; --- 4. INICIALIZAÇÃO DAS STRUCTS (8-BIT PURO E SEGURO) ---
+; =============================================================================
+; INICIALIZAÇÃO DATA-DRIVEN BLINDADA (ÍNDICES INTEGRALMENTE EM 16-BIT)
+; =============================================================================
+        rep #$30                        ; .a16, .i16 (A/X/Y travados em 16-bit)
+        .a16
+        .i16
 
+        ; 1. LIMPEZA INICIAL AUTOMATIZADA DA RAM DAS ARMAS
+        lda #0
+        ldx #.loword(WeaponA)
+@ClearRAMLoop:
+        sta a:0, x                      ; Zera de 2 em 2 bytes na WRAM
+        inx
+        inx
+        cpx #(.loword(WeaponE) + .sizeof(WeaponStruct))
+        bcc @ClearRAMLoop
 
-;----------  WeaponA ----------------
+        ; 2. LOOP DE CÓPIA DE ESTRUTURAS (ROM -> WRAM)
+        ldy #0                          ; Y = Indexador de bytes lidos da ROM
+        ldx #.loword(WeaponA)           ; X = Ponteiro de escrita na WRAM
 
-        lda #WEAPON_STATE_GROUND
-        sta WeaponA + WeaponStruct::Active
-        lda #WEAPON_ID_ROCK
-        sta WeaponA + WeaponStruct::Weapon_ID
-        lda #$6D
-        sta WeaponA + WeaponStruct::Tile_ID
+@CopyWeaponsLoop:
+        ; Como estamos em 16-bit, lemos e escrevemos de 2 em 2 bytes respeitando os offsets
+        lda a:Table_Init_Weapons + 0, y  ; Lê Active (Byte) e Weapon_ID (Byte)
+        sta a:WeaponStruct::Active, x
 
-        lda #$01
-        sta WeaponA + WeaponStruct::Tile_Size
-        
-        
-        lda #$AA
-        sta WeaponA + WeaponStruct::X_Pos
-        lda #(SCREEN_BOTTOM / 4) 
-        sta WeaponA + WeaponStruct::Y_Pos
+        lda a:Table_Init_Weapons + 2, y  ; Lê Tile_ID (Byte) e Tile_Size (Byte)
+        sta a:WeaponStruct::Tile_ID, x
 
-        stz WeaponA + WeaponStruct::Speed_X
-        stz WeaponA + WeaponStruct::Speed_Y
+        lda a:Table_Init_Weapons + 4, y  ; Lê X_Pos (Byte) e Y_Pos (Byte)
+        sta a:WeaponStruct::X_Pos, x
 
-;------------fim weaponA---------
+        ; Avança Y em 6 bytes (tamanho exato dos dados úteis de cada arma na tabela da ROM)
+        tya
+        clc
+        adc #6
+        tay
 
-;----------  WeaponB ----------------
+        ; Avança X para a próxima estrutura WeaponStruct inteira na WRAM
+        txa
+        clc
+        adc #.sizeof(WeaponStruct)
+        tax
 
-        lda #WEAPON_STATE_GROUND
-        sta WeaponB + WeaponStruct::Active
-        lda #WEAPON_ID_HAMMER
-        sta WeaponB + WeaponStruct::Weapon_ID
-        lda #$0E
-        sta WeaponB + WeaponStruct::Tile_ID
-        
-        lda #$01
-        sta WeaponB + WeaponStruct::Tile_Size
-        
-        
-        lda #$80
-        sta WeaponB + WeaponStruct::X_Pos
+        ; Checa se já inicializou todas as 5 armas do pool
+        cpx #(.loword(WeaponE) + .sizeof(WeaponStruct))
+        bcc @CopyWeaponsLoop
 
-        lda #(SCREEN_BOTTOM / 4) 
-        sta WeaponB + WeaponStruct::Y_Pos
-
-        stz WeaponB + WeaponStruct::Speed_X
-        stz WeaponB + WeaponStruct::Speed_Y
-
-;------------fim weaponB---------
-
-
-;----------  WeaponC ----------------
-
-        lda #WEAPON_STATE_GROUND
-        sta WeaponC + WeaponStruct::Active
-        lda #WEAPON_ID_WOOD
-        sta WeaponC + WeaponStruct::Weapon_ID
-        lda #$06
-        sta WeaponC + WeaponStruct::Tile_ID
-
-        lda #$04
-        sta WeaponC + WeaponStruct::Tile_Size
-        
-
-        lda #$30
-        sta WeaponC + WeaponStruct::X_Pos
-
-        lda #(SCREEN_BOTTOM / 4) 
-        sta WeaponC + WeaponStruct::Y_Pos
-
-        stz WeaponC + WeaponStruct::Speed_X
-        stz WeaponC + WeaponStruct::Speed_Y
-
-;------------fim WeaponC---------
-
-
-;----------  WeaponD ----------------
-
-        lda #WEAPON_STATE_GROUND
-        sta WeaponD + WeaponStruct::Active
-        lda #WEAPON_ID_PISTOL
-        sta WeaponD + WeaponStruct::Weapon_ID
-        lda #$06
-        sta WeaponD + WeaponStruct::Tile_ID
-
-        lda #$04
-        sta WeaponD + WeaponStruct::Tile_Size
-        
-
-        lda #$10
-        sta WeaponD + WeaponStruct::X_Pos
-
-        lda #(SCREEN_BOTTOM / 4) 
-        sta WeaponD + WeaponStruct::Y_Pos
-
-        stz WeaponD + WeaponStruct::Speed_X
-        stz WeaponD + WeaponStruct::Speed_Y
-
-;------------fim WeaponD---------
-
-;----------  WeaponE ----------------
-
-        lda #WEAPON_STATE_GROUND
-        sta WeaponE + WeaponStruct::Active
-        lda #WEAPON_ID_CHAIN
-        sta WeaponE + WeaponStruct::Weapon_ID
-        lda #$06
-        sta WeaponE + WeaponStruct::Tile_ID
-
-        lda #$04
-        sta WeaponE + WeaponStruct::Tile_Size
-        
-
-        lda #$10
-        sta WeaponE + WeaponStruct::X_Pos
-
-        lda #(SCREEN_BOTTOM / 2) 
-        sta WeaponE + WeaponStruct::Y_Pos
-
-        stz WeaponE + WeaponStruct::Speed_X
-        stz WeaponE + WeaponStruct::Speed_Y
-
-        ; ◄ CRÍTICO: LIMPEZA ANTI-LIXO VISUAL DO BOOT DE HARDWARE REAL
-        stz WeaponE + WeaponStruct::Melee_Timer
-        stz WeaponE + WeaponStruct::Melee_Frame
-        stz WeaponE + WeaponStruct::Anim_Variation
-        stz WeaponE + WeaponStruct::Hitbox_Active
-
-;------------fim WeaponE---------
+        ; 3. RESTAURAÇÃO DE MODO PARA O RESTANTE DO INIT.S
+        sep #$20                        ; Retorna Acumulador para 8-bit (.a8)
+        .a8
+        ; Índices X/Y continuam em 16-bit (.i16) de forma segura.
 
 
 

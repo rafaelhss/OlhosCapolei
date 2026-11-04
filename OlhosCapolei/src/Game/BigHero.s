@@ -490,19 +490,24 @@ MoveDone:
         sta BigHero + BigHeroStruct::Hurtbox_Active
         rts
 .endproc
+
 ;-------------------------------------------------------------------------------
-;   CheckWeaponPickup / DropWeapon (Versão Corrigida Parametrizada)
-;-------------------------------------------------------------------------------
-;-------------------------------------------------------------------------------
-;   CheckWeaponPickup / DropWeapon (Versão Corrigida e Enxuta)
+;   CheckWeaponPickup / DropWeapon (Versão Sênior - Troca de Inventário Blindada)
+;   Entrada: Y = Endereço absoluto do slot a ser testado (WeaponA..WeaponE)
 ;-------------------------------------------------------------------------------
 .proc CheckWeaponPickup
         lda a:WeaponStruct::Active, y
         cmp #WEAPON_STATE_EQUIPPED
         beq @DropWeapon
+        
         lda a:WeaponStruct::Active, y
         cmp #WEAPON_STATE_GROUND
-        bne @Exit
+        beq @TestDist
+        jmp @Exit
+
+
+; --- TESTE DE DISTÂNCIA HIERÁRQUICO (AABB) ---
+@TestDist:
         lda BigHero + BigHeroStruct::X_Pos
         sec
         sbc a:WeaponStruct::X_Pos, y
@@ -513,45 +518,82 @@ MoveDone:
 @DiffXPositive:
         cmp #PICKUP_DISTANCE
         bcs @Exit
+
         lda BigHero + BigHeroStruct::Y_Pos
+        clc
+        adc #48                         ; ◄ INJETADO: Move a âncora de teste da cabeça para a base/pés
         sec
-        sbc a:WeaponStruct::Y_Pos, y
+        sbc a:WeaponStruct::Y_Pos, y    ; Compara os pés do Herói com o chão da arma
         bcs @DiffYPositive
+
         eor #$FF
         clc
         adc #1
 @DiffYPositive:
         cmp #PICKUP_DISTANCE
         bcs @Exit
-        lda a:WeaponStruct::Weapon_ID, y
-        sta BigHero + BigHeroStruct::Current_Weapon_ID
-        lda #WEAPON_STATE_EQUIPPED
-        sta a:WeaponStruct::Active, y
-        rts
 
-@DropWeapon:
-        ; ◄ ESCUDO: Se o slot testado não for o que está na mão, ignora e preserva no chão!
-        lda a:WeaponStruct::Active, y
-        cmp #WEAPON_STATE_EQUIPPED
-        bne @Exit
+        ; =====================================================================
+        ; SE O HERÓI JÁ ESTIVER SEGURANDO OUTRA ARMA, FORÇA O DROP DELA PRIMEIRO
+        ; =====================================================================
+        lda BigHero + BigHeroStruct::Current_Weapon_ID
+        cmp #WEAPON_ID_UNARMED
+        beq @ApplyNewPickup             ; Se estava desarmado, pula direto para a coleta
 
-        ; Desequipa o herói limpando o inventário
-        lda #WEAPON_ID_UNARMED
-        sta BigHero + BigHeroStruct::Current_Weapon_ID
+        ; Preserva o Y da nova arma que estamos prestes a coletar
+        phy                             
         
-        ; Coloca o estado do slot atual de volta para o solo
+        ; Localiza qual slot antigo está na mão e força o desequipamento físico dele
+        jsr LoadActiveWeaponToY         ; Retorna o slot antigo em Y
+        cpy #0
+        beq @PopAndPickup               ; Proteção contra ponteiro nulo
+
+        ; Força a arma antiga a ir para o chão de forma limpa
         lda #WEAPON_STATE_GROUND
         sta a:WeaponStruct::Active, y
-        
-        ; --- CONFIGURAÇÃO DA POSIÇÃO DE SOLTURA CORRETA ---
-        ; Alinhamento Vertical (Chão do cenário)
+
+        ; Configura a posição de soltura da arma antiga rente ao corpo do herói
         lda BigHero + BigHeroStruct::Y_Pos
         clc
         adc #48
         sta a:WeaponStruct::Target_Y, y
         sta a:WeaponStruct::Y_Pos, y
         
-        ; Alinhamento Horizontal (Cai exatamente rente ao Herói + 8 pixels à frente)
+        lda BigHero + BigHeroStruct::X_Pos
+        clc
+        adc #8                          
+        sta a:WeaponStruct::X_Pos, y
+
+@PopAndPickup:
+        ply                             ; Recupera o Y da nova arma que o herói está em cima
+
+@ApplyNewPickup:
+        ; Executa a coleta da nova arma estritamente
+        lda a:WeaponStruct::Weapon_ID, y
+        sta BigHero + BigHeroStruct::Current_Weapon_ID
+        
+        lda #WEAPON_STATE_EQUIPPED
+        sta a:WeaponStruct::Active, y
+        rts
+
+@DropWeapon:
+        ; --- COMPORTAMENTO PADRÃO DE DROP VOLUNTÁRIO (BOTÃO X) ---
+        lda a:WeaponStruct::Active, y
+        cmp #WEAPON_STATE_EQUIPPED
+        bne @Exit
+
+        lda #WEAPON_ID_UNARMED
+        sta BigHero + BigHeroStruct::Current_Weapon_ID
+        
+        lda #WEAPON_STATE_GROUND
+        sta a:WeaponStruct::Active, y
+        
+        lda BigHero + BigHeroStruct::Y_Pos
+        clc
+        adc #48
+        sta a:WeaponStruct::Target_Y, y
+        sta a:WeaponStruct::Y_Pos, y
+        
         lda BigHero + BigHeroStruct::X_Pos
         clc
         adc #8                          
