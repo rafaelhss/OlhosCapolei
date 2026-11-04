@@ -152,7 +152,22 @@ _ResetAlign:
         ; 4. SISTEMA DE RENDERIZAÇÃO FINAL
         ldx #$0000     
         
+        jsr DrawVaderCrab
+
+
+        lda BigHero + BigHeroStruct::Current_Weapon_ID
+        cmp #WEAPON_ID_UNARMED
+        beq DrawHeroOverWeapons
+
         
+        bra Draweapons
+
+ DrawHeroOverWeapons:  
+        jsr DrawBigHero          
+        bra Draweapons
+
+Draweapons:
+
         ldy #.loword(WeaponA)            ; Garante que aponta para a WeaponA padrão
         jsr DrawDroppedWeapon     
         
@@ -168,11 +183,31 @@ _ResetAlign:
 
         ldy #.loword(WeaponE)     ; Passa o endereço de WRAM da WeaponC por parâmetro
         jsr DrawDroppedWeapon     ; Desenha reutilizando o mesmo código!
+        ;lda z:$00
+        ;eor #$40                        
+        ;sta z:$00
 
-
+        lda BigHero + BigHeroStruct::Current_Weapon_ID
+        cmp #WEAPON_ID_UNARMED
+        beq Finish
 
         jsr DrawBigHero          
-        jsr DrawVaderCrab
+        
+Finish:
+
+@LimpezaFantasmas:
+        cpx #512                        ; Chegou no fim da tabela de 128 sprites?
+        bcs @TerminouLimpeza
+        
+        inx                             ; Pula o X (Byte 0)
+        lda #$E0                        ; Coordenada Y inválida (Esconde o sprite fora da tela)
+        sta OAMMIRROR, x
+        inx                             ; Pula o Y (Byte 1)
+        inx                             ; Pula o Tile ID (Byte 2)
+        inx                             ; Pula os Atributos (Byte 3)
+        bra @LimpezaFantasmas
+
+@TerminouLimpeza:
 
         jmp GameLoop
 .endproc
@@ -504,7 +539,9 @@ MeleeExit:
         lda #HURT_TIME
         sta BigHero + BigHeroStruct::HurtTimer
 
-
+        lda z:$00
+        eor #$40                        
+        sta z:$00
         ; Constante local para a força do empurrão em pixels
         KNOCKBACK_FORCE = 16
 
