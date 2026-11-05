@@ -158,7 +158,9 @@ _ResetAlign:
         ; 4. SISTEMA DE RENDERIZAÇÃO FINAL
         ldx #$0000     
         
+        ldy #.loword(VaderCrab) 
         jsr DrawVaderCrab
+        
         jsr DrawBullet
 
 
@@ -505,7 +507,7 @@ PushVaderLeft:
         sbc #VADER_MELEE_KNOCKBACK
         sta VaderCrab + VaderCrabStruct::X_Pos
         
-        cmp #(SCREEN_LEFT
+        cmp #SCREEN_LEFT
         bcs MeleeExit
         lda #SCREEN_LEFT
         sta VaderCrab + VaderCrabStruct::X_Pos
@@ -760,6 +762,7 @@ CollisionDone:
 .export BigHero 
 .export PennyCrab
 .export VaderCrab
+.export RapaCrab
 .export WeaponA
 .export WeaponB
 .export WeaponC
@@ -771,6 +774,8 @@ CollisionDone:
 BigHero:         .tag BigHeroStruct
 PennyCrab:       .tag PennyCrabStruct
 VaderCrab:       .tag VaderCrabStruct
+RapaCrab:       .tag VaderCrabStruct
+
 WeaponA:         .tag WeaponStruct
 WeaponB:         .tag WeaponStruct
 WeaponC:         .tag WeaponStruct

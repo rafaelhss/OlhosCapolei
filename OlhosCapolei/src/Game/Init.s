@@ -23,6 +23,7 @@
 
 
 .import  BigHero, PennyCrab, VaderCrab, WeaponA, WeaponB, WeaponC, WeaponD, WeaponE
+.import RapaCrab
 .import Bullet
 .import InitRNG
 
@@ -238,6 +239,37 @@ Table_Init_Weapons:
         lda #STATE_WALKING
         sta VaderCrab + VaderCrabStruct::State
 ;=========== FIM Vader
+
+
+;----------- RapaCrab
+        lda #$CC                        ; 
+        sta RapaCrab + VaderCrabStruct::X_Pos
+        
+        lda #(SCREEN_BOTTOM / 2)        ; Y
+        sta RapaCrab + VaderCrabStruct::Y_Pos
+
+        lda #12                        
+        sta RapaCrab + VaderCrabStruct::Tile_Count  
+
+        lda #$09
+        sta RapaCrab + VaderCrabStruct::Walk_Anim_Speed 
+
+        lda #$04                       
+        sta RapaCrab + VaderCrabStruct::Anim_Timer
+        lda #$00                       
+        sta RapaCrab + VaderCrabStruct::Anim_Frame   
+
+        ; ◄ CRÍTICO: INICIALIZAÇÃO CONTRA O BUG DOS 5 SEGUNDOS
+        lda #$08                       
+        sta RapaCrab + VaderCrabStruct::Preparing_Anim_Timer
+        stz RapaCrab + VaderCrabStruct::Preparing_Anim_Frame
+        sta RapaCrab + VaderCrabStruct::Attacking_Anim_Timer
+        sta RapaCrab + VaderCrabStruct::Attacking_Timer
+        stz RapaCrab + VaderCrabStruct::Attacking_Anim_Frame
+        
+        lda #STATE_WALKING
+        sta RapaCrab + VaderCrabStruct::State
+;=========== FIM Rapa
 
 
 
