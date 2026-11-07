@@ -238,6 +238,10 @@ Table_Init_Weapons:
         
         lda #STATE_WALKING
         sta VaderCrab + VaderCrabStruct::State
+
+        lda #ENEMY_TYPE_VADER
+sta VaderCrab + VaderCrabStruct::Enemy_Type
+
 ;=========== FIM Vader
 
 
@@ -269,6 +273,9 @@ Table_Init_Weapons:
         
         lda #STATE_WALKING
         sta RapaCrab + VaderCrabStruct::State
+
+lda #ENEMY_TYPE_RAPA
+sta RapaCrab + VaderCrabStruct::Enemy_Type
 ;=========== FIM Rapa
 
 

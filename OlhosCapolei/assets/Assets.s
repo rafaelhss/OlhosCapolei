@@ -14,7 +14,7 @@
 ;----- Assset Data -------------------------------------------------------------
 .segment "SPRITEDATA"
 SpriteData: .incbin "SpritesBig9.vra"
-VaderData: .incbin "VaderSprites6.vra"
+VaderData: .incbin "VaderSprites7.vra"
 ColorData:  .incbin "SpritesBig8c.pal"
 BackgroundData: .incbin "Background.pal"
 

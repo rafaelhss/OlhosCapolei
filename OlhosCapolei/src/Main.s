@@ -96,7 +96,16 @@ _ResetAlign:
 
         jsr MoveBigHero
         jsr MovePennyCrab
+
+        ; --- MOVIMENTAÇÃO DO VADERCRAB ---
+        pea .loword(VaderCrab)
         jsr MoveVaderCrab
+        ply                             ; Limpa 2 bytes da pilha (.i16 ativo)
+
+        ; --- MOVIMENTAÇÃO DO RAPACRAB ---
+        pea .loword(RapaCrab)
+        jsr MoveVaderCrab
+        ply                             ; Limpa 2 bytes da pilha
 
 
         ldy #.loword(WeaponA)
@@ -161,13 +170,13 @@ _ResetAlign:
         ; --- RENDERIZAÇÃO DO VADERCRAB ---
         pea .loword(VaderCrab)          ; Empilha o endereço de 16-bit diretamente (Y fica livre!)
         jsr DrawVaderCrab
-        pla                     ; Tentativa Param: reset stack pointer
+        ply                     ; Tentativa Param: reset stack pointer
 
 
         ; --- RENDERIZAÇÃO DO VADERCRAB ---
         pea .loword(RapaCrab)          ; Empilha o endereço de 16-bit diretamente (Y fica livre!)
-        jsr DrawVaderCrab
-        pla                     ; Tentativa Param: reset stack pointer
+        ;jsr DrawVaderCrab
+        ply                     ; Tentativa Param: reset stack pointer
 
 
         jsr DrawBullet

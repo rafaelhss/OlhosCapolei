@@ -74,11 +74,12 @@ DP_WEAPON_TILE_TMP      = $10   ; Ocupa $08 (Guarda o Tile_ID do item arremessá
 DP_WEAPON_OAM_BACKUP    = $12   ; Ocupa $0A e $0B (Preserva temporariamente o reg X OAM)
 DP_WEAPON_POOL_PTR      = $14   ; Ocupa $0C (Índice de controle de varredura da RAM do Pool)
 
-DP_VADER_LAYOUT_PTR = $16 ;
-DP_ENEMY_STRUCT_PTR = $18 ;(Depois ver se da pra unificar com o de cima la na drawvadercrab)
-DP_ENEMY_X              = $1A   ; ◄ ADICIONE: Guarda o X do caranguejo atual (2 bytes)
-DP_ENEMY_Y              = $1C   ; ◄ ADICIONE: Guarda o Y do caranguejo atual (2 bytes)
-DP_ENEMY_FACING         = $1E   ; ◄ ADICIONE: Guarda a direção do caranguejo atual (2 bytes)
+DP_VADER_LAYOUT_PTR   = $16 ; Usa $16, $17, $18 (Ponteiro Longo de 24 bits)
+DP_ENEMY_STRUCT_PTR   = $19 ; Usa $19, $1A, $1B (Ponteiro Longo de 24 bits)
+DP_ENEMY_X            = $1C ; Usa $1C, $1D
+DP_ENEMY_Y            = $1E ; Usa $1E, $1F
+DP_ENEMY_FACING       = $20 ; Usa $20, $21
+
 
 ; --- Categorias Unificadas de Armas ---
 WEAPON_TYPE_MELEE      = $00  ; Arma Branca (Cano, Faca, Pau)
@@ -95,6 +96,12 @@ WEAPON_ID_ROCK         = 4    ; Pedra de Arremesso oficial do jogo
 WEAPON_ID_PISTOL       = 5
 WEAPON_ID_CHAIN      = 6
 WEAPON_ID_HAMMER       = 7
+
+;- tipos de inimigo
+ENEMY_TYPE_VADER = 0 ; dhart VaderCrab
+ENEMY_TYPE_RAPA  = 1 ; Rapa nui crab
+
+
 
 ; =============================================================================
 ; DEFINIÇÕES DE ESTRUTURAS DE DADOS (WRAM TABLES)
@@ -172,7 +179,8 @@ WEAPON_ID_HAMMER       = 7
     Hurtbox_X2            .byte   
     Hurtbox_Y1            .byte   
     Hurtbox_Y2            .byte 
-    HurtTimer            .byte 
+    HurtTimer            .byte
+    Enemy_Type           .byte  
       
 .endstruct
 
