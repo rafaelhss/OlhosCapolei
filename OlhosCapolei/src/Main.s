@@ -128,8 +128,16 @@ _ResetAlign:
 
         ; 3. FILTRO DE COLISÕES & REGRAS DE GAMEPLAY
         jsr ApplyEdgeCollisions
+
+
+        ; --- DETECÇÃO DE DANO AO HERÓI PARAMETRIZADA VIA PILHA ---
+        pea .loword(VaderCrab)
         jsr ApplyDamageToHero
-        
+        ply                             ; Limpa 2 bytes da pilha
+
+        pea .loword(RapaCrab)
+        jsr ApplyDamageToHero
+        ply                             ; Limpa 2 bytes da pilha
         
         ; --- CHECA COLISÃO DA PEDRADA PARA CADA SLOT DE FORMA ISOLADA ---
         ldy #.loword(WeaponA)
@@ -175,7 +183,7 @@ _ResetAlign:
 
         ; --- RENDERIZAÇÃO DO VADERCRAB ---
         pea .loword(RapaCrab)          ; Empilha o endereço de 16-bit diretamente (Y fica livre!)
-        ;jsr DrawVaderCrab
+        jsr DrawVaderCrab
         ply                     ; Tentativa Param: reset stack pointer
 
 
@@ -543,33 +551,42 @@ MeleeExit:
 ;-------------------------------------------------------------------------------
 ;   ApplyDamageToHero (Versão Arcade Premium - Proteção Atômica de Hitstun)
 ;-------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
+;   ApplyDamageToHero (Versão Arcade Premium Parametrizada via Pilha)
+;-------------------------------------------------------------------------------
 .proc ApplyDamageToHero
+        ; 1. Recupera o endereço de 16-bit da Struct do inimigo enviado via pilha
+        rep #$20
+        .a16
+        lda 3,s
+        tay                             ; Y agora aponta para o inimigo atual (Vader ou Rapa)
+        sep #$20
+        .a8
+
         ; =====================================================================
         ; FILTROS PRELIMINARES DE HARDWARE (8-bit)
         ; =====================================================================
-        ; 1. ⚡ ESCUDO DA REALEZA: Se o Herói está em Hitstun/Recuperação, aborta imediatamente!
-        ; Isso impede fisicamente hits duplos/triplos mesmo se ele estiver dentro da garra.
+        ; 1. Se o Herói está em Hitstun/Recuperação, aborta imediatamente!
         lda BigHero + BigHeroStruct::HurtTimer
         bne @AbortDamage
 
-        ; 2. Se a hitbox do VaderCrab não está ativa neste frame, aborta
-        lda VaderCrab + VaderCrabStruct::Hitbox_Active
+        ; 2. Se a hitbox deste caranguejo específico não está ativa, aborta
+        lda VaderCrabStruct::Hitbox_Active, y
         beq @AbortDamage
 
-        ; 3. Se a hurtbox do herói foi explicitamente desligada, aborta
+        ; 3. Se a hurtbox do herói foi desligada, aborta
         lda BigHero + BigHeroStruct::Hurtbox_Active
         beq @AbortDamage
 
         ; =====================================================================
-        ; MOTOR MATEMÁTICO POR EXCLUSÃO (Pipeline de Alta Performance 16-bit)
+        ; MOTOR MATEMÁTICO POR EXCLUSÃO (AABB Dinâmico 16-bit)
         ; =====================================================================
 @StartAABB:
-        rep #$20                ; Transiciona o Acumulador para 16 bits (.a16)
+        rep #$20                        ; Transiciona o Acumulador para 16 bits
         .a16
 
         ; --- TESTE DO EIXO X ---
-        ; Teste 1: Se Hitbox_X2 <= Hurtbox_X1 (Inimigo totalmente à esquerda) -> SAI
-        lda VaderCrab + VaderCrabStruct::Hitbox_X2
+        lda VaderCrabStruct::Hitbox_X2, y
         and #$00FF              
         sta $00                 
         lda BigHero + BigHeroStruct::Hurtbox_X1
@@ -577,8 +594,7 @@ MeleeExit:
         cmp $00
         bcs @NoCollision        
 
-        ; Teste 2: Se Hitbox_X1 >= Hurtbox_X2 (Inimigo totalmente à direita) -> SAI
-        lda VaderCrab + VaderCrabStruct::Hitbox_X1
+        lda VaderCrabStruct::Hitbox_X1, y
         and #$00FF
         sta $00
         lda BigHero + BigHeroStruct::Hurtbox_X2
@@ -588,8 +604,7 @@ MeleeExit:
         beq @NoCollision
 
         ; --- TESTE DO EIXO Y ---
-        ; Teste 3: Se Hitbox_Y2 <= Hurtbox_Y1 (Inimigo totalmente acima) -> SAI
-        lda VaderCrab + VaderCrabStruct::Hitbox_Y2
+        lda VaderCrabStruct::Hitbox_Y2, y
         and #$00FF
         sta $00
         lda BigHero + BigHeroStruct::Hurtbox_Y1
@@ -597,8 +612,7 @@ MeleeExit:
         cmp $00
         bcs @NoCollision        
 
-        ; Teste 4: Se Hitbox_Y1 >= Hurtbox_Y2 (Inimigo totalmente abaixo) -> SAI
-        lda VaderCrab + VaderCrabStruct::Hitbox_Y1
+        lda VaderCrabStruct::Hitbox_Y1, y
         and #$00FF
         sta $00
         lda BigHero + BigHeroStruct::Hurtbox_Y2
@@ -608,89 +622,93 @@ MeleeExit:
         beq @NoCollision
 
         ; =====================================================================
-        ; COLISÃO CONFIRMADA: O RETÂNGULO INTERSECTOU EM AMBOS OS EIXOS!
+        ; COLISÃO CONFIRMADA: IMPACTO REALIZADO!
         ; =====================================================================
-        sep #$20                ; Restaura o Acumulador para 8 bits (.a8)
+        sep #$20                        ; Restaura o Acumulador para 8 bits
         .a8
 
-        ; Liga o Hitstun imediatamente no relógio do Herói (30 frames de invulnerabilidade)
+        ; Liga o Hitstun imediatamente no Herói (30 frames)
         lda #30
         sta BigHero + BigHeroStruct::HurtTimer
         
         ; Desativa as flags para isolamento total do frame
         stz BigHero + BigHeroStruct::Hurtbox_Active
-        stz VaderCrab + VaderCrabStruct::Hitbox_Active
+        
+        lda #0
+        sta VaderCrabStruct::Hitbox_Active, y
 
-        ; Executa os impactos cinéticos e visuais do golpe tomado
+        ; Empilha o ponteiro do caranguejo agressor para empurrar o herói certo
+        phy
         jsr TriggerHeroDamageEffect
+        ply
         rts
 
 @NoCollision:
-        sep #$20                ; Restaura o Acumulador para 8 bits antes de sair (.a8)
+        sep #$20                        ; Restaura o Acumulador para 8 bits
         .a8
 @AbortDamage:
         rts
 .endproc
 
-; --- Sub-rotina de suporte para aplicar os efeitos do golpe tomado ---
 
 ;-------------------------------------------------------------------------------
 ;   TriggerHeroDamageEffect
 ;   Aplica Knockback no BigHero baseado no Facing do Inimigo e trata as bordas
 ;-------------------------------------------------------------------------------
+; -----------------------------------------------------------------------------
+;   File: Main.s (PARTE 2 DE 2 - KNOCKBACK DINÂMICO) - Substitua a antiga
+; -----------------------------------------------------------------------------
 .proc TriggerHeroDamageEffect
-        HURT_TIME = 30 ;quantodade de frames que fica de cara amassada
+        ; 1. Recupera o endereço do caranguejo enviado da pilha para o registrador Y
+        rep #$20
+        .a16
+        lda 3,s                         
+        tay
+        sep #$20
+        .a8
+
+        HURT_TIME = 30 
         lda #HURT_TIME
         sta BigHero + BigHeroStruct::HurtTimer
 
         lda z:$00
         eor #$40                        
         sta z:$00
-        ; Constante local para a força do empurrão em pixels
+        
         KNOCKBACK_FORCE = 16
 
-        ; 1. Verifica a direção do VaderCrab para determinar o vetor do Knockback
-        lda VaderCrab + VaderCrabStruct::Facing
-        bne @PushToRight        ; Se Facing != 0 (Olhando para a Direita), empurra para a DIREITA
+        ; 2. Verifica a direção do caranguejo atual parametrizado em Y
+        lda VaderCrabStruct::Facing, y
+        bne @PushToRight        
 
 @PushToLeft:
-        ; Inimigo olhando para a esquerda -> Empurra o herói para a ESQUERDA
         lda BigHero + BigHeroStruct::X_Pos
         sec
         sbc #KNOCKBACK_FORCE
         sta BigHero + BigHeroStruct::X_Pos
 
-        ; --- Proteção de Borda Esquerda (Underflow) ---
-        ; Se o resultado for menor que SCREEN_LEFT (ou se capotou a matemática devido ao SBC)
         lda BigHero + BigHeroStruct::X_Pos
         cmp #SCREEN_LEFT
-        bcs @DoneKnockback      ; Se X >= SCREEN_LEFT, está seguro. Pula.
+        bcs @DoneKnockback      
         
-        lda #SCREEN_LEFT        ; Se estourou a borda esquerda, trava o herói nela
+        lda #SCREEN_LEFT        
         sta BigHero + BigHeroStruct::X_Pos
         bra @DoneKnockback
 
 @PushToRight:
-        ; Inimigo olhando para a direita -> Empurra o herói para a DIREITA
         lda BigHero + BigHeroStruct::X_Pos
         clc
         adc #KNOCKBACK_FORCE
         sta BigHero + BigHeroStruct::X_Pos
 
-        ; --- Proteção de Borda Direita (Overflow) ---
-        ; O BigHero ocupa 32px de largura. Limite máximo é SCREEN_RIGHT - 32
         lda BigHero + BigHeroStruct::X_Pos
         cmp #(SCREEN_RIGHT - 32)
-        bcc @DoneKnockback      ; Se X < limite direito, está seguro. Pula.
+        bcc @DoneKnockback      
         
-        lda #(SCREEN_RIGHT - 32) ; Se estourou a borda direita, trava o herói nela
+        lda #(SCREEN_RIGHT - 32) 
         sta BigHero + BigHeroStruct::X_Pos
 
 @DoneKnockback:
-        ; 2. [Opcional] Inicializa um Timer de Invencibilidade na struct do Herói
-        ; lda #60
-        ; sta BigHero + BigHeroStruct::Invincibility_Timer ; (Adicionar campo na struct se desejar)
-
         rts
 .endproc
 
