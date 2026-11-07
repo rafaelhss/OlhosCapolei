@@ -138,39 +138,52 @@ _ResetAlign:
         pea .loword(RapaCrab)
         jsr ApplyDamageToHero
         ply                             ; Limpa 2 bytes da pilha
+
+
+
         
-        ; --- CHECA COLISÃO DA PEDRADA PARA CADA SLOT DE FORMA ISOLADA ---
-        ldy #.loword(WeaponA)
-        jsr ApplyWeaponCollisions       ; Testa se a arma do Slot A acertou o Vader
-        ldy #.loword(WeaponB)
-        jsr ApplyWeaponCollisions       ; Testa se a arma do Slot B acertou o Vader
-        ldy #.loword(WeaponC)
-        jsr ApplyWeaponCollisions       ; Testa se a arma do Slot C acertou o Vader
-        ldy #.loword(WeaponD)
-        jsr ApplyWeaponCollisions       ; Testa se a arma do Slot C acertou o Vader
-        ldy #.loword(WeaponE)
-        jsr ApplyWeaponCollisions       ; Testa se a arma do Slot C acertou o Vader
+        ; === TESTES CONTRA O VADERCRAB ===
+        ldy #.loword(VaderCrab)
+        sty z:DP_ENEMY_STRUCT_PTR       ; Salva o alvo atual na Direct Page!
         
+        ; Checa colisões de pedradas (Slots A..E) contra o Vader
+        .repeat 5, I
+            ldy #.loword(.ident(.sprintf("Weapon%c", $41 + I)))
+            jsr ApplyWeaponCollisions
+        .endrepeat
         
-        ; CHECA COLISÃO CORPORAL (PORRETADA) PARA CADA SLOT
-        ldy #.loword(WeaponA)
-        jsr ApplyMeleeWeaponCollisions
+        ; Checa colisões de porretadas (Slots A..E) contra o Vader
+        .repeat 5, I
+            ldy #.loword(.ident(.sprintf("Weapon%c", $41 + I)))
+            jsr ApplyMeleeWeaponCollisions
+        .endrepeat
 
-        ldy #.loword(WeaponB)
-        jsr ApplyMeleeWeaponCollisions
-
-        ldy #.loword(WeaponC)
-        jsr ApplyMeleeWeaponCollisions
-
-        ldy #.loword(WeaponD)
-        jsr ApplyMeleeWeaponCollisions
-
-        ldy #.loword(WeaponE)
-        jsr ApplyMeleeWeaponCollisions
-
-
+        ; --- CHECA COLISÃO DE BALAS/TIROS ---
+        pea .loword(VaderCrab)
         jsr ApplyBulletCollisions
+        ply
 
+
+
+        ; === TESTES CONTRA O RAPACRAB ===
+        ldy #.loword(RapaCrab)
+        sty z:DP_ENEMY_STRUCT_PTR       ; Muda o alvo atual na Direct Page!
+        
+        ; Checa colisões de pedradas (Slots A..E) contra o Rapa
+        .repeat 5, I
+            ldy #.loword(.ident(.sprintf("Weapon%c", $41 + I)))
+            jsr ApplyWeaponCollisions
+        .endrepeat
+        
+        ; Checa colisões de porretadas (Slots A..E) contra o Rapa
+        .repeat 5, I
+            ldy #.loword(.ident(.sprintf("Weapon%c", $41 + I)))
+            jsr ApplyMeleeWeaponCollisions
+        .endrepeat
+
+        pea .loword(RapaCrab)
+        jsr ApplyBulletCollisions
+        ply
         
         ; 4. SISTEMA DE RENDERIZAÇÃO FINAL
         ldx #$0000     
@@ -247,8 +260,9 @@ Finish:
         jmp GameLoop
 .endproc
 
-
-
+;-------------------------------------------------------------------------------
+;   ApplyBulletCollisions (Leitura de Direct Page Direta)
+;-------------------------------------------------------------------------------
 .proc ApplyBulletCollisions
         lda Bullet + BulletStruct::Active
         cmp #BULLET_STATE_ACTIVE
@@ -256,296 +270,263 @@ Finish:
         rts
 
 @CheckVaderVulnerable:
-        ; 2. Se o VaderCrab já estiver em Hitstun/Dano, aborta para evitar múltiplos hits
-        lda VaderCrab + VaderCrabStruct::HurtTimer
+        ldy z:DP_ENEMY_STRUCT_PTR       ; Y = Inimigo ativo (Vader ou Rapa)
+        lda VaderCrabStruct::HurtTimer, y
         beq @StartAABB
         rts
 
 @StartAABB:
-        ; --- TESTE DO EIXO X (Usando o slot parametrizado em Y) ---
+        ldy z:DP_ENEMY_STRUCT_PTR       
         lda Bullet + BulletStruct::X_Pos
         clc
-        adc #16                 ; Largura estimada da Bullet
-        cmp VaderCrab + VaderCrabStruct::Hurtbox_X1
-        bcc NoCollision
-        beq NoCollision
+        adc #16                 
+        cmp VaderCrabStruct::Hurtbox_X1, y
+        bcc @NoCollision
+        beq @NoCollision
 
         lda Bullet + BulletStruct::X_Pos
-        cmp VaderCrab + VaderCrabStruct::Hurtbox_X2
-        bcs NoCollision
+        cmp VaderCrabStruct::Hurtbox_X2, y
+        bcs @NoCollision
 
-        ; --- TESTE DO EIXO Y ---
         lda Bullet + BulletStruct::Y_Pos
         clc
-        adc #16                 ; Altura estimada
-        cmp VaderCrab + VaderCrabStruct::Hurtbox_Y1
-        bcc NoCollision
-        beq NoCollision
+        adc #16                 
+        cmp VaderCrabStruct::Hurtbox_Y1, y
+        bcc @NoCollision
+        beq @NoCollision
 
         lda Bullet + BulletStruct::Y_Pos
-        cmp VaderCrab + VaderCrabStruct::Hurtbox_Y2
-        bcs NoCollision
+        cmp VaderCrabStruct::Hurtbox_Y2, y
+        bcs @NoCollision
 
         ; =====================================================================
-        ; IMPACTO CONFIRMADO: Bullet ACERTOU O VADER!
+        ; IMPACTO CONFIRMADO
         ; =====================================================================
-        
-
         lda #BULLET_STATE_INACTIVE
         sta Bullet + BulletStruct::Active
 
-        ; 1. Força o VaderCrab a entrar em estado de Hitstun (30 frames)
+        ldy z:DP_ENEMY_STRUCT_PTR       
         lda #30
-        sta VaderCrab + VaderCrabStruct::HurtTimer
+        sta VaderCrabStruct::HurtTimer, y
 
-        ; =====================================================================
-        ; 🦀 BOUNCE BACK / KNOCKBACK DO VADERCRAB
-        ; =====================================================================
-
-        ; Verifica a direção do projétil ativo para empurrar o Vader corretamente
         lda Bullet + BulletStruct::Speed_X
         bmi @BulletIndoParaEsquerda
 
 @BulletIndoParaDireita:
-        lda VaderCrab + VaderCrabStruct::X_Pos
+        lda VaderCrabStruct::X_Pos, y
         clc
         adc #VADER_KNOCKBACK
-        sta VaderCrab + VaderCrabStruct::X_Pos
-        bra Finish
+        sta VaderCrabStruct::X_Pos, y
+        bra @Finish
 
 @BulletIndoParaEsquerda:
-        lda VaderCrab + VaderCrabStruct::X_Pos
+        lda VaderCrabStruct::X_Pos, y
         sec
         sbc #VADER_KNOCKBACK
-        sta VaderCrab + VaderCrabStruct::X_Pos
+        sta VaderCrabStruct::X_Pos, y
 
-NoCollision:
-Finish:
+@NoCollision:
+@Finish:
         rts
 .endproc
 
 ;-------------------------------------------------------------------------------
-;   ApplyWeaponCollisions (AABB CENTRALIZADO E PARAMETRIZADO VIA Y)
-;   Entrada: Y = Endereço absoluto do slot (WeaponA ou WeaponB)
+;   ApplyWeaponCollisions (Leitura de Direct Page Direta)
+;   Entrada: Y = Endereço absoluto do slot da Arma
 ;-------------------------------------------------------------------------------
 .proc ApplyWeaponCollisions
-        ; 1. Filtro preliminar: Só checa colisão se o slot enviado em Y estiver voando (THROWN = 2)
         lda a:WeaponStruct::Active, y
         cmp #WEAPON_STATE_THROWN
         beq @CheckVaderVulnerable
         rts
 
 @CheckVaderVulnerable:
-        ; 2. Se o VaderCrab já estiver em Hitstun/Dano, aborta para evitar múltiplos hits
-        lda VaderCrab + VaderCrabStruct::HurtTimer
+        sty z:DP_WEAPON_POOL_PTR        ; Preserva Y da arma
+        ldy z:DP_ENEMY_STRUCT_PTR       ; Carrega o inimigo atual
+        lda VaderCrabStruct::HurtTimer, y
         beq @StartAABB
+        ldy z:DP_WEAPON_POOL_PTR        
         rts
 
 @StartAABB:
-        ; --- TESTE DO EIXO X (Usando o slot parametrizado em Y) ---
-        lda a:WeaponStruct::X_Pos, y
-        clc
-        adc #16                 ; Largura estimada da pedra/martelo
-        cmp VaderCrab + VaderCrabStruct::Hurtbox_X1
-        bcc NoCollision
-        beq NoCollision
+        ldy z:DP_WEAPON_POOL_PTR        ; Y = Arma ativa
+        ldx z:DP_ENEMY_STRUCT_PTR       ; X = Inimigo ativo
 
         lda a:WeaponStruct::X_Pos, y
-        cmp VaderCrab + VaderCrabStruct::Hurtbox_X2
-        bcs NoCollision
+        clc
+        adc #16                 
+        cmp a:VaderCrabStruct::Hurtbox_X1, x
+        bcc @NoCollision
+        beq @NoCollision
 
-        ; --- TESTE DO EIXO Y ---
+        lda a:WeaponStruct::X_Pos, y
+        cmp a:VaderCrabStruct::Hurtbox_X2, x
+        bcs @NoCollision
+
         lda a:WeaponStruct::Y_Pos, y
         clc
-        adc #16                 ; Altura estimada
-        cmp VaderCrab + VaderCrabStruct::Hurtbox_Y1
-        bcc NoCollision
-        beq NoCollision
+        adc #16                 
+        cmp a:VaderCrabStruct::Hurtbox_Y1, x
+        bcc @NoCollision
+        beq @NoCollision
 
         lda a:WeaponStruct::Y_Pos, y
-        cmp VaderCrab + VaderCrabStruct::Hurtbox_Y2
-        bcs NoCollision
+        cmp a:VaderCrabStruct::Hurtbox_Y2, x
+        bcs @NoCollision
 
         ; =====================================================================
-        ; IMPACTO CONFIRMADO: A ARMA DO SLOT Y ACERTOU O VADER!
+        ; IMPACTO CONFIRMADO
         ; =====================================================================
-        
-        ; 1. Força o VaderCrab a entrar em estado de Hitstun (30 frames)
         lda #30
-        sta VaderCrab + VaderCrabStruct::HurtTimer
+        sta a:VaderCrabStruct::HurtTimer, x
 
-        ; =====================================================================
-        ; 🦀 BOUNCE BACK / KNOCKBACK DO VADERCRAB
-        ; =====================================================================
-        VADER_KNOCKBACK = 12
-
-        ; Verifica a direção do projétil ativo para empurrar o Vader corretamente
         lda a:WeaponStruct::Speed_X, y
         bmi @PedraIndoParaEsquerda
 
 @PedraIndoParaDireita:
-        lda VaderCrab + VaderCrabStruct::X_Pos
+        lda a:VaderCrabStruct::X_Pos, x
         clc
         adc #VADER_KNOCKBACK
-        sta VaderCrab + VaderCrabStruct::X_Pos
+        sta a:VaderCrabStruct::X_Pos, x
 
         cmp #(SCREEN_RIGHT - 48)
         bcc @ApplyRicochet
         lda #(SCREEN_RIGHT - 48)
-        sta VaderCrab + VaderCrabStruct::X_Pos
+        sta a:VaderCrabStruct::X_Pos, x
         bra @ApplyRicochet
 
 @PedraIndoParaEsquerda:
-        lda VaderCrab + VaderCrabStruct::X_Pos
+        lda a:VaderCrabStruct::X_Pos, x
         sec
         sbc #VADER_KNOCKBACK
-        sta VaderCrab + VaderCrabStruct::X_Pos
+        sta a:VaderCrabStruct::X_Pos, x
 
         cmp #SCREEN_LEFT
         bcs @ApplyRicochet
         lda #SCREEN_LEFT
-        sta VaderCrab + VaderCrabStruct::X_Pos
+        sta a:VaderCrabStruct::X_Pos, x
 
 @ApplyRicochet:
-        ; =====================================================================
-        ; 2. RICOCHETE PARAMETRIZADO DA ARMA QUE ESTAVA EM VOO
-        ; =====================================================================
         lda a:WeaponStruct::Speed_X, y
         eor #$FF
         clc
         adc #1
         sta a:WeaponStruct::Speed_X, y
 
-        ; 3. Impulso Vertical no quique da arma ativa
-        lda #$FC                ; Força Speed_Y = -4
+        lda #$FC                
         sta a:WeaponStruct::Speed_Y, y
 
-NoCollision:
+@NoCollision:
+        ldy z:DP_WEAPON_POOL_PTR        
         rts
 .endproc
 
-
-
 ;-------------------------------------------------------------------------------
-;   ApplyMeleeWeaponCollisions (Detecção de Dano Corporal por Proximidade)
-;   Entrada: Y = Endereço absoluto do slot (WeaponA, WeaponB ou WeaponC)
-;-------------------------------------------------------------------------------
-;-------------------------------------------------------------------------------
-;   ApplyMeleeWeaponCollisions (Conceito Puro: Hitbox da Arma vs Hurtbox do Inimigo)
-;   Entrada: Y = Endereço absoluto do slot (WeaponA, WeaponB ou WeaponC)
+;   ApplyMeleeWeaponCollisions (Leitura de Direct Page Direta)
+;   Entrada: Y = Endereço absoluto do slot da Arma
 ;-------------------------------------------------------------------------------
 .proc ApplyMeleeWeaponCollisions
 MeleeStart:
-        ; 1. Filtro preliminar rápido: A Hitbox da arma deve estar ligada. Se for 0, sai.
         lda a:WeaponStruct::Hitbox_Active, y
-        bne :+                          ; Se NÃO for zero (está ativa), pula para o próximo teste
-        jmp MeleeExit                   ; Se for zero, executa o Salto Longo Absoluto de saída
+        bne @CheckVaderVulnerable                
+        rts
 
-:       ; 2. Filtro de Segurança do Alvo: Se o VaderCrab já estiver em Hitstun, aborta
-        lda VaderCrab + VaderCrabStruct::HurtTimer
-        beq :+                          ; Se for igual a zero (vulnerável), pula para iniciar o AABB
-        jmp MeleeExit                   ; Se já estiver em hitstun, executa o Salto Longo Absoluto
+@CheckVaderVulnerable:
+        sty z:DP_WEAPON_POOL_PTR        ; Preserva Y da arma
+        ldy z:DP_ENEMY_STRUCT_PTR       ; Carrega o inimigo atual
+        lda VaderCrabStruct::HurtTimer, y
+        beq @StartAABB                  
+        ldy z:DP_WEAPON_POOL_PTR        
+        rts
 
-:       rep #$20                ; Transiciona acumulador para 16 bits para evitar sobramento
+@StartAABB:
+        ldy z:DP_WEAPON_POOL_PTR        ; Y = Arma ativa
+        ldx z:DP_ENEMY_STRUCT_PTR       ; X = Inimigo ativo
+
+        rep #$20                
         .a16
-        ; --- TESTE DE INTERSECÇÃO BLINDADO COM RÓTULOS NUMÉRICOS (HITBOX vs HURTBOX) ---
         
-        ; Teste 1: Se Hitbox_X2 <= Hurtbox_X1 (Ataque totalmente à esquerda)
         lda a:WeaponStruct::Hitbox_X2, y
         and #$00FF              
         sta $00                 
-        lda VaderCrab + VaderCrabStruct::Hurtbox_X1
+        lda a:VaderCrabStruct::Hurtbox_X1, x
         and #$00FF
         cmp $00
         bcc :+
-        
-        jmp MeleeNoCollision    ; Salto Longo Absoluto se não houver colisão
+        jmp MeleeNoCollision    
 
-:       ; Teste 2: Se Hitbox_X1 >= Hurtbox_X2 (Ataque totalmente à direita)
-        lda a:WeaponStruct::Hitbox_X1, y
+:       lda a:WeaponStruct::Hitbox_X1, y
         and #$00FF
         sta $00
-        lda VaderCrab + VaderCrabStruct::Hurtbox_X2
+        lda a:VaderCrabStruct::Hurtbox_X2, x
         and #$00FF
         cmp $00
         bcs :+          
-        
         jmp MeleeNoCollision        
 
-:       ; Teste 3: Se Hitbox_Y2 <= Hurtbox_Y1 (Ataque totalmente acima)
-        lda a:WeaponStruct::Hitbox_Y2, y
+:       lda a:WeaponStruct::Hitbox_Y2, y
         and #$00FF
         sta $00
-        lda VaderCrab + VaderCrabStruct::Hurtbox_Y1
+        lda a:VaderCrabStruct::Hurtbox_Y1, x
         and #$00FF
         cmp $00
         bcc :+
-        
         jmp MeleeNoCollision        
 
-:       ; Teste 4: Se Hitbox_Y1 >= Hurtbox_Y2 (Ataque totalmente abaixo)
-        lda a:WeaponStruct::Hitbox_Y1, y
+:       lda a:WeaponStruct::Hitbox_Y1, y
         and #$00FF
         sta $00
-        lda VaderCrab + VaderCrabStruct::Hurtbox_Y2
+        lda a:VaderCrabStruct::Hurtbox_Y2, x
         and #$00FF
         cmp $00
-        bcs MeleeConfirmouImpacto   ; Se for menor, passou em TODOS os testes! COLISÃO CONFIRMADA!
-        
+        bcs @MeleeConfirmouImpacto   
         jmp MeleeNoCollision        
 
-MeleeConfirmouImpacto:
-        ; =====================================================================
-        ; CONTACT CONFIRMED: COLISÃO GEOMÉTRICA DE CAIXAS TOTALMENTE REALIZADA!
-        ; =====================================================================
-        sep #$20                ; Retorna acumulador para 8 bits
+@MeleeConfirmouImpacto:
+        sep #$20                
         .a8
 
-        ; 1. Aplica o estado de dano (Hitstun) ao caranguejo grande
         lda #10
-        sta VaderCrab + VaderCrabStruct::HurtTimer
+        sta a:VaderCrabStruct::HurtTimer, x
 
-        ; 2. Desativa a Hitbox para este frame para garantir que dê apenas 1 hit por porretada
         lda #$00
         sta a:WeaponStruct::Hitbox_Active, y
 
-        ; 3. Executa o Knockback baseado no Facing do herói
         VADER_MELEE_KNOCKBACK = 20
-
         lda BigHero + BigHeroStruct::Facing
-        bne PushVaderLeft
+        bne @PushVaderLeft
 
-PushVaderRight:
-        lda VaderCrab + VaderCrabStruct::X_Pos
+@PushVaderRight:
+        lda a:VaderCrabStruct::X_Pos, x
         clc
         adc #VADER_MELEE_KNOCKBACK
-        sta VaderCrab + VaderCrabStruct::X_Pos
+        sta a:VaderCrabStruct::X_Pos, x
         
         cmp #(SCREEN_RIGHT - 48)
         bcc MeleeExit
         lda #(SCREEN_RIGHT - 48)
-        sta VaderCrab + VaderCrabStruct::X_Pos
+        sta a:VaderCrabStruct::X_Pos, x
         bra MeleeExit
 
-PushVaderLeft:
-        lda VaderCrab + VaderCrabStruct::X_Pos
+@PushVaderLeft:
+        lda a:VaderCrabStruct::X_Pos, x
         sec
         sbc #VADER_MELEE_KNOCKBACK
-        sta VaderCrab + VaderCrabStruct::X_Pos
+        sta a:VaderCrabStruct::X_Pos, x
         
         cmp #SCREEN_LEFT
         bcs MeleeExit
         lda #SCREEN_LEFT
-        sta VaderCrab + VaderCrabStruct::X_Pos
+        sta a:VaderCrabStruct::X_Pos, x
         bra MeleeExit
 
 MeleeNoCollision:
-        sep #$20                ; Garante o retorno estável para 8-bit se falhar
+        sep #$20                
         .a8
 MeleeExit:
+        ldy z:DP_WEAPON_POOL_PTR        
         rts
 .endproc
-
 ;-------------------------------------------------------------------------------
 
 ;-------------------------------------------------------------------------------
