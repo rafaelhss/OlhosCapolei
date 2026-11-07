@@ -158,9 +158,18 @@ _ResetAlign:
         ; 4. SISTEMA DE RENDERIZAÇÃO FINAL
         ldx #$0000     
         
-        ldy #.loword(VaderCrab) 
+        ; --- RENDERIZAÇÃO DO VADERCRAB ---
+        pea .loword(VaderCrab)          ; Empilha o endereço de 16-bit diretamente (Y fica livre!)
         jsr DrawVaderCrab
-        
+        pla                     ; Tentativa Param: reset stack pointer
+
+
+        ; --- RENDERIZAÇÃO DO VADERCRAB ---
+        pea .loword(RapaCrab)          ; Empilha o endereço de 16-bit diretamente (Y fica livre!)
+        jsr DrawVaderCrab
+        pla                     ; Tentativa Param: reset stack pointer
+
+
         jsr DrawBullet
 
 

@@ -545,33 +545,64 @@ VaderCrab_Layout_FrameAttacking1:
 ;-------------------------------------------------------------------------------
 ;   DrawVaderCrab
 ;-------------------------------------------------------------------------------
-;-------------------------------------------------------------------------------
-;   DrawVaderCrab (Pipeline de Layout Dinâmico via Direct Page - COMPLETA)
-;-------------------------------------------------------------------------------
+; Garanta que esse slot de 16-bit está livre na Direct Page
+; DP_ENEMY_STRUCT_PTR = $02 
+
 .proc DrawVaderCrab
+        ; --- RECUPERAÇÃO DO PARÂMETRO DA PILHA ---
+        lda 3,s                         
+        sta z:DP_ENEMY_STRUCT_PTR
+        lda 4,s                         
+        sta z:DP_ENEMY_STRUCT_PTR+1     ; DP_ENEMY_STRUCT_PTR aponta para o caranguejo atual
+
         ; --- PIPELINE HIERÁRQUICO DE SELEÇÃO DE MATRIZ ---
-        ; 1. Prioridade Máxima: Está em Hitstun (Tomando Dano)?
-        lda VaderCrab + VaderCrabStruct::HurtTimer
+        ; Para evitar usar Y aqui, usamos uma técnica simples: 
+        ; Adicionamos o offset diretamente ao ponteiro na Direct Page temporariamente!
+        
+        ; 1. Checa HurtTimer
+        clc
+        lda z:DP_ENEMY_STRUCT_PTR
+        adc #VaderCrabStruct::HurtTimer
+        sta z:DP_TEMP_02                ; Endereço exato do HurtTimer em WRAM
+        lda z:DP_ENEMY_STRUCT_PTR+1
+        adc #0
+        sta z:DP_TEMP_02+1
+        
+        lda [DP_TEMP_02]                ; Leitura indireta longa
         beq @CheckStates
 
-        ; Carrega a tabela de dano na Direct Page
         ldy #.loword(VaderCrab_Layout_Hurt)
-        sty z:DP_VADER_LAYOUT_PTR        ; Reutilizando slot livre de 16-bit na DP
+        sty z:DP_VADER_LAYOUT_PTR        
         bra @StartDraw
 
 @CheckStates:
-        ; 2. Estado: Preparando Ataque
-        lda VaderCrab + VaderCrabStruct::State
+        ; 2. Checa Estado
+        clc
+        lda z:DP_ENEMY_STRUCT_PTR
+        adc #VaderCrabStruct::State
+        sta z:DP_TEMP_02
+        lda z:DP_ENEMY_STRUCT_PTR+1
+        adc #0
+        sta z:DP_TEMP_02+1
+        
+        lda [DP_TEMP_02]
         cmp #STATE_PREPARING
         bne @CheckAttacking
 
-        ; Seleção do frame de PREPARE (0 a 3)
-        lda VaderCrab + VaderCrabStruct::Preparing_Anim_Frame
+        ; Checa Preparing_Anim_Frame
+        clc
+        lda z:DP_ENEMY_STRUCT_PTR
+        adc #VaderCrabStruct::Preparing_Anim_Frame
+        sta z:DP_TEMP_02
+        lda z:DP_ENEMY_STRUCT_PTR+1
+        adc #0
+        sta z:DP_TEMP_02+1
+        
+        lda [DP_TEMP_02]
         cmp #1
         beq @Prep1
         cmp #2
         beq @Prep2
-
 
 @Prep0: 
         ldy #.loword(VaderCrab_Layout_FramePreparing0)
@@ -583,13 +614,19 @@ VaderCrab_Layout_FrameAttacking1:
         ldy #.loword(VaderCrab_Layout_FramePreparing2)
         bra @SavePtr
 
-
 @CheckAttacking:
-        ; 3. Estado: Atacando
         cmp #STATE_ATACKING
         bne @CheckWalking
 
-        lda VaderCrab + VaderCrabStruct::Attacking_Anim_Frame
+        clc
+        lda z:DP_ENEMY_STRUCT_PTR
+        adc #VaderCrabStruct::Attacking_Anim_Frame
+        sta z:DP_TEMP_02
+        lda z:DP_ENEMY_STRUCT_PTR+1
+        adc #0
+        sta z:DP_TEMP_02+1
+        
+        lda [DP_TEMP_02]
         bne @Attack1
 @Attack0: 
         ldy #.loword(VaderCrab_Layout_FrameAttacking0)
@@ -599,8 +636,15 @@ VaderCrab_Layout_FrameAttacking1:
         bra @SavePtr
 
 @CheckWalking:
-        ; 4. Estado padrão: Caminhada / Idle
-        lda VaderCrab + VaderCrabStruct::Anim_Frame
+        clc
+        lda z:DP_ENEMY_STRUCT_PTR
+        adc #VaderCrabStruct::Anim_Frame
+        sta z:DP_TEMP_02
+        lda z:DP_ENEMY_STRUCT_PTR+1
+        adc #0
+        sta z:DP_TEMP_02+1
+        
+        lda [DP_TEMP_02]
         bne @Walk1
 @Walk0: 
         ldy #.loword(VaderCrab_Layout)
@@ -612,73 +656,106 @@ VaderCrab_Layout_FrameAttacking1:
         sty z:DP_VADER_LAYOUT_PTR
 
 @StartDraw:
-        ldy #$0000              ; Indexador de bytes lidos do layout (0 a 63)
+        ; Buscamos de antemão os valores fixos de X, Y e Facing para não re-calcular no loop
+        ; Salvando nas variáveis temporárias da Direct Page
+        
+        ; Busca Facing
+        clc
+        lda z:DP_ENEMY_STRUCT_PTR
+        adc #VaderCrabStruct::Facing
+        sta z:DP_TEMP_02
+        lda z:DP_ENEMY_STRUCT_PTR+1
+        adc #0
+        sta z:DP_TEMP_02+1
+        lda [DP_TEMP_02]
+        sta z:DP_TEMP_00                ; Armazena Facing atual do inimigo em DP_TEMP_00
+
+        ; Busca X_Pos
+        clc
+        lda z:DP_ENEMY_STRUCT_PTR
+        adc #VaderCrabStruct::X_Pos
+        sta z:DP_TEMP_02
+        lda z:DP_ENEMY_STRUCT_PTR+1
+        adc #0
+        sta z:DP_TEMP_02+1
+        lda [DP_TEMP_02]
+        sta z:DP_TEMP_01                ; Armazena X_Pos atual em DP_TEMP_01
+
+        ; Busca Y_Pos
+        clc
+        lda z:DP_ENEMY_STRUCT_PTR
+        adc #VaderCrabStruct::Y_Pos
+        sta z:DP_TEMP_02
+        lda z:DP_ENEMY_STRUCT_PTR+1
+        adc #0
+        sta z:DP_TEMP_02+1
+        lda [DP_TEMP_02]
+        sta z:DP_TEMP_02                ; Armazena Y_Pos atual em DP_TEMP_02 (Sobrescreve ponteiro antigo pois não precisamos mais dele)
+
+        ldy #$0000                      ; Indexador do Layout Gráfico (0 a 63) - 100% Intacto!
 
 DrawLoop:
         ; === 1. PROCESSAR POSIÇÃO X COM ESPELHAMENTO ===
-        lda VaderCrab + VaderCrabStruct::Facing
+        lda z:DP_TEMP_00                ; Lê Facing pré-salvo
         bne DrawXNormal         
 
 DrawXInverted:
-        ; Inversão de colunas baseada no ponteiro dinâmico da DP
         lda #48
         sec
         sbc (DP_VADER_LAYOUT_PTR),y 
         clc
-        adc VaderCrab + VaderCrabStruct::X_Pos 
+        adc z:DP_TEMP_01                ; Adiciona X_Pos pré-salvo
         sta OAMMIRROR, X
         bra ProcessY
 
 DrawXNormal:
         lda (DP_VADER_LAYOUT_PTR),y
         clc
-        adc VaderCrab + VaderCrabStruct::X_Pos    
+        adc z:DP_TEMP_01                ; Adiciona X_Pos pré-salvo
         sta OAMMIRROR, X                          
 
 ProcessY:
         inx                                       
-        iny                     ; Aponta para o Offset Y
+        iny                     
 
         ; === 2. PROCESSAR POSIÇÃO Y ===
         lda (DP_VADER_LAYOUT_PTR),y
         clc
-        adc VaderCrab + VaderCrabStruct::Y_Pos    
+        adc z:DP_TEMP_02                ; Adiciona Y_Pos pré-salvo
         sta OAMMIRROR, X                          
         inx
-        iny                     ; Aponta para o Tile ID
+        iny                     
 
-        ; === 3. PROCESSAR TILE ID DIRETO DO PONTEIRO ATIVO ===
+        ; === 3. PROCESSAR TILE ID ===
         lda (DP_VADER_LAYOUT_PTR),y
         sta OAMMIRROR, X
         inx
-        iny                     ; Aponta para os Atributos
+        iny                     
 
-        ; === 4. PROCESSAR ATRIBUTOS E INJETAR H-FLIP HIERÁRQUICO ===
+        ; === 4. PROCESSAR ATRIBUTOS E H-FLIP ===
         lda (DP_VADER_LAYOUT_PTR),y
-        sta z:DP_TEMP_00        ; Rascunho rápido em RAM
+        sta z:DP_TEMP_03                ; Rascunho rápido de atributos
         
-        lda VaderCrab + VaderCrabStruct::Facing
-        bne @NoFlip             ; Se for 1 (Direita), não flipa por hardware
+        lda z:DP_TEMP_00                ; Testa Facing
+        bne @NoFlip             
 
 @ApplyFlip:
-        lda z:DP_TEMP_00
-        ;ora #%01000000          ; Injeta o Bit 6 de Flip Horizontal na PPU
-        eor #%01000000          ; Injeta o Bit 6 de Flip Horizontal na PPU
-        sta z:DP_TEMP_00
+        lda z:DP_TEMP_03
+        eor #%01000000          
+        sta z:DP_TEMP_03
 
 @NoFlip:
-        lda z:DP_TEMP_00
+        lda z:DP_TEMP_03
         sta OAMMIRROR, X        
         
         inx
-        iny                     ; Avança para o próximo bloco
+        iny                     
 
-        cpy #64                 ; Desenhou os 16 blocos (16 * 4 bytes)?
+        cpy #64                 
         bne DrawLoop 
 
         rts
 .endproc
-
 
 
 
