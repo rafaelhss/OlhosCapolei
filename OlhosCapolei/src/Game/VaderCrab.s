@@ -545,218 +545,161 @@ VaderCrab_Layout_FrameAttacking1:
 ;-------------------------------------------------------------------------------
 ;   DrawVaderCrab
 ;-------------------------------------------------------------------------------
-; Garanta que esse slot de 16-bit está livre na Direct Page
-; DP_ENEMY_STRUCT_PTR = $02 
-
 .proc DrawVaderCrab
-        ; --- RECUPERAÇÃO DO PARÂMETRO DA PILHA ---
-        lda 3,s                         
-        sta z:DP_ENEMY_STRUCT_PTR
-        lda 4,s                         
-        sta z:DP_ENEMY_STRUCT_PTR+1     ; DP_ENEMY_STRUCT_PTR aponta para o caranguejo atual
+        ; 1. Transiciona temporariamente o acumulador para 16-bit para ler o endereço completo
+        rep #$20                        
+        .a16
+        
+        lda 3,s                         ; Carrega o endereço de 16-bit da Struct direto da pilha
+        tay                             ; Transfere instantaneamente para o registrador Y!
 
-        ; --- PIPELINE HIERÁRQUICO DE SELEÇÃO DE MATRIZ ---
-        ; Para evitar usar Y aqui, usamos uma técnica simples: 
-        ; Adicionamos o offset diretamente ao ponteiro na Direct Page temporariamente!
+        ; Retorna o acumulador para 8-bit, pois o restante do jogo usa .a8
+        sep #$20                        
+        .a8
         
-        ; 1. Checa HurtTimer
-        clc
-        lda z:DP_ENEMY_STRUCT_PTR
-        adc #VaderCrabStruct::HurtTimer
-        sta z:DP_TEMP_02                ; Endereço exato do HurtTimer em WRAM
-        lda z:DP_ENEMY_STRUCT_PTR+1
-        adc #0
-        sta z:DP_TEMP_02+1
+        ; 2. Salva uma cópia rápida (Cache) dos dados da Struct para a Direct Page
+        ; Agora o Y está carregado perfeitamente com o endereço correto da WRAM
+        lda a:VaderCrabStruct::X_Pos, y
+        sta z:DP_ENEMY_X
         
-        lda [DP_TEMP_02]                ; Leitura indireta longa
+        lda a:VaderCrabStruct::Y_Pos, y
+        sta z:DP_ENEMY_Y
+        
+        lda a:VaderCrabStruct::Facing, y
+        sta z:DP_ENEMY_FACING
+
+
+        ; 3. MÁQUINA DE ESTADOS: Decide qual Layout Gráfico usar
+        lda a:VaderCrabStruct::HurtTimer, y
         beq @CheckStates
 
         ldy #.loword(VaderCrab_Layout_Hurt)
-        sty z:DP_VADER_LAYOUT_PTR        
-        bra @StartDraw
+        bra @SaveLayout
 
 @CheckStates:
-        ; 2. Checa Estado
-        clc
-        lda z:DP_ENEMY_STRUCT_PTR
-        adc #VaderCrabStruct::State
-        sta z:DP_TEMP_02
-        lda z:DP_ENEMY_STRUCT_PTR+1
-        adc #0
-        sta z:DP_TEMP_02+1
-        
-        lda [DP_TEMP_02]
+        lda a:VaderCrabStruct::State, y
         cmp #STATE_PREPARING
         bne @CheckAttacking
 
-        ; Checa Preparing_Anim_Frame
-        clc
-        lda z:DP_ENEMY_STRUCT_PTR
-        adc #VaderCrabStruct::Preparing_Anim_Frame
-        sta z:DP_TEMP_02
-        lda z:DP_ENEMY_STRUCT_PTR+1
-        adc #0
-        sta z:DP_TEMP_02+1
-        
-        lda [DP_TEMP_02]
+        ; --- Estado: Preparando Ataque ---
+        lda a:VaderCrabStruct::Preparing_Anim_Frame, y
         cmp #1
         beq @Prep1
         cmp #2
         beq @Prep2
-
 @Prep0: 
-        ldy #.loword(VaderCrab_Layout_FramePreparing0)
-        bra @SavePtr
+        ldy #.loword(VaderCrab_Layout_FramePreparing0) 
+        bra @SaveLayout
 @Prep1: 
-        ldy #.loword(VaderCrab_Layout_FramePreparing1)
-        bra @SavePtr
+        ldy #.loword(VaderCrab_Layout_FramePreparing1) 
+        bra @SaveLayout
 @Prep2: 
-        ldy #.loword(VaderCrab_Layout_FramePreparing2)
-        bra @SavePtr
+        ldy #.loword(VaderCrab_Layout_FramePreparing2) 
+        bra @SaveLayout
 
 @CheckAttacking:
         cmp #STATE_ATACKING
         bne @CheckWalking
 
-        clc
-        lda z:DP_ENEMY_STRUCT_PTR
-        adc #VaderCrabStruct::Attacking_Anim_Frame
-        sta z:DP_TEMP_02
-        lda z:DP_ENEMY_STRUCT_PTR+1
-        adc #0
-        sta z:DP_TEMP_02+1
-        
-        lda [DP_TEMP_02]
+        ; --- Estado: Atacando ---
+        lda a:VaderCrabStruct::Attacking_Anim_Frame, y
         bne @Attack1
 @Attack0: 
-        ldy #.loword(VaderCrab_Layout_FrameAttacking0)
-        bra @SavePtr
+        ldy #.loword(VaderCrab_Layout_FrameAttacking0) 
+        bra @SaveLayout
 @Attack1: 
-        ldy #.loword(VaderCrab_Layout_FrameAttacking1)
-        bra @SavePtr
+        ldy #.loword(VaderCrab_Layout_FrameAttacking1) 
+        bra @SaveLayout
 
 @CheckWalking:
-        clc
-        lda z:DP_ENEMY_STRUCT_PTR
-        adc #VaderCrabStruct::Anim_Frame
-        sta z:DP_TEMP_02
-        lda z:DP_ENEMY_STRUCT_PTR+1
-        adc #0
-        sta z:DP_TEMP_02+1
-        
-        lda [DP_TEMP_02]
+        ; --- Estado Padrão: Caminhada / Idle ---
+        lda a:VaderCrabStruct::Anim_Frame, y
         bne @Walk1
 @Walk0: 
         ldy #.loword(VaderCrab_Layout)
-        bra @SavePtr
+        bra @SaveLayout
 @Walk1: 
         ldy #.loword(VaderCrab_Layout_Frame1)
 
-@SavePtr:
+@SaveLayout:
         sty z:DP_VADER_LAYOUT_PTR
 
-@StartDraw:
-        ; Buscamos de antemão os valores fixos de X, Y e Facing para não re-calcular no loop
-        ; Salvando nas variáveis temporárias da Direct Page
-        
-        ; Busca Facing
-        clc
-        lda z:DP_ENEMY_STRUCT_PTR
-        adc #VaderCrabStruct::Facing
-        sta z:DP_TEMP_02
-        lda z:DP_ENEMY_STRUCT_PTR+1
-        adc #0
-        sta z:DP_TEMP_02+1
-        lda [DP_TEMP_02]
-        sta z:DP_TEMP_00                ; Armazena Facing atual do inimigo em DP_TEMP_00
-
-        ; Busca X_Pos
-        clc
-        lda z:DP_ENEMY_STRUCT_PTR
-        adc #VaderCrabStruct::X_Pos
-        sta z:DP_TEMP_02
-        lda z:DP_ENEMY_STRUCT_PTR+1
-        adc #0
-        sta z:DP_TEMP_02+1
-        lda [DP_TEMP_02]
-        sta z:DP_TEMP_01                ; Armazena X_Pos atual em DP_TEMP_01
-
-        ; Busca Y_Pos
-        clc
-        lda z:DP_ENEMY_STRUCT_PTR
-        adc #VaderCrabStruct::Y_Pos
-        sta z:DP_TEMP_02
-        lda z:DP_ENEMY_STRUCT_PTR+1
-        adc #0
-        sta z:DP_TEMP_02+1
-        lda [DP_TEMP_02]
-        sta z:DP_TEMP_02                ; Armazena Y_Pos atual em DP_TEMP_02 (Sobrescreve ponteiro antigo pois não precisamos mais dele)
-
-        ldy #$0000                      ; Indexador do Layout Gráfico (0 a 63) - 100% Intacto!
-
-DrawLoop:
-        ; === 1. PROCESSAR POSIÇÃO X COM ESPELHAMENTO ===
-        lda z:DP_TEMP_00                ; Lê Facing pré-salvo
-        bne DrawXNormal         
-
-DrawXInverted:
-        lda #48
-        sec
-        sbc (DP_VADER_LAYOUT_PTR),y 
-        clc
-        adc z:DP_TEMP_01                ; Adiciona X_Pos pré-salvo
-        sta OAMMIRROR, X
-        bra ProcessY
-
-DrawXNormal:
-        lda (DP_VADER_LAYOUT_PTR),y
-        clc
-        adc z:DP_TEMP_01                ; Adiciona X_Pos pré-salvo
-        sta OAMMIRROR, X                          
-
-ProcessY:
-        inx                                       
-        iny                     
-
-        ; === 2. PROCESSAR POSIÇÃO Y ===
-        lda (DP_VADER_LAYOUT_PTR),y
-        clc
-        adc z:DP_TEMP_02                ; Adiciona Y_Pos pré-salvo
-        sta OAMMIRROR, X                          
-        inx
-        iny                     
-
-        ; === 3. PROCESSAR TILE ID ===
-        lda (DP_VADER_LAYOUT_PTR),y
-        sta OAMMIRROR, X
-        inx
-        iny                     
-
-        ; === 4. PROCESSAR ATRIBUTOS E H-FLIP ===
-        lda (DP_VADER_LAYOUT_PTR),y
-        sta z:DP_TEMP_03                ; Rascunho rápido de atributos
-        
-        lda z:DP_TEMP_00                ; Testa Facing
-        bne @NoFlip             
-
-@ApplyFlip:
-        lda z:DP_TEMP_03
-        eor #%01000000          
-        sta z:DP_TEMP_03
-
-@NoFlip:
-        lda z:DP_TEMP_03
-        sta OAMMIRROR, X        
-        
-        inx
-        iny                     
-
-        cpy #64                 
-        bne DrawLoop 
-
+        ; 4. Dispara o motor isolado de renderização de sprites
+        jsr RenderVaderSprites
         rts
 .endproc
 
+
+;-------------------------------------------------------------------------------
+;   RenderVaderSprites (Motor de Desenho Otimizado e Purificado)
+;   X = Indexador OAM (Preservado do Main)
+;   Y = Indexador Layout (Inicia em 0 e vai até 64)
+;-------------------------------------------------------------------------------
+.proc RenderVaderSprites
+        ldy #$0000              ; Inicializa Y estritamente para andar na matriz do layout
+
+@DrawLoop:
+        ; === 1. PROCESSAR POSIÇÃO X COM ESPELHAMENTO ===
+        lda z:DP_ENEMY_FACING
+        bne @DrawXNormal         
+
+@DrawXInverted:
+        lda #48
+        sec
+        sbc (DP_VADER_LAYOUT_PTR), y 
+        clc
+        adc z:DP_ENEMY_X
+        sta OAMMIRROR, x
+        bra @ProcessY
+
+@DrawXNormal:
+        lda (DP_VADER_LAYOUT_PTR), y
+        clc
+        adc z:DP_ENEMY_X
+        sta OAMMIRROR, x                          
+
+@ProcessY:
+        inx                                       
+        iny                     ; Aponta para o Offset Y no Layout
+
+        ; === 2. PROCESSAR POSIÇÃO Y ===
+        lda (DP_VADER_LAYOUT_PTR), y
+        clc
+        adc z:DP_ENEMY_Y
+        sta OAMMIRROR, x                          
+        
+        inx
+        iny                     ; Aponta para o Tile ID no Layout
+
+        ; === 3. PROCESSAR TILE ID ===
+        lda (DP_VADER_LAYOUT_PTR), y
+        sta OAMMIRROR, x
+        
+        inx
+        iny                     ; Aponta para os Atributos no Layout
+
+        ; === 4. PROCESSAR ATRIBUTOS E INJETAR H-FLIP HIERÁRQUICO ===
+        lda (DP_VADER_LAYOUT_PTR), y
+        sta z:DP_TEMP_00        ; Guarda os atributos originais do Layout
+        
+        lda z:DP_ENEMY_FACING   ; Testamos o Facing direto no Acumulador para manter Y intocado
+        bne @NoFlip             
+        
+        lda z:DP_TEMP_00
+        eor #%01000000          ; Aplica o Flip se for Esquerda (Facing = 0)
+        sta z:DP_TEMP_00
+
+@NoFlip:
+        lda z:DP_TEMP_00
+        sta OAMMIRROR, x        
+        inx
+        
+        iny                     ; Avança Y para o início do próximo bloco de 4 bytes
+        cpy #64                 ; Processou todos os 16 sub-sprites (16 * 4 = 64 bytes)?
+        bne @DrawLoop 
+
+        rts
+.endproc
 
 
 ;---------------- DEBUG ---------------
