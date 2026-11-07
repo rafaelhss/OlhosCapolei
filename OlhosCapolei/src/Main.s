@@ -196,7 +196,7 @@ _ResetAlign:
 
         ; --- RENDERIZAcÃO DO VADERCRAB ---
         pea .loword(RapaCrab)          ; Empilha o endereco de 16-bit diretamente (Y fica livre!)
-        ;jsr DrawVaderCrab
+        jsr DrawVaderCrab
         ply                     ; Tentativa Param: reset stack pointer
 
 
