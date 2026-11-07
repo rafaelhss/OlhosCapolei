@@ -1,5 +1,5 @@
 ; -----------------------------------------------------------------------------
-;   File: Main.s (Edição Elegante & Otimizada - Pipeline de Auto-polling)
+;   File: Main.s (Edicão Elegante & Otimizada - Pipeline de Auto-polling)
 ;   Description: Displays a sprite movable with the dpad
 ; -----------------------------------------------------------------------------
 
@@ -9,7 +9,7 @@
 ;-------------------------------------------------------------------------------
 
 ;----- Assembler Directives ----------------------------------------------------
-.p816                           ; Habilita o conjunto de instruções do 65816
+.p816                           ; Habilita o conjunto de instrucões do 65816
 ;-------------------------------------------------------------------------------
 
 ;----- Includes ----------------------------------------------------------------
@@ -39,7 +39,7 @@ VADER_KNOCKBACK = 12
 ;   PONTO DE ENTRADA DO SISTEMA (Boot seguro em Hardware Real)
 ;-------------------------------------------------------------------------------
 .proc   ResetHandler
-        sei                     ; Desabilita interrupções de hardware
+        sei                     ; Desabilita interrupcões de hardware
         cld                     ; Desativa modo decimal binário (Crítico para Everdrive)
         clc
         xce                     ; Transiciona o 65816 para Modo Nativo
@@ -50,7 +50,7 @@ _ResetAlign:
         rep #$10                ; Índices X/Y travados em 16-bit (.i16)
         sep #$20                ; Acumulador A travado em 8-bit (.a8)
         
-        lda #$8f                ; Força V-Blank imediato (Desliga a tela)
+        lda #$8f                ; Forca V-Blank imediato (Desliga a tela)
         sta INIDISP
         stz NMITIMEN            ; Garante NMI desligado durante limpezas
         
@@ -62,13 +62,13 @@ _ResetAlign:
         jsr ClearVRAM
         jsr ClearCGRAM
         jsr ClearOAMRAM
-        jsr InitDemo            ; Executa inicialização customizada e ativa PPU
+        jsr InitDemo            ; Executa inicializacão customizada e ativa PPU
 
         
-        ; --- ENTRADA EM AMBIENTE DE EXECUÇÃO REAL ---
+        ; --- ENTRADA EM AMBIENTE DE EXECUcÃO REAL ---
         lda #$81                ; ◄ AUTO-POLLING LIGADO: Habilita NMI ($80) + Auto-read ($01)
         sta NMITIMEN
-        cli                     ; Corta a trava global de interrupções da CPU
+        cli                     ; Corta a trava global de interrupcões da CPU
 
         jmp GameLoop            
 .endproc
@@ -92,17 +92,17 @@ _ResetAlign:
         ; 1. INPUT PIPELINE
         jsr ReadJoypad1
 
-        ; 2. SESSÃO DE FÍSICA E MOVIMENTAÇÃO
+        ; 2. SESSÃO DE FÍSICA E MOVIMENTAcÃO
 
         jsr MoveBigHero
         jsr MovePennyCrab
 
-        ; --- MOVIMENTAÇÃO DO VADERCRAB ---
+        ; --- MOVIMENTAcÃO DO VADERCRAB ---
         pea .loword(VaderCrab)
         jsr MoveVaderCrab
         ply                             ; Limpa 2 bytes da pilha (.i16 ativo)
 
-        ; --- MOVIMENTAÇÃO DO RAPACRAB ---
+        ; --- MOVIMENTAcÃO DO RAPACRAB ---
         pea .loword(RapaCrab)
         jsr MoveVaderCrab
         ply                             ; Limpa 2 bytes da pilha
@@ -130,7 +130,7 @@ _ResetAlign:
         jsr ApplyEdgeCollisions
 
 
-        ; --- DETECÇÃO DE DANO AO HERÓI PARAMETRIZADA VIA PILHA ---
+        ; --- DETECcÃO DE DANO AO HERÓI PARAMETRIZADA VIA PILHA ---
         pea .loword(VaderCrab)
         jsr ApplyDamageToHero
         ply                             ; Limpa 2 bytes da pilha
@@ -185,18 +185,18 @@ _ResetAlign:
         jsr ApplyBulletCollisions
         ply
         
-        ; 4. SISTEMA DE RENDERIZAÇÃO FINAL
+        ; 4. SISTEMA DE RENDERIZAcÃO FINAL
         ldx #$0000     
         
-        ; --- RENDERIZAÇÃO DO VADERCRAB ---
-        pea .loword(VaderCrab)          ; Empilha o endereço de 16-bit diretamente (Y fica livre!)
+        ; --- RENDERIZAcÃO DO VADERCRAB ---
+        pea .loword(VaderCrab)          ; Empilha o endereco de 16-bit diretamente (Y fica livre!)
         jsr DrawVaderCrab
         ply                     ; Tentativa Param: reset stack pointer
 
 
-        ; --- RENDERIZAÇÃO DO VADERCRAB ---
-        pea .loword(RapaCrab)          ; Empilha o endereço de 16-bit diretamente (Y fica livre!)
-        jsr DrawVaderCrab
+        ; --- RENDERIZAcÃO DO VADERCRAB ---
+        pea .loword(RapaCrab)          ; Empilha o endereco de 16-bit diretamente (Y fica livre!)
+        ;jsr DrawVaderCrab
         ply                     ; Tentativa Param: reset stack pointer
 
 
@@ -219,17 +219,17 @@ Draweapons:
         ldy #.loword(WeaponA)            ; Garante que aponta para a WeaponA padrão
         jsr DrawDroppedWeapon     
         
-        ldy #.loword(WeaponB)     ; Passa o endereço de WRAM da WeaponB por parâmetro
+        ldy #.loword(WeaponB)     ; Passa o endereco de WRAM da WeaponB por parâmetro
         jsr DrawDroppedWeapon     ; Desenha reutilizando o mesmo código!
 
-        ldy #.loword(WeaponC)     ; Passa o endereço de WRAM da WeaponC por parâmetro
+        ldy #.loword(WeaponC)     ; Passa o endereco de WRAM da WeaponC por parâmetro
         jsr DrawDroppedWeapon     ; Desenha reutilizando o mesmo código!
 
-        ldy #.loword(WeaponD)     ; Passa o endereço de WRAM da WeaponC por parâmetro
+        ldy #.loword(WeaponD)     ; Passa o endereco de WRAM da WeaponC por parâmetro
         jsr DrawDroppedWeapon     ; Desenha reutilizando o mesmo código!
 
 
-        ldy #.loword(WeaponE)     ; Passa o endereço de WRAM da WeaponC por parâmetro
+        ldy #.loword(WeaponE)     ; Passa o endereco de WRAM da WeaponC por parâmetro
         jsr DrawDroppedWeapon     ; Desenha reutilizando o mesmo código!
         ;lda z:$00
         ;eor #$40                        
@@ -332,7 +332,10 @@ Finish:
 
 ;-------------------------------------------------------------------------------
 ;   ApplyWeaponCollisions (Leitura de Direct Page Direta)
-;   Entrada: Y = Endereço absoluto do slot da Arma
+;   Entrada: Y = Endereco absoluto do slot da Arma
+;-------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
+;   ApplyWeaponCollisions (Física de Ricochete Corrigida de Ponta a Ponta)
 ;-------------------------------------------------------------------------------
 .proc ApplyWeaponCollisions
         lda a:WeaponStruct::Active, y
@@ -380,7 +383,9 @@ Finish:
         lda #30
         sta a:VaderCrabStruct::HurtTimer, x
 
+        ; --- SALVA DIREcÃO DA ARMA ANTES DE ALTERAR RESTRUTURAcÕES ---
         lda a:WeaponStruct::Speed_X, y
+        sta z:DP_TEMP_00                ; Salva o vetor original no rascunho temporário
         bmi @PedraIndoParaEsquerda
 
 @PedraIndoParaDireita:
@@ -390,10 +395,10 @@ Finish:
         sta a:VaderCrabStruct::X_Pos, x
 
         cmp #(SCREEN_RIGHT - 48)
-        bcc @ApplyRicochet
+        bcc @ForcaRicochete
         lda #(SCREEN_RIGHT - 48)
         sta a:VaderCrabStruct::X_Pos, x
-        bra @ApplyRicochet
+        bra @ForcaRicochete
 
 @PedraIndoParaEsquerda:
         lda a:VaderCrabStruct::X_Pos, x
@@ -402,28 +407,31 @@ Finish:
         sta a:VaderCrabStruct::X_Pos, x
 
         cmp #SCREEN_LEFT
-        bcs @ApplyRicochet
+        bcs @ForcaRicochete
         lda #SCREEN_LEFT
         sta a:VaderCrabStruct::X_Pos, x
 
-@ApplyRicochet:
-        lda a:WeaponStruct::Speed_X, y
+@ForcaRicochete:
+        ; --- INVERSÃO MATEMÁTICA ABSOLUTA DO VETOR HORIZONTAL ---
+        lda z:DP_TEMP_00                ; Recupera o Speed_X original salvo
         eor #$FF
         clc
         adc #1
-        sta a:WeaponStruct::Speed_X, y
+        sta a:WeaponStruct::Speed_X, y  ; Grava de volta cravado na struct da arma
 
+        ; Impulso Vertical de quique para cima
         lda #$FC                
         sta a:WeaponStruct::Speed_Y, y
+        rts                             ; Sai direto com sucesso, pulando o bloco NoCollision
 
 @NoCollision:
-        ldy z:DP_WEAPON_POOL_PTR        
+        ldy z:DP_WEAPON_POOL_PTR        ; Restaura Y se não bateu
         rts
 .endproc
 
 ;-------------------------------------------------------------------------------
 ;   ApplyMeleeWeaponCollisions (Leitura de Direct Page Direta)
-;   Entrada: Y = Endereço absoluto do slot da Arma
+;   Entrada: Y = Endereco absoluto do slot da Arma
 ;-------------------------------------------------------------------------------
 .proc ApplyMeleeWeaponCollisions
 MeleeStart:
@@ -530,13 +538,13 @@ MeleeExit:
 ;-------------------------------------------------------------------------------
 
 ;-------------------------------------------------------------------------------
-;   ApplyDamageToHero (Versão Arcade Premium - Proteção Atômica de Hitstun)
+;   ApplyDamageToHero (Versão Arcade Premium - Protecão Atômica de Hitstun)
 ;-------------------------------------------------------------------------------
 ;-------------------------------------------------------------------------------
 ;   ApplyDamageToHero (Versão Arcade Premium Parametrizada via Pilha)
 ;-------------------------------------------------------------------------------
 .proc ApplyDamageToHero
-        ; 1. Recupera o endereço de 16-bit da Struct do inimigo enviado via pilha
+        ; 1. Recupera o endereco de 16-bit da Struct do inimigo enviado via pilha
         rep #$20
         .a16
         lda 3,s
@@ -547,7 +555,7 @@ MeleeExit:
         ; =====================================================================
         ; FILTROS PRELIMINARES DE HARDWARE (8-bit)
         ; =====================================================================
-        ; 1. Se o Herói está em Hitstun/Recuperação, aborta imediatamente!
+        ; 1. Se o Herói está em Hitstun/Recuperacão, aborta imediatamente!
         lda BigHero + BigHeroStruct::HurtTimer
         bne @AbortDamage
 
@@ -640,7 +648,7 @@ MeleeExit:
 ;   File: Main.s (PARTE 2 DE 2 - KNOCKBACK DINÂMICO) - Substitua a antiga
 ; -----------------------------------------------------------------------------
 .proc TriggerHeroDamageEffect
-        ; 1. Recupera o endereço do caranguejo enviado da pilha para o registrador Y
+        ; 1. Recupera o endereco do caranguejo enviado da pilha para o registrador Y
         rep #$20
         .a16
         lda 3,s                         
@@ -658,7 +666,7 @@ MeleeExit:
         
         KNOCKBACK_FORCE = 16
 
-        ; 2. Verifica a direção do caranguejo atual parametrizado em Y
+        ; 2. Verifica a direcão do caranguejo atual parametrizado em Y
         lda VaderCrabStruct::Facing, y
         bne @PushToRight        
 
@@ -708,9 +716,9 @@ CheckHeroLeft:
         ; Se o herói passou da esquerda (underflow), o valor capotou para perto de $FF (ex: $FD, $FE, $FF)
         ; Se o valor for maior que 240 e ele estava perto do zero, ele cruzou a borda esquerda.
         cmp #240
-        bcc CheckHeroRight          ; Se X < 240, está em uma posição normal da tela. Checa a direita.
+        bcc CheckHeroRight          ; Se X < 240, está em uma posicão normal da tela. Checa a direita.
         
-        ; Se caiu aqui, houve underflow (X >= 240 vindo do zero). Força na borda esquerda!
+        ; Se caiu aqui, houve underflow (X >= 240 vindo do zero). Forca na borda esquerda!
         lda #SCREEN_LEFT            
         sta BigHero + BigHeroStruct::X_Pos
         bra CheckHeroTop            
@@ -731,7 +739,7 @@ CheckHeroTop:
         cmp #240
         bcc CheckHeroBottom         ; Se Y < 240, altura está normal. Checa a base.
         
-        ; Se caiu aqui, houve underflow no teto. Força na borda superior!
+        ; Se caiu aqui, houve underflow no teto. Forca na borda superior!
         lda #SCREEN_TOP             
         sta BigHero + BigHeroStruct::Y_Pos
         bra CollisionDone          
@@ -750,15 +758,15 @@ CollisionDone:
 .endproc
 
 ;-------------------------------------------------------------------------------
-;   EXECUÇÃO AUTOMÁTICA EM V-BLANK (Hardware real manipula OAM aqui)
+;   EXECUcÃO AUTOMÁTICA EM V-BLANK (Hardware real manipula OAM aqui)
 ;-------------------------------------------------------------------------------
 .proc   NMIHandler
-        lda RDNMI               ; Lê e limpa o flag indicador de interrupção de NMI
+        lda RDNMI               ; Lê e limpa o flag indicador de interrupcão de NMI
 .import Hero, InimigoGrande, InimigoGrande2
 
        
         tsx                     ; Preserva o ponteiro de pilha atual
-        pea OAMMIRROR           ; Injeta o endereço do espelho da RAM
+        pea OAMMIRROR           ; Injeta o endereco do espelho da RAM
         jsr UpdateOAMRAM        ; Envia os dados para a OAM real via DMA
         txs                     ; Restaura a pilha instantaneamente
 
@@ -766,14 +774,14 @@ CollisionDone:
 .endproc
 
 ;-------------------------------------------------------------------------------
-;   VETOR DE PROSPECÇÃO DE HARDWARE
+;   VETOR DE PROSPECcÃO DE HARDWARE
 ;-------------------------------------------------------------------------------
 .proc   IRQHandler
         rti
 .endproc
 
 ;-------------------------------------------------------------------------------
-;   ALOCAÇÃO DE VARIÁVEIS NA WRAM 
+;   ALOCAcÃO DE VARIÁVEIS NA WRAM 
 ;-------------------------------------------------------------------------------
 .segment "BSS"
 .export BigHero 
