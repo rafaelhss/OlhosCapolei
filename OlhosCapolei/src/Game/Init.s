@@ -25,6 +25,7 @@
 .import  BigHero, PennyCrab, VaderCrab, WeaponA, WeaponB, WeaponC, WeaponD, WeaponE
 .import RapaCrab
 .import Bullet
+.import Bullet2
 .import InitRNG
 .import Pow
 
@@ -328,8 +329,27 @@ sta RapaCrab + VaderCrabStruct::Enemy_Type
         sta Bullet + BulletStruct::Speed_X
                  
 
-; =========== FIM BiigHero
+; =========== FIM bullet
 
+;------------- cria Bullet2
+
+        lda #64                        ; Nasce perto do meio horizontal da tela
+        sta Bullet2 + BulletStruct::X_Pos
+        
+        lda #100                        ; Nasce em uma altura boa de chão (eixo Z)
+        sta Bullet2 + BulletStruct::Y_Pos
+
+        lda #$01
+        sta Bullet2 + BulletStruct::Active
+
+        lda #$84
+        sta Bullet2 + BulletStruct::Tile_ID
+
+        lda #$01 
+        sta Bullet2 + BulletStruct::Speed_X
+                 
+
+; =========== FIM bullet2
 
 
 ;--- cria Pow

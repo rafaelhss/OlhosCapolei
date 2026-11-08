@@ -12,9 +12,11 @@
 .include "Registers.inc"
 
 .import BigHero, Bullet
+.import Bullet2
 
 
 .export DrawBullet, MoveBullet
+.export DrawBullet2, MoveBullet2 
 
 
 
@@ -98,3 +100,76 @@ Finish:
         rts
 .endproc
 
+;-------------------------------------------------------------------------------
+;   DrawBullet2 (Renderizador Dedicado para o Slot 2)
+;-------------------------------------------------------------------------------
+.proc DrawBullet2
+        lda Bullet2 + BulletStruct::Active
+        cmp #BULLET_STATE_INACTIVE
+        beq Finish
+
+        lda Bullet2 + BulletStruct::X_Pos
+        sta OAMMIRROR, x
+        inx
+        
+        lda Bullet2 + BulletStruct::Y_Pos
+        sta OAMMIRROR, x
+        inx
+        
+        lda Bullet2 + BulletStruct::Tile_ID
+        sta OAMMIRROR, x
+        inx
+        
+        lda Bullet2 + BulletStruct::Speed_X  
+        bmi @SingleDefaultAttributes
+
+@SingleApplyFlip:
+        lda #$00                         
+        sta OAMMIRROR, x
+        inx
+        rts
+
+@SingleDefaultAttributes:
+        lda #$00                         
+        eor #$40                         
+        sta OAMMIRROR, x
+        inx
+        rts
+Finish:
+        rts    
+.endproc
+
+;-------------------------------------------------------------------------------
+;   MoveBullet2 (Física Dedicada para o Slot 2)
+;-------------------------------------------------------------------------------
+.proc MoveBullet2
+        lda Bullet2 + BulletStruct::Active
+        cmp #BULLET_STATE_ACTIVE
+        bne @Exit
+        
+@StartFisica:
+        lda Bullet2 + BulletStruct::X_Pos
+        clc
+        adc Bullet2 + BulletStruct::Speed_X
+        sta Bullet2 + BulletStruct::X_Pos
+
+@CheckWallRight:
+        lda Bullet2 + BulletStruct::X_Pos
+        cmp #(SCREEN_RIGHT - 16)        
+        bcc @CheckWallLeft               
+
+        lda #(SCREEN_RIGHT - 17)        
+        sta Bullet2 + BulletStruct::X_Pos
+        bra @WallHit
+
+@CheckWallLeft:
+        lda Bullet2 + BulletStruct::X_Pos
+        cmp #(SCREEN_LEFT + 4)
+        bcs @Exit            
+
+@WallHit:
+        lda #BULLET_STATE_INACTIVE
+        sta Bullet2 + BulletStruct::Active
+@Exit:
+        rts
+.endproc

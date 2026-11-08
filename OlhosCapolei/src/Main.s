@@ -124,6 +124,7 @@ _ResetAlign:
         jsr UpdateProjectiles
 
         jsr MoveBullet
+        jsr MoveBullet2
 
 
         ; 3. FILTRO DE COLISÕES & REGRAS DE GAMEPLAY
@@ -162,6 +163,9 @@ _ResetAlign:
         pea .loword(VaderCrab)
         jsr ApplyBulletCollisions
         ply
+        pea .loword(VaderCrab)
+        jsr ApplyBullet2Collisions
+        ply
 
 
 
@@ -184,6 +188,9 @@ _ResetAlign:
         pea .loword(RapaCrab)
         jsr ApplyBulletCollisions
         ply
+        pea .loword(RapaCrab)
+        jsr ApplyBullet2Collisions
+        ply
         
         ; 4. SISTEMA DE RENDERIZAcÃO FINAL
         ldx #$0000     
@@ -203,6 +210,7 @@ _ResetAlign:
 
 
         jsr DrawBullet
+        jsr DrawBullet2
 
 
         lda BigHero + BigHeroStruct::Current_Weapon_ID
@@ -337,6 +345,83 @@ Finish:
 @Finish:
         rts
 .endproc
+
+
+;-------------------------------------------------------------------------------
+;   ApplyBullet2Collisions (Física de Impacto para o Segundo Slot de Tiro)
+;-------------------------------------------------------------------------------
+.proc ApplyBullet2Collisions
+        lda Bullet2 + BulletStruct::Active
+        cmp #BULLET_STATE_ACTIVE
+        beq @CheckVaderVulnerable
+        rts
+
+@CheckVaderVulnerable:
+        ldy z:DP_ENEMY_STRUCT_PTR       
+        lda VaderCrabStruct::HurtTimer, y
+        beq @StartAABB
+        rts
+
+@StartAABB:
+        ldy z:DP_ENEMY_STRUCT_PTR       
+        lda Bullet2 + BulletStruct::X_Pos
+        clc
+        adc #16                 
+        cmp VaderCrabStruct::Hurtbox_X1, y
+        bcc @NoCollision
+        beq @NoCollision
+
+        lda Bullet2 + BulletStruct::X_Pos
+        cmp VaderCrabStruct::Hurtbox_X2, y
+        bcs @NoCollision
+
+        lda Bullet2 + BulletStruct::Y_Pos
+        clc
+        adc #16                 
+        cmp VaderCrabStruct::Hurtbox_Y1, y
+        bcc @NoCollision
+        beq @NoCollision
+
+        lda Bullet2 + BulletStruct::Y_Pos
+        cmp VaderCrabStruct::Hurtbox_Y2, y
+        bcs @NoCollision
+
+        ; =====================================================================
+        ; IMPACTO CONFIRMADO (Bullet 2)
+        ; =====================================================================
+        lda #BULLET_STATE_INACTIVE
+        sta Bullet2 + BulletStruct::Active
+
+        ldy z:DP_ENEMY_STRUCT_PTR       
+        lda #30
+        sta VaderCrabStruct::HurtTimer, y
+
+        ldy z:DP_ENEMY_STRUCT_PTR 
+        jsr createEnemyPow
+        
+        ldy z:DP_ENEMY_STRUCT_PTR
+        lda Bullet2 + BulletStruct::Speed_X
+        bmi @BulletIndoParaEsquerda
+
+@BulletIndoParaDireita:
+        lda VaderCrabStruct::X_Pos, y
+        clc
+        adc #VADER_KNOCKBACK
+        sta VaderCrabStruct::X_Pos, y
+        bra @Finish
+
+@BulletIndoParaEsquerda:
+        lda VaderCrabStruct::X_Pos, y
+        sec
+        sbc #VADER_KNOCKBACK
+        sta VaderCrabStruct::X_Pos, y
+
+@NoCollision:
+@Finish:
+        rts
+.endproc
+
+
 
 ;-------------------------------------------------------------------------------
 ;   ApplyWeaponCollisions (Leitura de Direct Page Direta)
@@ -916,6 +1001,7 @@ Finish:
 .export WeaponE
 .export Bullet
 .export Pow
+.export Bullet2
 
 
 BigHero:         .tag BigHeroStruct
@@ -929,6 +1015,7 @@ WeaponC:         .tag WeaponStruct
 WeaponD:         .tag WeaponStruct
 WeaponE:         .tag WeaponStruct
 Bullet:          .tag BulletStruct
+Bullet2:          .tag BulletStruct
 
 Pow:             .tag PowStruct
 

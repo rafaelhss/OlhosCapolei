@@ -8,6 +8,8 @@ BULLET_INC = 1
 ;----- Import ------------------------------------------------------------------
 .import     MoveBullet
 .import     DrawBullet
+.import     MoveBullet2
+.import     DrawBullet2
 ;-------------------------------------------------------------------------------
 
 .endif

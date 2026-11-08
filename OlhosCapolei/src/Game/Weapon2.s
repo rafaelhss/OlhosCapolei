@@ -27,6 +27,7 @@
 .import     WeaponD
 .import     WeaponE
 .import     Bullet
+.import     Bullet2
 .import     rand                ; Invocando o seu LFSR puro de src/common/Util.s
 
 ;----- Includes ----------------------------------------------------------------
@@ -876,47 +877,74 @@ Weapon_Chain_Anims_Table:
 
 
 
+;-------------------------------------------------------------------------------
+;   ProcessFireAttack (Seleção Dinâmica de Slots de Projétil)
+;   Entrada: Y = Endereço absoluto do slot ativo da Pistola
+;-------------------------------------------------------------------------------
 .proc ProcessFireAttack
-        ; Só inicia se o temporizador do golpe estiver zerado (evita spam)
+        ; Só inicia se o temporizador da pistola estiver zerado (evita spam)
         lda a:WeaponStruct::Melee_Timer, y
         bne @Exit
 
-        ; Configura o tiro com 10 frames de duração total
+        ; Configura o cooldown do tiro com 10 frames de duração
         lda #10
         sta a:WeaponStruct::Melee_Timer, y
         
-        ; Inicia no frame de animação 0
         lda #$00
         sta a:WeaponStruct::Melee_Frame, y
 
-        
-        lda  a:WeaponStruct::X_Pos, y
+        ; --- SELEÇÃO DE ARSENAL: Tenta o Slot 1 primeiro ---
+        lda Bullet + BulletStruct::Active
+        beq @AtirarNoSlot1              ; Se estiver 0 (INACTIVE), dispara a Bullet 1
+
+        ; Se a Bullet 1 estiver ocupada, tenta o Slot 2
+        lda Bullet2 + BulletStruct::Active
+        beq @AtirarNoSlot2              ; Se estiver 0 (INACTIVE), dispara a Bullet 2
+        bra @Exit                       ; Ambas na tela? Aborta o disparo
+
+@AtirarNoSlot1:
+        lda a:WeaponStruct::X_Pos, y
         sta Bullet + BulletStruct::X_Pos
-        
-        lda  a:WeaponStruct::Y_Pos, y
+        lda a:WeaponStruct::Y_Pos, y
         sta Bullet + BulletStruct::Y_Pos
+        lda #$EE
+        sta Bullet + BulletStruct::Tile_ID
         
         lda #$01
         sta Bullet + BulletStruct::Active
 
-        lda #$EE
-        sta Bullet + BulletStruct::Tile_ID
+        lda BigHero + BigHeroStruct::Facing
+        bne @Esquerda1
+        lda #BULLET_SPEED
+        sta Bullet + BulletStruct::Speed_X
+        bra @Exit
+@Esquerda1:
+        lda #<(-BULLET_SPEED)
+        sta Bullet + BulletStruct::Speed_X
+        bra @Exit
+
+@AtirarNoSlot2:
+        lda a:WeaponStruct::X_Pos, y
+        sta Bullet2 + BulletStruct::X_Pos
+        lda a:WeaponStruct::Y_Pos, y
+        sta Bullet2 + BulletStruct::Y_Pos
+        lda #$84
+        sta Bullet2 + BulletStruct::Tile_ID
+        
+        lda #$01
+        sta Bullet2 + BulletStruct::Active
 
         lda BigHero + BigHeroStruct::Facing
-        bne @BulletEsquerda
+        bne @Esquerda2
         lda #BULLET_SPEED
-        bra @SetSpeed
-
-@BulletEsquerda:
-        lda #<(-BULLET_SPEED) 
-@SetSpeed:
-
-        sta Bullet + BulletStruct::Speed_X
-        
-
+        sta Bullet2 + BulletStruct::Speed_X
+        bra @Exit
+@Esquerda2:
+        lda #<(-BULLET_SPEED)
+        sta Bullet2 + BulletStruct::Speed_X
 
 @Exit:
-rts
+        rts
 .endproc
 
 ;-------------------------------------------------------------------------------
