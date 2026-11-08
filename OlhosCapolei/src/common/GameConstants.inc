@@ -38,6 +38,9 @@ SPRITE_SPEED    = $01   ; Velocidade base do herói
 ENEMY_ATTACK_DISTANCE = $32   ; Distância de engajamento do ataque da IA   
 ENEMY_ATTACK_Y_RANGE  = $08   ; Tolerância no eixo Y para alinhamento tridimensional
 
+SECTOR_OFFSET_X = 40
+SECTOR_OFFSET_Y = 24
+
 ; --- Limites Preventivos contra Underflow (Zonas de Amortecimento) ---
 HERO_SAFE_LIMIT         = (SPRITE_SPEED + SPRITE_SPEED) 
 HERO_SCREEN_SAFE_LIMIT  = SCREEN_RIGHT - HERO_SAFE_LIMIT
@@ -63,6 +66,10 @@ DP_TEMP_01              = $01
 DP_TEMP_02              = $02
 DP_TEMP_03              = $03
 DP_TEMP_CALC            = $05   ; ◄ ADICIONE ISSO: Rascunho isolado para matemática de ponteiros
+
+DP_TEMP_04              = $06
+
+DP_TEMP_05              = $08
 
 
 ; --- Zona Exclusiva do Subsistema do Herói (BigHero.s) ---
@@ -181,6 +188,8 @@ ENEMY_TYPE_RAPA  = 1 ; Rapa nui crab
     Hurtbox_Y2            .byte 
     HurtTimer            .byte
     Enemy_Type           .byte  
+    Attack_Sector        .byte
+
       
 .endstruct
 

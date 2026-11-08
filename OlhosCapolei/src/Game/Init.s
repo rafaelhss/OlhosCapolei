@@ -242,7 +242,10 @@ Table_Init_Weapons:
         sta VaderCrab + VaderCrabStruct::State
 
         lda #ENEMY_TYPE_VADER
-sta VaderCrab + VaderCrabStruct::Enemy_Type
+        STA VaderCrab + VaderCrabStruct::Enemy_Type
+
+        lda #$02
+        sta VaderCrab + VaderCrabStruct::Attack_Sector
 
 ;=========== FIM Vader
 
@@ -277,7 +280,11 @@ sta VaderCrab + VaderCrabStruct::Enemy_Type
         sta RapaCrab + VaderCrabStruct::State
 
 lda #ENEMY_TYPE_RAPA
-sta RapaCrab + VaderCrabStruct::Enemy_Type
+STA RapaCrab + VaderCrabStruct::Enemy_Type
+
+
+    lda #$01
+    sta RapaCrab + VaderCrabStruct::Attack_Sector       
 ;=========== FIM Rapa
 
 

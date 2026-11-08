@@ -1,5 +1,5 @@
 ; -----------------------------------------------------------------------------
-;   File: VaderCrab.s (VERSÃO INTEGRAL - COMPILAÇÃO DIRETA CA65)
+;   File: VaderCrab.s (VERSÃO REVISADA - COMPILAÇÃO DIRETA CA65)
 ;   Description: Subroutines to move and draw VaderCrab and RapaCrab dynamic elements
 ; -----------------------------------------------------------------------------
 
@@ -30,14 +30,16 @@ ATTACKING_ANIM_SPEED = 15
 ATTACKING_DURATION_FRAMES = 45
 ATTACK_MAX_FRAMES = 2  
 
-
-
 DP_DRAW_ENEMY_TYPE = $10
 
 .segment "CODE"
 
+;===============================================================================
+;   SISTEMA DE MOVIMENTAÇÃO (IA E FÍSICA)
+;===============================================================================
+
 ;-------------------------------------------------------------------------------
-;   MoveVaderCrab (IA e Física Parametrizadas via Pilha)
+;   MoveVaderCrab (IA e Física Parametrizadas via Pilha) - ORQUESTRADOR
 ;-------------------------------------------------------------------------------
 .proc MoveVaderCrab
         rep #$20                        
@@ -47,30 +49,94 @@ DP_DRAW_ENEMY_TYPE = $10
         sep #$20                        
         .a8
 
+        ; Verifica se o inimigo está em animação de dano (Hurt)
         lda a:VaderCrabStruct::HurtTimer, y
         beq @ProcessIA                  
         
         sec
         sbc #1
         sta a:VaderCrabStruct::HurtTimer, y
-        brl Done   
+        brl @Done   
 
 @ProcessIA:
-AttackFrameUpdate:
+        ; --- RASTREAMENTO DINÂMICO DE FACING DURANTE O PREPARO ---
+        lda a:VaderCrabStruct::State, y
+        cmp #STATE_PREPARING            ; Ele está se preparando para atacar?
+        bne @AvaliaEstados              ; Se não estiver, segue o fluxo normal
+        
+        ; Se estiver se preparando, força o caranguejo a olhar para o herói se ele mudar de lado
+        lda a:VaderCrabStruct::X_Pos, y
+        cmp BigHero + BigHeroStruct::X_Pos
+        bcc @OlhaDireitaPreparo
+
+@OlhaEsquerdaPreparo:
+        lda #0
+        sta a:VaderCrabStruct::Facing, y
+        bra @AvaliaEstados
+
+@OlhaDireitaPreparo:
+        lda #1
+        sta a:VaderCrabStruct::Facing, y
+
+@AvaliaEstados:
         lda a:VaderCrabStruct::State, y
         cmp #STATE_ATACKING
-        beq @ProcessandoAtaque
-        brl PreparingFrameUpdate 
+        bne @CheckPreparing
+        jsr UpdateAttackingState
+        bra @ApplyMovement
 
-@ProcessandoAtaque:  
+@CheckPreparing:
+        cmp #STATE_PREPARING
+        bne @CheckResting
+        jsr UpdatePreparingState
+        bra @ApplyMovement
+
+@CheckResting:
+        lda a:VaderCrabStruct::Resting_Timer, y
+        sec
+        sbc #1
+        sta a:VaderCrabStruct::Resting_Timer, y
+        bpl @ProcessResting
+
+        lda a:VaderCrabStruct::State, y
+        cmp #STATE_WALKING
+        bne @ApplyMovement
+        
+        jsr UpdateWalkAnimation
+        bra @ApplyMovement
+
+@ProcessResting:
+        jsr UpdateRestingState
+
+@ApplyMovement:
+        ; Bloqueia alteração de física/posição enquanto o golpe é desferido
+        lda a:VaderCrabStruct::State, y
+        cmp #STATE_ATACKING
+        beq @Done
+        
+        lda FrameCounter
+        and #%00000001
+        beq @ExecutePhysics
+        bra @Done
+
+@ExecutePhysics:
+        jsr ApplyEnemyPhysics
+
+@Done:
+        jsr UpdateVaderGeometry
+        rts
+.endproc
+
+;-------------------------------------------------------------------------------
+.proc UpdateAttackingState
         lda a:VaderCrabStruct::Attacking_Timer, y
         clc
         adc #1
         sta a:VaderCrabStruct::Attacking_Timer, y
         cmp #ATTACKING_DURATION_FRAMES
-        bne AttackingAnim
+        bne @Anim
 
-        ; --- SANITIZAÇÃO ATÔMICA DA HITBOX E TIMERS NO FIM DO GOLPE ---
+        ; Fim do Golpe: Sanitização Atômica
         lda #0
         sta a:VaderCrabStruct::Hitbox_Active, y  
         sta a:VaderCrabStruct::Attacking_Timer, y
@@ -83,24 +149,20 @@ AttackFrameUpdate:
         lda #STATE_WALKING
         sta a:VaderCrabStruct::State, y
         
-        ;sorteia um nuero de frames pra descansar
-        jsr rand                        ; Chama seu LFSR (Devolve valor de 0 a 255 em A)
-        and #$3F                        ; Aplica máscara de bits (Isola valores de 0 a 63)
+        jsr rand                        
+        and #$3F                        
         clc
-        adc #60                         ; Soma o deslocamento base (Offset de 60)
-        
+        adc #60                         
         sta a:VaderCrabStruct::Resting_Timer, y
-        brl Move 
+        rts
 
-AttackingAnim:
+@Anim:
         lda a:VaderCrabStruct::Attacking_Anim_Timer, y
         sec
         sbc #1
         sta a:VaderCrabStruct::Attacking_Anim_Timer, y
-        beq ContinueAttackAnim 
-        brl Move 
+        bne @Done
 
-ContinueAttackAnim:
         lda #ATTACKING_ANIM_SPEED 
         sta a:VaderCrabStruct::Attacking_Anim_Timer, y
         
@@ -110,18 +172,16 @@ ContinueAttackAnim:
         cmp #ATTACK_MAX_FRAMES          
         bcc @SaveFrame                  
         lda #0                          
-
 @SaveFrame:
         sta a:VaderCrabStruct::Attacking_Anim_Frame, y
 
-@AtualizarHitbox:
-        lda a:VaderCrabStruct::Attacking_Anim_Frame, y
+        ; Atualização da Hitbox ativa com base na direção em que o ataque travou
         cmp #1
         beq @AtivarHitbox
         
         lda #0
         sta a:VaderCrabStruct::Hitbox_Active, y
-        bra @FinalizaHitbox
+        bra @Done
 
 @AtivarHitbox:
         lda #1
@@ -145,7 +205,7 @@ ContinueAttackAnim:
         sta a:VaderCrabStruct::Hitbox_X1, y
         lda a:VaderCrabStruct::X_Pos, y 
         sta a:VaderCrabStruct::Hitbox_X2, y
-        bra @FinalizaHitbox
+        bra @Done
 
 @HitboxDireitaAtaque:
         lda a:VaderCrabStruct::X_Pos, y
@@ -155,21 +215,18 @@ ContinueAttackAnim:
         clc
         adc #32                             
         sta a:VaderCrabStruct::Hitbox_X2, y
+@Done:
+        rts
+.endproc
 
-@FinalizaHitbox:
-        jmp Move
-
-PreparingFrameUpdate:
-        lda a:VaderCrabStruct::State, y
-        cmp #STATE_PREPARING
-        bne WalkFrameUpdate 
-        
+;-------------------------------------------------------------------------------
+.proc UpdatePreparingState
         lda a:VaderCrabStruct::Preparing_Timer, y
         clc
         adc #1
         sta a:VaderCrabStruct::Preparing_Timer, y
         cmp #PREPARING_DURATION_FRAMES
-        bne PreparingAnim
+        bne @Anim
  
         lda #STATE_ATACKING
         sta a:VaderCrabStruct::State, y
@@ -180,14 +237,14 @@ PreparingFrameUpdate:
         
         lda #ATTACKING_ANIM_SPEED
         sta a:VaderCrabStruct::Attacking_Anim_Timer, y
-        jmp Done
+        rts
 
-PreparingAnim:
+@Anim:
         lda a:VaderCrabStruct::Preparing_Anim_Timer, y
         sec
         sbc #1
         sta a:VaderCrabStruct::Preparing_Anim_Timer, y
-        bne Move 
+        bne @Done 
 
         lda #PREPARING_ANIM_SPEED 
         sta a:VaderCrabStruct::Preparing_Anim_Timer, y
@@ -198,28 +255,19 @@ PreparingAnim:
         cmp #PREPARING_MAX_FRAMES          
         bcc @SaveFramePrep                  
         lda #0                          
-
 @SaveFramePrep:
         sta a:VaderCrabStruct::Preparing_Anim_Frame, y
+@Done:
+        rts
+.endproc
 
-WalkFrameUpdate:
-        lda a:VaderCrabStruct::Resting_Timer, y
-        sec
-        sbc #1
-        sta a:VaderCrabStruct::Resting_Timer, y
-        bmi ContinueWalkFrameUpdate
-        brl RestFrameUpdate    
-    
-ContinueWalkFrameUpdate:
-        lda a:VaderCrabStruct::State, y
-        cmp #STATE_WALKING
-        bne Move 
-
+;-------------------------------------------------------------------------------
+.proc UpdateWalkAnimation
         lda a:VaderCrabStruct::Anim_Timer, y
         sec
         sbc #1
         sta a:VaderCrabStruct::Anim_Timer, y
-        bne Move 
+        bne @Done 
         
         lda #WALK_ANIM_SPEED 
         sta a:VaderCrabStruct::Anim_Timer, y
@@ -227,187 +275,215 @@ ContinueWalkFrameUpdate:
         lda a:VaderCrabStruct::Anim_Frame, y
         eor #$01 
         sta a:VaderCrabStruct::Anim_Frame, y
+@Done:
+        rts
+.endproc
 
-Move:
-        lda a:VaderCrabStruct::State, y
-        cmp #STATE_ATACKING
-        bne ContinuaFisicaNormal
-        jmp Done                        
+;-------------------------------------------------------------------------------
+.proc UpdateRestingState
+@LoopResting:
+        sty z:DP_ENEMY_STRUCT_PTR
+        jsr rand
+        and #$10
+        beq @VoltaRest
+        
+        ldy z:DP_ENEMY_STRUCT_PTR
+        lda #STATE_RESTING
+        sta a:VaderCrabStruct::State, y
+        rts
+        
+@VoltaRest:
+        ldy z:DP_ENEMY_STRUCT_PTR
+        lda a:VaderCrabStruct::Resting_Timer, y
+        sec
+        sbc #1
+        sta a:VaderCrabStruct::Resting_Timer, y
+        bra @LoopResting
+.endproc
 
-ContinuaFisicaNormal:
-      ; --- FILTRO DE VELOCIDADE POR FRAME SKIP ---
-        lda FrameCounter
-        and #%00000001          ; Módulo 2 (Se move frame sim, frame não = Metade da velocidade)
-        beq @AvancaFisica       ; Se for 0, deixa andar. Se for 1, pula a física!
-        jmp Done                ; Aborta o movimento neste frame (Mantém a posição atual)
-
-
-@AvancaFisica:
+;-------------------------------------------------------------------------------
+;   ApplyEnemyPhysics (Cerco Multi-Setorial Estabilizado)
+;-------------------------------------------------------------------------------
+.proc ApplyEnemyPhysics
         sty z:DP_ENEMY_STRUCT_PTR
 
-        lda a:VaderCrabStruct::X_Pos, y
-        clc
-        adc #16                          
+        lda a:VaderCrabStruct::Attack_Sector, y
+        cmp #0                          
+        beq @SetorSupDireito
+        cmp #1                          
+        beq @SetorSupEsquerdo
+        cmp #2                          
+        beq @SetorInfDireito
+
+@SetorInfEsquerdo:
+        lda BigHero + BigHeroStruct::X_Pos
         sec
-        sbc BigHero + BigHeroStruct::X_Pos
-        bcs CalculateAbsoluteDistance   
-
-        eor #$FF                
+        sbc #SECTOR_OFFSET_X
+        sta z:DP_TEMP_04                
+        lda BigHero + BigHeroStruct::Y_Pos
         clc
-        adc #1                  
+        adc #SECTOR_OFFSET_Y
+        sta z:DP_TEMP_05                
+        bra @ProcessaPerseguicao
 
-CalculateAbsoluteDistance:   
-        ldy z:DP_ENEMY_STRUCT_PTR   
-        cmp #ENEMY_ATTACK_DISTANCE
-        bcc StopHorizontalMove  
-        beq StopHorizontalMove  
-
-        lda a:VaderCrabStruct::X_Pos, y
-        cmp BigHero + BigHeroStruct::X_Pos
-        bcc WalkRight           
-
-WalkLeft:
-        lda a:VaderCrabStruct::X_Pos, y
+@SetorSupDireito:
+        lda BigHero + BigHeroStruct::X_Pos
+        clc
+        adc #SECTOR_OFFSET_X
+        sta z:DP_TEMP_04
+        lda BigHero + BigHeroStruct::Y_Pos
         sec
-        sbc #WALK_SPEED                 
-        sta a:VaderCrabStruct::X_Pos, y
-        
-        lda #0
-        sta a:VaderCrabStruct::Facing, y 
-        lda #STATE_WALKING
-        sta a:VaderCrabStruct::State, y
-        lda #0
-        sta a:VaderCrabStruct::Preparing_Timer, y
-        bra CheckVerticalMove
+        sbc #SECTOR_OFFSET_Y
+        sta z:DP_TEMP_05
+        bra @ProcessaPerseguicao
 
-WalkRight:
-        lda a:VaderCrabStruct::X_Pos, y
-        clc
-        adc #WALK_SPEED                  
-        sta a:VaderCrabStruct::X_Pos, y
-        
-        lda #1
-        sta a:VaderCrabStruct::Facing, y 
-        lda #STATE_WALKING
-        sta a:VaderCrabStruct::State, y
-        lda #0
-        sta a:VaderCrabStruct::Preparing_Timer, y
-        bra CheckVerticalMove
-
-StopHorizontalMove:
-        lda a:VaderCrabStruct::State, y
-        cmp #STATE_ATACKING
-        beq @KeepStateX
-        cmp #STATE_PREPARING
-        beq @KeepStateX
-        
-        lda #STATE_PREPARING
-        sta a:VaderCrabStruct::State, y
-        
-        lda #0
-        sta a:VaderCrabStruct::Preparing_Timer, y
-        sta a:VaderCrabStruct::Preparing_Anim_Frame, y
-        sta a:VaderCrabStruct::Hitbox_Active, y            
-        
-        lda #PREPARING_ANIM_SPEED
-        sta a:VaderCrabStruct::Preparing_Anim_Timer, y
-
-@KeepStateX:
-        bra CheckVerticalMove
-
-CheckVerticalMove:
-        sty z:DP_ENEMY_STRUCT_PTR   
-        
-        lda a:VaderCrabStruct::Y_Pos, y
+@SetorSupEsquerdo:
+        lda BigHero + BigHeroStruct::X_Pos
         sec
-        sbc BigHero + BigHeroStruct::Y_Pos
-        bcs CalculateAbsoluteY          
-
-        eor #$FF                
-        clc
-        adc #1 
-
-CalculateAbsoluteY:
-        ldy z:DP_ENEMY_STRUCT_PTR   
-        cmp #ENEMY_ATTACK_Y_RANGE
-        bcc StopVerticalMove            
-        beq StopVerticalMove            
-
-        lda a:VaderCrabStruct::Y_Pos, y
-        cmp BigHero + BigHeroStruct::Y_Pos    
-        bcc MoveDown                    
-
-MoveUp:
-        lda a:VaderCrabStruct::Y_Pos, y
+        sbc #SECTOR_OFFSET_X
+        sta z:DP_TEMP_04
+        lda BigHero + BigHeroStruct::Y_Pos
         sec
-        sbc #WALK_SPEED                  
-        sta a:VaderCrabStruct::Y_Pos, y
-        
-        lda #STATE_WALKING
-        sta a:VaderCrabStruct::State, y
-        lda #0
-        sta a:VaderCrabStruct::Preparing_Timer, y
-        bra ExitMovement
-    
-MoveDown:
-        lda a:VaderCrabStruct::Y_Pos, y
+        sbc #SECTOR_OFFSET_Y
+        sta z:DP_TEMP_05
+        bra @ProcessaPerseguicao
+
+@SetorInfDireito:
+        lda BigHero + BigHeroStruct::X_Pos
         clc
-        adc #WALK_SPEED                  
-        sta a:VaderCrabStruct::Y_Pos, y
-        
-        lda #STATE_WALKING
-        sta a:VaderCrabStruct::State, y
-        lda #0
-        sta a:VaderCrabStruct::Preparing_Timer, y
-        bra ExitMovement
-    
-StopVerticalMove:
-        lda a:VaderCrabStruct::State, y
-        cmp #STATE_ATACKING
-        beq Done
-        cmp #STATE_PREPARING
-        beq Done
-
-        lda a:VaderCrabStruct::State, y
-        cmp #STATE_WALKING
-        beq ExitMovement
-
-        lda #STATE_PREPARING
-        sta a:VaderCrabStruct::State, y
-        
-        lda #0
-        sta a:VaderCrabStruct::Preparing_Timer, y
-        sta a:VaderCrabStruct::Preparing_Anim_Frame, y
-sta a:VaderCrabStruct::Hitbox_Active, y
-lda #PREPARING_ANIM_SPEED
-sta a:VaderCrabStruct::Preparing_Anim_Timer, y
-ExitMovement:
-lda a:VaderCrabStruct::State, y
-cmp #STATE_WALKING
-bne Done
-lda #WALK_ANIM_SPEED
-sta a:VaderCrabStruct::Walk_Anim_Speed, y
-bra Done
-RestFrameUpdate:
-lda a:VaderCrabStruct::Resting_Timer, y
+ADC #SECTOR_OFFSET_X
+sta z:DP_TEMP_04
+lda BigHero + BigHeroStruct::Y_Pos
+clc
+adc #SECTOR_OFFSET_Y
+sta z:DP_TEMP_05
+@ProcessaPerseguicao:
+ldy z:DP_ENEMY_STRUCT_PTR
+lda a:VaderCrabStruct::X_Pos, y
 sec
-sbc #1
-sta a:VaderCrabStruct::Resting_Timer, y
-sty z:DP_ENEMY_STRUCT_PTR
-jsr rand
-and #$10
-beq @VoltaRest
-ldy z:DP_ENEMY_STRUCT_PTR
-lda #STATE_RESTING
+sbc BigHero + BigHeroStruct::X_Pos
+bcs @AbsCorpoX
+eor #$FF
+clc
+adc #1
+@AbsCorpoX:
+cmp #24
+bcs @FisicaNormal
+lda a:VaderCrabStruct::Y_Pos, y
+sec
+sbc BigHero + BigHeroStruct::Y_Pos
+bcs @AvaliaInimigoAbaixo
+eor #$FF
+clc
+adc #1
+@AvaliaInimigoAbaixo:
+cmp #16
+bcs @FisicaNormal
+lda a:VaderCrabStruct::Y_Pos, y
+cmp BigHero + BigHeroStruct::Y_Pos
+bcs @ContornarPorCima
+@ContornarPorBaixo:
+lda a:VaderCrabStruct::Y_Pos, y
+clc
+adc #WALK_SPEED
+sta a:VaderCrabStruct::Y_Pos, y
+bra @AplicaMovimentoX
+@ContornarPorCima:
+lda a:VaderCrabStruct::Y_Pos, y
+sec
+sbc #WALK_SPEED
+sta a:VaderCrabStruct::Y_Pos, y
+@AplicaMovimentoX:
+lda a:VaderCrabStruct::X_Pos, y
+cmp z:DP_TEMP_04
+bcc @EvasaoDireita
+@EvasaoEsquerda:
+lda a:VaderCrabStruct::X_Pos, y
+sec
+sbc #WALK_SPEED
+sta a:VaderCrabStruct::X_Pos, y
+lda #0
+sta a:VaderCrabStruct::Facing, y
+bra @FinalizaEvasao
+@EvasaoDireita:
+lda a:VaderCrabStruct::X_Pos, y
+clc
+adc #WALK_SPEED
+sta a:VaderCrabStruct::X_Pos, y
+lda #1
+sta a:VaderCrabStruct::Facing, y
+@FinalizaEvasao:
+lda #STATE_WALKING
 sta a:VaderCrabStruct::State, y
-bra Done
-@VoltaRest:
-ldy z:DP_ENEMY_STRUCT_PTR
-brl RestFrameUpdate
-Done:
-jsr UpdateVaderGeometry
+bra @CheckFimEixoX
+@FisicaNormal:
+lda a:VaderCrabStruct::X_Pos, y
+sec
+sbc z:DP_TEMP_04
+bcs @CalcAbsX
+eor #$FF
+clc
+adc #1
+@CalcAbsX:
+cmp #ENEMY_ATTACK_DISTANCE
+bcc @StopHorizontal
+lda a:VaderCrabStruct::X_Pos, y
+cmp z:DP_TEMP_04
+bcc @WalkRight
+@WalkLeft:
+lda a:VaderCrabStruct::X_Pos, y
+sec
+sbc #WALK_SPEED
+sta a:VaderCrabStruct::X_Pos, y
+lda #0
+sta a:VaderCrabStruct::Facing, y
+bra @CheckVertical
+@WalkRight:
+lda a:VaderCrabStruct::X_Pos, y
+clc
+adc #WALK_SPEED
+sta a:VaderCrabStruct::X_Pos, y
+lda #1
+sta a:VaderCrabStruct::Facing, y
+bra @CheckVertical
+@StopHorizontal:
+lda #STATE_PREPARING
+sta a:VaderCrabStruct::State, y
+@CheckVertical:
+lda a:VaderCrabStruct::Y_Pos, y
+sec
+sbc z:DP_TEMP_05
+bcs @CalcAbsY
+eor #$FF
+clc
+adc #1
+@CalcAbsY:
+cmp #ENEMY_ATTACK_Y_RANGE
+bcc @StopVertical
+lda a:VaderCrabStruct::Y_Pos, y
+cmp z:DP_TEMP_05
+bcc @MoveDown
+@MoveUp:
+lda a:VaderCrabStruct::Y_Pos, y
+sec
+sbc #WALK_SPEED
+sta a:VaderCrabStruct::Y_Pos, y
+bra @CheckFimEixoX
+@MoveDown:
+lda a:VaderCrabStruct::Y_Pos, y
+clc
+adc #WALK_SPEED
+sta a:VaderCrabStruct::Y_Pos, y
+bra @CheckFimEixoX
+@StopVertical:
+lda a:VaderCrabStruct::State, y
+cmp #STATE_PREPARING
+bne @CheckFimEixoX
+@CheckFimEixoX:
+lda #STATE_WALKING
 rts
 .endproc
+;-------------------------------------------------------------------------------
 .proc UpdateVaderGeometry
 lda a:VaderCrabStruct::X_Pos, y
 sta a:VaderCrabStruct::Hurtbox_X1, y
@@ -421,6 +497,187 @@ adc #64
 sta a:VaderCrabStruct::Hurtbox_Y2, y
 rts
 .endproc
+
+;===============================================================================
+;   SISTEMA DE GRÁFICOS (RENDERIZAÇÃO E SPRITES OAM)
+;===============================================================================
+
+;-------------------------------------------------------------------------------
+;   DrawVaderCrab - ORQUESTRADOR DE GRÁFICOS
+;-------------------------------------------------------------------------------
+.proc DrawVaderCrab
+        rep #$20
+        .a16
+        lda 3,s
+        tay
+        sep #$20
+        .a8
+        .i16
+        lda a:VaderCrabStruct::X_Pos, y
+        sta z:DP_TEMP_01
+        lda a:VaderCrabStruct::Y_Pos, y
+        sta z:DP_TEMP_02
+        lda a:VaderCrabStruct::Facing, y
+        sta z:DP_TEMP_03
+        jsr ResolveAnimationFrame
+        sta z:DP_TEMP_00
+        jsr GetAnimationTablePointer
+        lda #$00
+        sta z:DP_ENEMY_STRUCT_PTR+2
+        sta z:DP_VADER_LAYOUT_PTR+2
+        ldy #0
+        lda z:DP_TEMP_00
+        clc
+        adc z:DP_ENEMY_STRUCT_PTR
+        sta z:DP_TEMP_CALC
+        lda z:DP_ENEMY_STRUCT_PTR+1
+        adc #0
+        sta z:DP_TEMP_CALC+1
+        lda #$00
+        sta z:DP_TEMP_CALC+2
+        lda [DP_TEMP_CALC], y
+        sta z:DP_VADER_LAYOUT_PTR
+        iny
+        lda [DP_TEMP_CALC], y
+        sta z:DP_VADER_LAYOUT_PTR+1
+        jsr RenderVaderSprites
+        rts
+.endproc
+
+;-------------------------------------------------------------------------------
+.proc ResolveAnimationFrame
+        lda a:VaderCrabStruct::HurtTimer, y
+        beq @CheckStates
+        lda #4
+        rts
+@CheckStates:
+        lda a:VaderCrabStruct::State, y
+        cmp #STATE_PREPARING
+        bne @CheckAttacking
+        lda a:VaderCrabStruct::Preparing_Anim_Frame, y
+        cmp #1
+        beq @Prep1
+        cmp #2
+        beq @Prep2
+@Prep0: lda #6
+        rts
+@Prep1: lda #8
+        rts
+@Prep2: lda #10
+        rts
+@CheckAttacking:
+        cmp #STATE_ATACKING
+        bne @CheckWalking
+        lda a:VaderCrabStruct::Attacking_Anim_Frame, y
+        bne @Attack1
+@Attack0: lda #12
+        rts
+@Attack1: lda #14
+        rts
+@CheckWalking:
+        lda a:VaderCrabStruct::Anim_Frame, y
+        bne @Walk1
+@Walk0: lda #0
+        rts
+@Walk1: lda #2
+        rts
+.endproc
+
+;-------------------------------------------------------------------------------
+.proc GetAnimationTablePointer
+        lda a:VaderCrabStruct::Enemy_Type, y
+        cmp #1
+        beq @ChaveiaRapa
+@ChaveiaVader:
+        ldy #.loword(Vader_Animation_Table)
+        sty z:DP_ENEMY_STRUCT_PTR
+        rts
+@ChaveiaRapa:
+        ldy #.loword(Rapa_Animation_Table)
+        sty z:DP_ENEMY_STRUCT_PTR
+        rts
+.endproc
+
+;-------------------------------------------------------------------------------
+.proc RenderVaderSprites
+        ldy #$0000
+@DrawLoop:
+        lda #$00
+        sta z:DP_VADER_LAYOUT_PTR+2
+        lda z:DP_TEMP_03
+        bne @DrawXNormal
+@DrawXInverted:
+        lda #48
+        sec
+        sbc [DP_VADER_LAYOUT_PTR], y
+        clc
+        adc z:DP_TEMP_01
+        sta OAMMIRROR, x
+        bra @ProcessY
+@DrawXNormal:
+        lda [DP_VADER_LAYOUT_PTR], y
+        clc
+        adc z:DP_TEMP_01
+        sta OAMMIRROR, x
+@ProcessY:
+        inx
+        iny
+        lda [DP_VADER_LAYOUT_PTR], y
+        clc
+        adc z:DP_TEMP_02
+        sta OAMMIRROR, x
+        inx
+        iny
+        lda [DP_VADER_LAYOUT_PTR], y
+        sta OAMMIRROR, x
+        inx
+        iny
+        lda [DP_VADER_LAYOUT_PTR], y
+        sta z:DP_TEMP_00
+        lda z:DP_TEMP_03
+        bne @NoFlip
+        lda z:DP_TEMP_00
+        eor #%01000000
+        sta z:DP_TEMP_00
+@NoFlip:
+        lda z:DP_TEMP_00
+        sta OAMMIRROR, x
+        inx
+        iny
+        cpy #64
+        bne @DrawLoop
+        rts
+.endproc
+
+;-------------------------------------------------------------------------------
+.proc DrawVaderHitboxDebug
+        lda VaderCrab + VaderCrabStruct::Hitbox_X1
+        sta a:OAMMIRROR, X
+        inx
+        lda VaderCrab + VaderCrabStruct::Hitbox_Y1
+        sta a:OAMMIRROR, X
+        inx
+        lda #$A0
+        sta a:OAMMIRROR, X
+        inx
+        lda #$31
+        sta a:OAMMIRROR, X
+        inx
+        lda VaderCrab + VaderCrabStruct::Hitbox_X2
+        sta a:OAMMIRROR, X
+        inx
+        lda VaderCrab + VaderCrabStruct::Hitbox_Y2
+        sta a:OAMMIRROR, X
+        inx
+        lda #$A2
+        sta a:OAMMIRROR, X
+        inx
+        lda #$31
+        sta OAMMIRROR, X
+        inx
+        rts
+.endproc
+
 ; =============================================================================
 ; BANCO DE MATRIZES DE ANIMAÇÃO DO VADERCRAB
 ; =============================================================================
@@ -464,6 +721,7 @@ VaderCrab_Layout_FrameAttacking1:
 .byte 0, 16,$20,$01, 16, 16,$2A,$01, 32, 16,$2C,$01, 48, 16,$8E,$01
 .byte 0, 32,$A8,$01, 16, 32,$AA,$01, 32, 32,$AC,$01, 48, 32,$AE,$01
 .byte 0, 48,$C8,$01, 16, 48,$CA,$01, 32, 48,$CC,$01, 48, 48,$CE,$01
+
 ; =============================================================================
 ; BANCO DE MATRIZES DE ANIMAÇÃO DO RAPACRAB
 ; =============================================================================
@@ -507,6 +765,7 @@ RapaCrab_Layout_FrameAttacking1:
 .byte 3, 16,$00,$01, 19, 16,$26,$01, 35, 16,$28,$01, 51, 16,$20,$01
 .byte 0, 32,$40,$01, 16, 32,$42,$01, 32, 32,$44,$01, 48, 32,$46,$01
 .byte 0, 48,$60,$01, 16, 48,$62,$01, 32, 48,$64,$01, 48, 48,$66,$01
+
 ; --- Tabelas de Animação de 16-bit ---
 Vader_Animation_Table:
 .word .loword(VaderCrab_Layout)
@@ -529,196 +788,3 @@ Rapa_Animation_Table:
 Enemy_Master_Animation_Table:
 .word .loword(Vader_Animation_Table)
 .word .loword(Rapa_Animation_Table)
-;-------------------------------------------------------------------------------
-;   DrawVaderCrab
-;-------------------------------------------------------------------------------
-.proc DrawVaderCrab
-rep #$20
-.a16
-lda 3,s
-tay
-sep #$20
-.a8
-.i16
-lda a:VaderCrabStruct::X_Pos, y
-sta z:DP_TEMP_01
-lda a:VaderCrabStruct::Y_Pos, y
-sta z:DP_TEMP_02
-lda a:VaderCrabStruct::Facing, y
-sta z:DP_TEMP_03
-lda a:VaderCrabStruct::HurtTimer, y
-beq @CheckStates
-
-      ; --- pisca se tomou dano ---
-        lda FrameCounter
-        and #%00000001          ; Módulo 2 
-        beq Finish       ; Se for 0, desiste
-        
-
-
-lda #4
-bra @ResolvePointer
-@CheckStates:
-lda a:VaderCrabStruct::State, y
-cmp #STATE_PREPARING
-bne @CheckAttacking
-lda a:VaderCrabStruct::Preparing_Anim_Frame, y
-cmp #1
-beq @Prep1
-cmp #2
-beq @Prep2
-@Prep0:
-lda #6
-bra @ResolvePointer
-@Prep1:
-lda #8
-bra @ResolvePointer
-@Prep2:
-lda #10
-bra @ResolvePointer
-@CheckAttacking:
-cmp #STATE_ATACKING
-bne @CheckWalking
-lda a:VaderCrabStruct::Attacking_Anim_Frame, y
-bne @Attack1
-@Attack0:
-lda #12
-bra @ResolvePointer
-@Attack1:
-lda #14
-bra @ResolvePointer
-@CheckWalking:
-lda a:VaderCrabStruct::Anim_Frame, y
-bne @Walk1
-@Walk0:
-lda #0
-bra @ResolvePointer
-@Walk1:
-lda #2
-@ResolvePointer:
-sta z:DP_TEMP_00
-lda a:VaderCrabStruct::Enemy_Type, y
-cmp #1
-beq @ChaveiaRapa
-@ChaveiaVader:
-ldy #.loword(Vader_Animation_Table)
-sty z:DP_ENEMY_STRUCT_PTR
-bra @BuscaLayout
-@ChaveiaRapa:
-ldy #.loword(Rapa_Animation_Table)
-sty z:DP_ENEMY_STRUCT_PTR
-
-@BuscaLayout:
-        lda #$00
-        sta z:DP_ENEMY_STRUCT_PTR+2
-        sta z:DP_VADER_LAYOUT_PTR+2
-        
-        ldy #0
-        lda z:DP_TEMP_00
-        clc
-        adc z:DP_ENEMY_STRUCT_PTR
-        sta z:DP_TEMP_CALC
-        lda z:DP_ENEMY_STRUCT_PTR+1
-        adc #0
-        sta z:DP_TEMP_CALC+1
-        
-        ; === BLINDAGEM PARA EMULADORES JAVASCRIPT ===
-        ; Força o terceiro byte de banco do rascunho de cálculo a ser estritamente $00 (ROM)
-        lda #$00
-        sta z:DP_TEMP_CALC+2
-        
-        ; Agora a leitura longa de 24-bit está selada em qualquer interpretador!
-        lda [DP_TEMP_CALC], y
-        sta z:DP_VADER_LAYOUT_PTR
-        iny
-        lda [DP_TEMP_CALC], y
-        sta z:DP_VADER_LAYOUT_PTR+1
-        jsr RenderVaderSprites
-
-Finish: 
-        rts
-.endproc
-
-;-------------------------------------------------------------------------------
-;   RenderVaderSprites
-;-------------------------------------------------------------------------------
-.proc RenderVaderSprites
-ldy #$0000
-@DrawLoop:
-lda #$00
-sta z:DP_VADER_LAYOUT_PTR+2
-lda z:DP_TEMP_03
-bne @DrawXNormal
-@DrawXInverted:
-lda #48
-sec
-sbc [DP_VADER_LAYOUT_PTR], y
-clc
-adc z:DP_TEMP_01
-sta OAMMIRROR, x
-bra @ProcessY
-@DrawXNormal:
-lda [DP_VADER_LAYOUT_PTR], y
-clc
-adc z:DP_TEMP_01
-sta OAMMIRROR, x
-@ProcessY:
-inx
-iny
-lda [DP_VADER_LAYOUT_PTR], y
-clc
-adc z:DP_TEMP_02
-sta OAMMIRROR, x
-inx
-iny
-lda [DP_VADER_LAYOUT_PTR], y
-sta OAMMIRROR, x
-inx
-iny
-lda [DP_VADER_LAYOUT_PTR], y
-sta z:DP_TEMP_00
-lda z:DP_TEMP_03
-bne @NoFlip
-lda z:DP_TEMP_00
-eor #%01000000
-sta z:DP_TEMP_00
-@NoFlip:
-lda z:DP_TEMP_00
-sta OAMMIRROR, x
-inx
-iny
-cpy #64
-bne @DrawLoop
-rts
-.endproc
-;-------------------------------------------------------------------------------
-;   DrawVaderHitboxDebug
-;-------------------------------------------------------------------------------
-.proc DrawVaderHitboxDebug
-@Desenhar:
-lda VaderCrab + VaderCrabStruct::Hitbox_X1
-sta a:OAMMIRROR, X
-inx
-lda VaderCrab + VaderCrabStruct::Hitbox_Y1
-sta a:OAMMIRROR, X
-inx
-lda #$A0
-sta a:OAMMIRROR, X
-inx
-lda #$31
-sta a:OAMMIRROR, X
-inx
-lda VaderCrab + VaderCrabStruct::Hitbox_X2
-sta a:OAMMIRROR, X
-inx
-lda VaderCrab + VaderCrabStruct::Hitbox_Y2
-sta a:OAMMIRROR, X
-inx
-lda #$A2
-sta a:OAMMIRROR, X
-inx
-lda #$31
-sta OAMMIRROR, X
-inx
-rts
-.endproc
