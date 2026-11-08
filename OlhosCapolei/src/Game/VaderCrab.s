@@ -553,6 +553,9 @@ DP_DRAW_ENEMY_TYPE = $10
 
 
 ;-------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
+;   DrawVaderCrab - ORQUESTRADOR GRÁFICO COM EFEITO PISCAR (HIT STUN)
+;-------------------------------------------------------------------------------
 .proc DrawVaderCrab
         rep #$20
         .a16
@@ -561,18 +564,32 @@ DP_DRAW_ENEMY_TYPE = $10
         sep #$20
         .a8
         .i16
+
+        ; --- LÓGICA DE PISCAR (FLICKER EM HIT STUN) ---
+        lda a:VaderCrabStruct::HurtTimer, y  ; Carrega o timer de dano atual
+        beq @IniciaDesenho                   ; Se for 0, desenha normalmente
+
+        ; Se estiver em hit stun, testa o bit 0 (saber se o frame é par ou ímpar)
+        and #%00000001
+        beq @AbortaDesenho                   ; Se o bit for 0 (frame par), pula o desenho e faz piscar!
+
+@IniciaDesenho:
+        ; Aloca posições físicas e direção temporariamente
         lda a:VaderCrabStruct::X_Pos, y
         sta z:DP_TEMP_01
         lda a:VaderCrabStruct::Y_Pos, y
         sta z:DP_TEMP_02
         lda a:VaderCrabStruct::Facing, y
         sta z:DP_TEMP_03
+
         jsr ResolveAnimationFrame
         sta z:DP_TEMP_00
         jsr GetAnimationTablePointer
+
         lda #$00
         sta z:DP_ENEMY_STRUCT_PTR+2
         sta z:DP_VADER_LAYOUT_PTR+2
+
         ldy #0
         lda z:DP_TEMP_00
         clc
@@ -583,19 +600,23 @@ DP_DRAW_ENEMY_TYPE = $10
         sta z:DP_TEMP_CALC+1
         lda #$00
         sta z:DP_TEMP_CALC+2
+
         lda [DP_TEMP_CALC], y
         sta z:DP_VADER_LAYOUT_PTR
         iny
         lda [DP_TEMP_CALC], y
         sta z:DP_VADER_LAYOUT_PTR+1
+
         jsr RenderVaderSprites
+
+@AbortaDesenho:
         rts
 .endproc
 
 .proc ResolveAnimationFrame
         lda a:VaderCrabStruct::HurtTimer, y
         beq @CheckStates
-        lda #4
+        lda #4                          ; Se tiver HurtTimer ativo, força o frame de Hurt
         rts
 @CheckStates:
         lda a:VaderCrabStruct::State, y
