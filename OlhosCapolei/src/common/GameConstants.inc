@@ -227,4 +227,14 @@ ENEMY_TYPE_RAPA  = 1 ; Rapa nui crab
 .endstruct
 
 
+.struct PowStruct
+    Active_timer      .byte   ; 0 = Vazio, 1 = Visível no chão esperando coleta
+    Tile_ID     .byte   ; Tile base do gráfico
+    X_Pos       .byte   
+    Y_Pos       .byte   
+.endstruct
+
+
+
+
 .endif

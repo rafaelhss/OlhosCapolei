@@ -548,6 +548,14 @@ lda a:VaderCrabStruct::Facing, y
 sta z:DP_TEMP_03
 lda a:VaderCrabStruct::HurtTimer, y
 beq @CheckStates
+
+      ; --- pisca se tomou dano ---
+        lda FrameCounter
+        and #%00000001          ; Módulo 2 
+        beq Finish       ; Se for 0, desiste
+        
+
+
 lda #4
 bra @ResolvePointer
 @CheckStates:
@@ -617,6 +625,8 @@ iny
 lda [DP_TEMP_CALC], y
 sta z:DP_VADER_LAYOUT_PTR+1
 jsr RenderVaderSprites
+
+Finish: 
 rts
 .endproc
 ;-------------------------------------------------------------------------------

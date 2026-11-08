@@ -26,6 +26,7 @@
 .import RapaCrab
 .import Bullet
 .import InitRNG
+.import Pow
 
 .segment "CODE"
 
@@ -329,7 +330,19 @@ sta RapaCrab + VaderCrabStruct::Enemy_Type
 
 ; =========== FIM BiigHero
 
+;--- cria Pow
 
+    stz Pow + PowStruct::Active_timer
+    stz Pow + PowStruct::X_Pos
+    stz Pow + PowStruct::Y_Pos
+
+    lda #$84
+    sta Pow + PowStruct::Tile_ID
+    
+    
+
+
+;===  fim Pow
 
          JSR InitRNG    ; Define a semente inicial do gerador de números aleatórios
 

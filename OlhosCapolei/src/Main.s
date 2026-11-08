@@ -187,6 +187,8 @@ _ResetAlign:
         
         ; 4. SISTEMA DE RENDERIZAcÃO FINAL
         ldx #$0000     
+
+        jsr DrawPow ; tem que estar em cima de td
         
         ; --- RENDERIZAcÃO DO VADERCRAB ---
         pea .loword(VaderCrab)          ; Empilha o endereco de 16-bit diretamente (Y fica livre!)
@@ -196,7 +198,7 @@ _ResetAlign:
 
         ; --- RENDERIZAcÃO DO VADERCRAB ---
         pea .loword(RapaCrab)          ; Empilha o endereco de 16-bit diretamente (Y fica livre!)
-        jsr DrawVaderCrab
+        ;jsr DrawVaderCrab
         ply                     ; Tentativa Param: reset stack pointer
 
 
@@ -309,6 +311,12 @@ Finish:
         lda #30
         sta VaderCrabStruct::HurtTimer, y
 
+
+        ldy z:DP_ENEMY_STRUCT_PTR 
+        jsr createEnemyPow
+        
+
+
         lda Bullet + BulletStruct::Speed_X
         bmi @BulletIndoParaEsquerda
 
@@ -383,6 +391,9 @@ Finish:
         lda #30
         sta a:VaderCrabStruct::HurtTimer, x
 
+        ldy z:DP_ENEMY_STRUCT_PTR 
+        jsr createEnemyPow
+
         ; --- SALVA DIREcÃO DA ARMA ANTES DE ALTERAR RESTRUTURAcÕES ---
         lda a:WeaponStruct::Speed_X, y
         sta z:DP_TEMP_00                ; Salva o vetor original no rascunho temporário
@@ -432,6 +443,9 @@ Finish:
 ;-------------------------------------------------------------------------------
 ;   ApplyMeleeWeaponCollisions (Leitura de Direct Page Direta)
 ;   Entrada: Y = Endereco absoluto do slot da Arma
+;-------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
+;   ApplyMeleeWeaponCollisions (Correção de Knockback com Restauro de Contexto)
 ;-------------------------------------------------------------------------------
 .proc ApplyMeleeWeaponCollisions
 MeleeStart:
@@ -494,13 +508,26 @@ MeleeStart:
         sep #$20                
         .a8
 
+        ; Dispara o POW na tela
+        ldy z:DP_ENEMY_STRUCT_PTR 
+        jsr createEnemyPow
+
+        ; --- RECUPERAÇÃO DE CONTEXTO CRÍTICA ---
+        ; Como jsr createEnemyPow alterou registradores, re-sincronizamos X e Y!
+        ldy z:DP_WEAPON_POOL_PTR        ; Y volta a apontar para a Arma
+        ldx z:DP_ENEMY_STRUCT_PTR       ; X volta a apontar para o Inimigo
+
+        ; Aplica o hitstun de 10 frames no caranguejo indexado em X
         lda #10
         sta a:VaderCrabStruct::HurtTimer, x
 
+        ; Desativa a hitbox da arma para evitar múltiplos hits no mesmo frame
         lda #$00
         sta a:WeaponStruct::Hitbox_Active, y
 
-        VADER_MELEE_KNOCKBACK = 20
+        VADER_MELEE_KNOCKBACK = 16
+
+        ; --- MATEMÁTICA DE EMPURRÃO INDEXADA EM X ---
         lda BigHero + BigHeroStruct::Facing
         bne @PushVaderLeft
 
@@ -532,9 +559,10 @@ MeleeNoCollision:
         sep #$20                
         .a8
 MeleeExit:
-        ldy z:DP_WEAPON_POOL_PTR        
+        ldy z:DP_WEAPON_POOL_PTR        ; Restaura Y da arma para o macro do loop funcionar
         rts
 .endproc
+
 ;-------------------------------------------------------------------------------
 
 ;-------------------------------------------------------------------------------
@@ -557,15 +585,20 @@ MeleeExit:
         ; =====================================================================
         ; 1. Se o Herói está em Hitstun/Recuperacão, aborta imediatamente!
         lda BigHero + BigHeroStruct::HurtTimer
-        bne @AbortDamage
+        beq CheckEnemyHitbox
+        jmp AbortDamage
 
+CheckEnemyHitbox:
         ; 2. Se a hitbox deste caranguejo específico não está ativa, aborta
         lda VaderCrabStruct::Hitbox_Active, y
-        beq @AbortDamage
+        bne CheckHeroHurtbox
+        jmp AbortDamage
 
+CheckHeroHurtbox:
         ; 3. Se a hurtbox do herói foi desligada, aborta
         lda BigHero + BigHeroStruct::Hurtbox_Active
-        beq @AbortDamage
+        bne @StartAABB
+        jmp AbortDamage
 
         ; =====================================================================
         ; MOTOR MATEMÁTICO POR EXCLUSÃO (AABB Dinâmico 16-bit)
@@ -616,6 +649,9 @@ MeleeExit:
         sep #$20                        ; Restaura o Acumulador para 8 bits
         .a8
 
+
+        jsr createHeroPow
+        
         ; Liga o Hitstun imediatamente no Herói (30 frames)
         lda #30
         sta BigHero + BigHeroStruct::HurtTimer
@@ -635,7 +671,7 @@ MeleeExit:
 @NoCollision:
         sep #$20                        ; Restaura o Acumulador para 8 bits
         .a8
-@AbortDamage:
+AbortDamage:
         rts
 .endproc
 
@@ -757,6 +793,87 @@ CollisionDone:
         rts
 .endproc
 
+
+;-------------------------------------------------------------------------------
+;   createHeroPow (Versão Blindada com Isolamento de Registradores)
+;-------------------------------------------------------------------------------
+.proc createHeroPow
+
+
+        ; Salva os registradores de índice atuais para proteger a OAM e o loop global
+        phx
+        phy
+
+        lda #08
+        sta Pow + PowStruct::Active_timer
+
+        ; --- CÁLCULO DO CENTRO X DO HERÓI ---
+        lda BigHero + BigHeroStruct::Hurtbox_X1
+        clc
+        adc BigHero + BigHeroStruct::Hurtbox_X2
+        ror a 
+        sta Pow + PowStruct::X_Pos
+        
+        ; --- CÁLCULO DO CENTRO Y DO HERÓI (Com blindagem ROR contra estouros) ---
+        lda BigHero + BigHeroStruct::Hurtbox_Y1
+        clc
+        adc BigHero + BigHeroStruct::Hurtbox_Y2
+        ror a 
+        sta Pow + PowStruct::Y_Pos
+
+        ; Restaura os contextos intactos antes de voltar para o fluxo de dano
+        ply
+        plx
+        rts
+.endproc
+
+.proc createEnemyPow
+        lda #08
+        sta Pow + PowStruct::Active_timer
+        
+        lda a:VaderCrabStruct::Hurtbox_X1, y
+        clc
+        adc a:VaderCrabStruct::Hurtbox_X2, y
+        ror a 
+        sta Pow + PowStruct::X_Pos
+        lda a:VaderCrabStruct::Hurtbox_Y2, y
+        clc
+        adc a:VaderCrabStruct::Hurtbox_Y1, y
+        ror a 
+        sta Pow + PowStruct::Y_Pos
+.endproc
+
+
+.proc DrawPow
+
+rts; ;Desativando pow, pq nao ficou legal
+
+        lda Pow + PowStruct::Active_timer
+        beq Finish
+        dec Pow + PowStruct::Active_timer
+
+        lda Pow + PowStruct::X_Pos
+        sta OAMMIRROR, x
+        inx
+        
+        lda Pow + PowStruct::Y_Pos
+        sta OAMMIRROR, x
+        inx
+        
+        lda Pow + PowStruct::Tile_ID
+        sta OAMMIRROR, x
+        inx
+
+        lda #$00                         
+        sta OAMMIRROR, x
+        inx
+
+Finish:
+        rts    
+    
+.endproc
+
+
 ;-------------------------------------------------------------------------------
 ;   EXECUcÃO AUTOMÁTICA EM V-BLANK (Hardware real manipula OAM aqui)
 ;-------------------------------------------------------------------------------
@@ -794,6 +911,7 @@ CollisionDone:
 .export WeaponD
 .export WeaponE
 .export Bullet
+.export Pow
 
 
 BigHero:         .tag BigHeroStruct
@@ -807,6 +925,8 @@ WeaponC:         .tag WeaponStruct
 WeaponD:         .tag WeaponStruct
 WeaponE:         .tag WeaponStruct
 Bullet:          .tag BulletStruct
+
+Pow:             .tag PowStruct
 
 FrameCounter:    .res 1    ; Contador global de frames (0 a 255)
 .export FrameCounter
