@@ -607,28 +607,38 @@ bra @BuscaLayout
 @ChaveiaRapa:
 ldy #.loword(Rapa_Animation_Table)
 sty z:DP_ENEMY_STRUCT_PTR
+
 @BuscaLayout:
-lda #$00
-sta z:DP_ENEMY_STRUCT_PTR+2
-sta z:DP_VADER_LAYOUT_PTR+2
-ldy #0
-lda z:DP_TEMP_00
-clc
-adc z:DP_ENEMY_STRUCT_PTR
-sta z:DP_TEMP_CALC
-lda z:DP_ENEMY_STRUCT_PTR+1
-adc #0
-sta z:DP_TEMP_CALC+1
-lda [DP_TEMP_CALC], y
-sta z:DP_VADER_LAYOUT_PTR
-iny
-lda [DP_TEMP_CALC], y
-sta z:DP_VADER_LAYOUT_PTR+1
-jsr RenderVaderSprites
+        lda #$00
+        sta z:DP_ENEMY_STRUCT_PTR+2
+        sta z:DP_VADER_LAYOUT_PTR+2
+        
+        ldy #0
+        lda z:DP_TEMP_00
+        clc
+        adc z:DP_ENEMY_STRUCT_PTR
+        sta z:DP_TEMP_CALC
+        lda z:DP_ENEMY_STRUCT_PTR+1
+        adc #0
+        sta z:DP_TEMP_CALC+1
+        
+        ; === BLINDAGEM PARA EMULADORES JAVASCRIPT ===
+        ; Força o terceiro byte de banco do rascunho de cálculo a ser estritamente $00 (ROM)
+        lda #$00
+        sta z:DP_TEMP_CALC+2
+        
+        ; Agora a leitura longa de 24-bit está selada em qualquer interpretador!
+        lda [DP_TEMP_CALC], y
+        sta z:DP_VADER_LAYOUT_PTR
+        iny
+        lda [DP_TEMP_CALC], y
+        sta z:DP_VADER_LAYOUT_PTR+1
+        jsr RenderVaderSprites
 
 Finish: 
-rts
+        rts
 .endproc
+
 ;-------------------------------------------------------------------------------
 ;   RenderVaderSprites
 ;-------------------------------------------------------------------------------
