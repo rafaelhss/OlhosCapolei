@@ -197,18 +197,7 @@ _ResetAlign:
 
         jsr DrawPow ; tem que estar em cima de td
         
-        ; --- RENDERIZAcÃO DO VADERCRAB ---
-        pea .loword(VaderCrab)          ; Empilha o endereco de 16-bit diretamente (Y fica livre!)
-        jsr DrawVaderCrab
-        ply                     ; Tentativa Param: reset stack pointer
-
-
-        ; --- RENDERIZAcÃO DO VADERCRAB ---
-        pea .loword(RapaCrab)          ; Empilha o endereco de 16-bit diretamente (Y fica livre!)
-        jsr DrawVaderCrab
-        ply                     ; Tentativa Param: reset stack pointer
-
-
+   
         jsr DrawBullet
         jsr DrawBullet2
 
@@ -252,6 +241,18 @@ Draweapons:
         jsr DrawBigHero          
         
 Finish:
+     ; --- RENDERIZAcÃO DO VADERCRAB ---
+        pea .loword(VaderCrab)          ; Empilha o endereco de 16-bit diretamente (Y fica livre!)
+        jsr DrawVaderCrab
+        ply                     ; Tentativa Param: reset stack pointer
+
+
+        ; --- RENDERIZAcÃO DO VADERCRAB ---
+        pea .loword(RapaCrab)          ; Empilha o endereco de 16-bit diretamente (Y fica livre!)
+        jsr DrawVaderCrab
+        ply                     ; Tentativa Param: reset stack pointer
+
+
 
 @LimpezaFantasmas:
         cpx #512                        ; Chegou no fim da tabela de 128 sprites?
