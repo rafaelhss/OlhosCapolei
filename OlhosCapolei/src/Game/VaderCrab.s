@@ -129,11 +129,7 @@ DP_DRAW_ENEMY_TYPE = $10
         beq @Done
         cmp #STATE_RESTING              
         beq @Done
-        
-        lda FrameCounter
-        and #%00000001
-        beq @ExecutePhysics
-        bra @Done
+
 
 @ExecutePhysics:
         jsr ApplyEnemyPhysics
@@ -322,7 +318,7 @@ DP_DRAW_ENEMY_TYPE = $10
         lda a:VaderCrabStruct::State, y
         cmp #STATE_RESTING
         bne @Continue
-        jmp @AbortaFisica
+        jmp AbortaFisica
 
 @Continue:
         lda a:VaderCrabStruct::Attack_Sector, y
@@ -444,7 +440,7 @@ DP_DRAW_ENEMY_TYPE = $10
         lda #STATE_WALKING
         sta a:VaderCrabStruct::State, y
 @JumpFimEixoX:
-        brl @CheckFimEixoX              
+        brl CheckFimEixoX              
 @FisicaNormal:
         ; --- 1. ISOLAMENTO ABSOLUTO DO EIXO X ---
         lda a:VaderCrabStruct::X_Pos, y
@@ -456,9 +452,16 @@ DP_DRAW_ENEMY_TYPE = $10
         adc #1
 @CalcAbsX:
         cmp #ENEMY_ATTACK_DISTANCE
-        bcc @PertoNoX                   ; SE ESTIVER PERTO NO X, VALIDA O EIXO Y
+        bcc PertoNoX                   ; SE ESTIVER PERTO NO X, VALIDA O EIXO Y
 
         ; --- CASO A: LONGE NO X (ANDA HORIZONTALMENTE E APENAS REPOSICIONA Y) ---
+        ;-- trava pra diminuir a velocidade. Nao funcona bem, mas ok
+        lda FrameCounter
+        AND #%00000001
+        beq Continua
+        jmp AbortaFisica
+
+Continua:
         lda a:VaderCrabStruct::X_Pos, y
         cmp z:DP_TEMP_04
         bcc @WalkRight
@@ -514,9 +517,9 @@ DP_DRAW_ENEMY_TYPE = $10
         adc #WALK_SPEED
         sta a:VaderCrabStruct::Y_Pos, y
 @FimApenas:
-        brl @CheckFimEixoX              ; Aborta o frame como STATE_WALKING seguro
+        brl CheckFimEixoX              ; Aborta o frame como STATE_WALKING seguro
 
-@PertoNoX:
+PertoNoX:
         ; --- CASO B: PERTO NO X (SÓ ATACA SE O Y TAMBÉM CONFIRMAR) ---
         lda a:VaderCrabStruct::Y_Pos, y
         sec
@@ -553,16 +556,16 @@ DP_DRAW_ENEMY_TYPE = $10
         lda #STATE_WALKING
         sta a:VaderCrabStruct::State, y
 @FimPertoX:
-        brl @CheckFimEixoX
+        brl CheckFimEixoX
 
 @AtaqueConsolidado:
         ; AMBOS OS EIXOS EM RAIO DE COLISÃO: Ativa preparação
         lda #STATE_PREPARING
         sta a:VaderCrabStruct::State, y
-        brl @CheckFimEixoX
+        brl CheckFimEixoX
 
-@CheckFimEixoX:
-@AbortaFisica:
+CheckFimEixoX:
+AbortaFisica:
         rts
 .endproc
 
