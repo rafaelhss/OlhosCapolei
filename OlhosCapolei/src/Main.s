@@ -198,7 +198,7 @@ _ResetAlign:
 
         ; --- RENDERIZAcÃO DO VADERCRAB ---
         pea .loword(RapaCrab)          ; Empilha o endereco de 16-bit diretamente (Y fica livre!)
-        ;jsr DrawVaderCrab
+        jsr DrawVaderCrab
         ply                     ; Tentativa Param: reset stack pointer
 
 
@@ -343,7 +343,7 @@ Finish:
 ;   Entrada: Y = Endereco absoluto do slot da Arma
 ;-------------------------------------------------------------------------------
 ;-------------------------------------------------------------------------------
-;   ApplyWeaponCollisions (Física de Ricochete Corrigida de Ponta a Ponta)
+;   ApplyWeaponCollisions (Física de Ricochete Corrigida e Blindada)
 ;-------------------------------------------------------------------------------
 .proc ApplyWeaponCollisions
         lda a:WeaponStruct::Active, y
@@ -394,9 +394,13 @@ Finish:
         ldy z:DP_ENEMY_STRUCT_PTR 
         jsr createEnemyPow
 
-        ; --- SALVA DIREcÃO DA ARMA ANTES DE ALTERAR RESTRUTURAcÕES ---
+        ; Restaura os contextos limpos de índice após o retorno do POW
+        ldy z:DP_WEAPON_POOL_PTR        
+        ldx z:DP_ENEMY_STRUCT_PTR       
+
+        ; Salva a direção horizontal da arma em um rascunho seguro
         lda a:WeaponStruct::Speed_X, y
-        sta z:DP_TEMP_00                ; Salva o vetor original no rascunho temporário
+        sta z:DP_TEMP_00                
         bmi @PedraIndoParaEsquerda
 
 @PedraIndoParaDireita:
@@ -423,20 +427,20 @@ Finish:
         sta a:VaderCrabStruct::X_Pos, x
 
 @ForcaRicochete:
-        ; --- INVERSÃO MATEMÁTICA ABSOLUTA DO VETOR HORIZONTAL ---
-        lda z:DP_TEMP_00                ; Recupera o Speed_X original salvo
+        ; --- INVERSÃO MATEMÁTICA OBRIGATÓRIA DO VETOR ---
+        lda z:DP_TEMP_00                ; Recupera a velocidade original do rascunho
         eor #$FF
         clc
         adc #1
-        sta a:WeaponStruct::Speed_X, y  ; Grava de volta cravado na struct da arma
+        sta a:WeaponStruct::Speed_X, y  ; Inverte o sinal (complemento de dois)
 
-        ; Impulso Vertical de quique para cima
+        ; Injeta o impulso vertical de quique para cima (-4)
         lda #$FC                
         sta a:WeaponStruct::Speed_Y, y
-        rts                             ; Sai direto com sucesso, pulando o bloco NoCollision
+        rts
 
 @NoCollision:
-        ldy z:DP_WEAPON_POOL_PTR        ; Restaura Y se não bateu
+        ldy z:DP_WEAPON_POOL_PTR        
         rts
 .endproc
 

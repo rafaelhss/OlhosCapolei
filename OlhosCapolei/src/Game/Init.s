@@ -330,6 +330,8 @@ sta RapaCrab + VaderCrabStruct::Enemy_Type
 
 ; =========== FIM BiigHero
 
+
+
 ;--- cria Pow
 
     stz Pow + PowStruct::Active_timer
