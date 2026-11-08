@@ -211,7 +211,7 @@ Table_Init_Weapons:
 
 
 ;----------- VaderCrab
-        lda #$CC                        ; 
+        lda #$20                        ; 
         sta VaderCrab + VaderCrabStruct::X_Pos
         
         lda #(SCREEN_BOTTOM / 2)        ; Y
@@ -246,7 +246,7 @@ sta VaderCrab + VaderCrabStruct::Enemy_Type
 
 
 ;----------- RapaCrab
-        lda #$CC                        ; 
+        lda #$C8                        ; 
         sta RapaCrab + VaderCrabStruct::X_Pos
         
         lda #(SCREEN_BOTTOM / 2)        ; Y
@@ -311,7 +311,7 @@ sta RapaCrab + VaderCrabStruct::Enemy_Type
 
 ;------------- cria Bullet
 
-        lda #100                        ; Nasce perto do meio horizontal da tela
+        lda #64                        ; Nasce perto do meio horizontal da tela
         sta Bullet + BulletStruct::X_Pos
         
         lda #100                        ; Nasce em uma altura boa de chão (eixo Z)
