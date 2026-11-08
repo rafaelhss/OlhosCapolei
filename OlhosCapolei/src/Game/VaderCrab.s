@@ -91,13 +91,17 @@ DP_DRAW_ENEMY_TYPE = $10
         bra @ApplyMovement
 
 @CheckResting:
-        ; Se o cronômetro de descanso estiver ativo, processa o repouso
+        ; Verifica primeiro se o timer já zerou para evitar underflow cíclico
         lda a:VaderCrabStruct::Resting_Timer, y
+        beq @RestingFim                ; Se já for 0, o descanso acabou
+
+        ; Decrementa o timer de descanso com segurança
         sec
         sbc #1
         sta a:VaderCrabStruct::Resting_Timer, y
-        bpl @ProcessResting
+        bra @ProcessResting            ; Enquanto for maior que 0, processa o repouso
 
+@RestingFim:
         ; --- QUEBRA DE DEADLOCK: O tempo de descanso acabou! ---
         ; Se o estado ainda for STATE_RESTING, força a volta para STATE_WALKING
         lda a:VaderCrabStruct::State, y
@@ -161,12 +165,20 @@ DP_DRAW_ENEMY_TYPE = $10
         lda #STATE_RESTING              
         sta a:VaderCrabStruct::State, y
         
-        ;Rest_time
-        jsr rand                        
-        and #$3F                        
+        ; --- CONFIGURAÇÃO DE DESCANSO CONFIGURÁVEL E BLINDADA ---
+        jsr rand                        ; Devolve valor aleatório em A
+        and #$C0                        ; Máscara curtíssima (Variação de apenas 0 a 3 frames)
         clc
-        adc #30                         
-        sta a:VaderCrabStruct::Resting_Timer, y
+        
+        ; =====================================================================
+        ; CONTROLE EXATO AQUI: 
+        ; Defina o número de frames exatos que você quer de pausa após o soco.
+        ; 5 = Quase instantâneo (Inimigos super agressivos)
+        ; 30 = Meio segundo de descanso parado
+        ; =====================================================================
+        adc #60                          ; Tempo base mínimo em frames
+        
+        sta a:VaderCrabStruct::Resting_Timer, y ; Grava o valor real (Sorteia entre 5 e 8 frames)
         rts
 
 @Anim:
@@ -301,6 +313,9 @@ DP_DRAW_ENEMY_TYPE = $10
 ;-------------------------------------------------------------------------------
 ;   ApplyEnemyPhysics - INTELEGÊNCIA DE FILTRO E EVASÃO DE CORPO
 ;-------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
+;   ApplyEnemyPhysics - INTELIGÊNCIA DE FILTRO, EVASÃO E TRAVA DUPLA DE ATAQUE
+;-------------------------------------------------------------------------------
 .proc ApplyEnemyPhysics
         sty z:DP_ENEMY_STRUCT_PTR
 
@@ -413,7 +428,7 @@ DP_DRAW_ENEMY_TYPE = $10
         sta a:VaderCrabStruct::X_Pos, y
         lda #0
         sta a:VaderCrabStruct::Facing, y
-        brl @FinalizaEvasao              ; Mudado para BRL longo
+        brl @FinalizaEvasao              
 @EvasaoDireita:
         lda a:VaderCrabStruct::X_Pos, y
         clc
@@ -429,9 +444,9 @@ DP_DRAW_ENEMY_TYPE = $10
         lda #STATE_WALKING
         sta a:VaderCrabStruct::State, y
 @JumpFimEixoX:
-        brl @CheckFimEixoX              ; Mudado para BRL longo
-
+        brl @CheckFimEixoX              
 @FisicaNormal:
+        ; --- 1. ISOLAMENTO ABSOLUTO DO EIXO X ---
         lda a:VaderCrabStruct::X_Pos, y
         sec
         sbc z:DP_TEMP_04
@@ -441,8 +456,9 @@ DP_DRAW_ENEMY_TYPE = $10
         adc #1
 @CalcAbsX:
         cmp #ENEMY_ATTACK_DISTANCE
-        bcc @StopHorizontal
+        bcc @PertoNoX                   ; SE ESTIVER PERTO NO X, VALIDA O EIXO Y
 
+        ; --- CASO A: LONGE NO X (ANDA HORIZONTALMENTE E APENAS REPOSICIONA Y) ---
         lda a:VaderCrabStruct::X_Pos, y
         cmp z:DP_TEMP_04
         bcc @WalkRight
@@ -454,15 +470,7 @@ DP_DRAW_ENEMY_TYPE = $10
         sta a:VaderCrabStruct::X_Pos, y
         lda #0
         sta a:VaderCrabStruct::Facing, y
-
-        lda a:VaderCrabStruct::State, y
-        cmp #STATE_WALKING
-        beq @JumpCheckVertical
-        lda #STATE_WALKING
-        sta a:VaderCrabStruct::State, y
-@JumpCheckVertical:
-        jmp @CheckVertical              
-
+        bra @ForcaAndarX
 @WalkRight:
         lda a:VaderCrabStruct::X_Pos, y
         clc
@@ -471,19 +479,45 @@ DP_DRAW_ENEMY_TYPE = $10
         lda #1
         sta a:VaderCrabStruct::Facing, y
 
+@ForcaAndarX:
         lda a:VaderCrabStruct::State, y
         cmp #STATE_WALKING
-        beq @JumpCheckVertical2
+        beq @ApenasReposicionaY
         lda #STATE_WALKING
         sta a:VaderCrabStruct::State, y
-@JumpCheckVertical2:
-        jmp @CheckVertical              
 
-@StopHorizontal:
-        lda #STATE_PREPARING
-        sta a:VaderCrabStruct::State, y
+@ApenasReposicionaY:
+        ; Se o X está longe, move o Y para alinhar, mas NUNCA dispara ataque
+        lda a:VaderCrabStruct::Y_Pos, y
+        sec
+        sbc z:DP_TEMP_05
+        bcs @AbsYApenas
+        eor #$FF
+        clc
+        adc #1
+@AbsYApenas:
+        cmp #ENEMY_ATTACK_Y_RANGE
+        bcc @FimApenas                  ; Altura correta, aborta sem atacar
 
-@CheckVertical:
+        lda a:VaderCrabStruct::Y_Pos, y
+        cmp z:DP_TEMP_05
+        bcc @MoveDownApenas
+@MoveUpApenas:
+        lda a:VaderCrabStruct::Y_Pos, y
+        sec
+        sbc #WALK_SPEED
+        sta a:VaderCrabStruct::Y_Pos, y
+        bra @FimApenas
+@MoveDownApenas:
+        lda a:VaderCrabStruct::Y_Pos, y
+        clc
+        adc #WALK_SPEED
+        sta a:VaderCrabStruct::Y_Pos, y
+@FimApenas:
+        brl @CheckFimEixoX              ; Aborta o frame como STATE_WALKING seguro
+
+@PertoNoX:
+        ; --- CASO B: PERTO NO X (SÓ ATACA SE O Y TAMBÉM CONFIRMAR) ---
         lda a:VaderCrabStruct::Y_Pos, y
         sec
         sbc z:DP_TEMP_05
@@ -493,48 +527,46 @@ DP_DRAW_ENEMY_TYPE = $10
         adc #1
 @CalcAbsY:
         cmp #ENEMY_ATTACK_Y_RANGE
-        bcc @StopVertical
+        bcc @AtaqueConsolidado          ; PERTO NO X + PERTO NO Y = ATAQUE SEGURO
 
+        ; Perto no X, mas longe no Y: Anda verticalmente para fechar o cerco
         lda a:VaderCrabStruct::Y_Pos, y
         cmp z:DP_TEMP_05
-        bcc @MoveDown
-@MoveUp:
+        bcc @MoveDownPertoX
+
+@MoveUpPertoX:
         lda a:VaderCrabStruct::Y_Pos, y
         sec
         sbc #WALK_SPEED
         sta a:VaderCrabStruct::Y_Pos, y
-
-        lda a:VaderCrabStruct::State, y
-        cmp #STATE_WALKING
-        beq @JumpFim1
-        lda #STATE_WALKING
-        sta a:VaderCrabStruct::State, y
-@JumpFim1:
-        brl @CheckFimEixoX              ; Mudado para BRL Longo (Mata o erro da linha 415)
-
-@MoveDown:
+        bra @ForcaEstadoAndarPertoX
+@MoveDownPertoX:
         lda a:VaderCrabStruct::Y_Pos, y
         clc
         adc #WALK_SPEED
         sta a:VaderCrabStruct::Y_Pos, y
 
+@ForcaEstadoAndarPertoX:
         lda a:VaderCrabStruct::State, y
         cmp #STATE_WALKING
-        beq @JumpFim2
+        beq @FimPertoX
         lda #STATE_WALKING
         sta a:VaderCrabStruct::State, y
-@JumpFim2:
-        brl @CheckFimEixoX              ; Mudado para BRL Longo (Mata o erro da linha 418)
+@FimPertoX:
+        brl @CheckFimEixoX
 
-@StopVertical:
-        lda a:VaderCrabStruct::State, y
-        cmp #STATE_PREPARING
-        bne @CheckFimEixoX
+@AtaqueConsolidado:
+        ; AMBOS OS EIXOS EM RAIO DE COLISÃO: Ativa preparação
+        lda #STATE_PREPARING
+        sta a:VaderCrabStruct::State, y
+        brl @CheckFimEixoX
 
 @CheckFimEixoX:
 @AbortaFisica:
         rts
 .endproc
+
+
 
 ;-------------------------------------------------------------------------------
 .proc UpdateVaderGeometry
