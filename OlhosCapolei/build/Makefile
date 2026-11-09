@@ -169,21 +169,13 @@ src/Game/Input.s.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/OlhosCapolei.dir/build.make CMakeFiles/OlhosCapolei.dir/src/Game/Input.s.o
 .PHONY : src/Game/Input.s.o
 
-src/Game/PennyCrab.o: src/Game/PennyCrab.s.o
-.PHONY : src/Game/PennyCrab.o
+src/Game/MeleeCrab.o: src/Game/MeleeCrab.s.o
+.PHONY : src/Game/MeleeCrab.o
 
 # target to build an object file
-src/Game/PennyCrab.s.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/OlhosCapolei.dir/build.make CMakeFiles/OlhosCapolei.dir/src/Game/PennyCrab.s.o
-.PHONY : src/Game/PennyCrab.s.o
-
-src/Game/VaderCrab.o: src/Game/VaderCrab.s.o
-.PHONY : src/Game/VaderCrab.o
-
-# target to build an object file
-src/Game/VaderCrab.s.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/OlhosCapolei.dir/build.make CMakeFiles/OlhosCapolei.dir/src/Game/VaderCrab.s.o
-.PHONY : src/Game/VaderCrab.s.o
+src/Game/MeleeCrab.s.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/OlhosCapolei.dir/build.make CMakeFiles/OlhosCapolei.dir/src/Game/MeleeCrab.s.o
+.PHONY : src/Game/MeleeCrab.s.o
 
 src/Game/Weapon2.o: src/Game/Weapon2.s.o
 .PHONY : src/Game/Weapon2.o
@@ -255,8 +247,7 @@ help:
 	@echo "... src/Game/Bullet.o"
 	@echo "... src/Game/Init.o"
 	@echo "... src/Game/Input.o"
-	@echo "... src/Game/PennyCrab.o"
-	@echo "... src/Game/VaderCrab.o"
+	@echo "... src/Game/MeleeCrab.o"
 	@echo "... src/Game/Weapon2.o"
 	@echo "... src/Main.o"
 	@echo "... src/PPU/PPU.o"

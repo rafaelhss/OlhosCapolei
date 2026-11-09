@@ -59,7 +59,7 @@ DP_DRAW_ENEMY_TYPE = $10
         brl @Done   
 
 @ProcessIA:
-        ; --- RASTREAMENTO DINÂMICO DE FACING DURANTE O PREPARO ---
+        ; --- RASTREAMENTO DINÂMICO DE FACING DURANTE O PREPARO [ eu acho que isso nao tinha que ser feito aqui e sim no UpdatePreparingState...]---
         lda a:VaderCrabStruct::State, y
         cmp #STATE_PREPARING            
         bne @AvaliaEstados              
@@ -310,17 +310,36 @@ DP_DRAW_ENEMY_TYPE = $10
 ;   ApplyEnemyPhysics - INTELEGÊNCIA DE FILTRO E EVASÃO DE CORPO
 ;-------------------------------------------------------------------------------
 ;-------------------------------------------------------------------------------
-;   ApplyEnemyPhysics - INTELIGÊNCIA DE FILTRO, EVASÃO E TRAVA DUPLA DE ATAQUE
+;   ApplyEnemyPhysics - ORQUESTRADOR REFATORADO
 ;-------------------------------------------------------------------------------
 .proc ApplyEnemyPhysics
         sty z:DP_ENEMY_STRUCT_PTR
 
         lda a:VaderCrabStruct::State, y
         cmp #STATE_RESTING
-        bne @Continue
-        jmp AbortaFisica
+        beq @Aborta
 
-@Continue:
+        ; 1. Calcula o alvo com base no setor do inimigo
+        jsr GetTargetSector
+
+        ; 2. Verifica se há colisão/necessidade de evasão de corpo
+        jsr HandleBodyEvasion
+        bcc @FisicaPadrao               ; Se o Carry estiver limpo, segue física normal
+        rts                             ; Se evadiu, encerra o frame
+
+@FisicaPadrao:
+        ; 3. Executa a aproximação e lógica de ataque regular
+        jsr HandleNormalPhysics
+
+@Aborta:
+        rts
+.endproc
+
+;-------------------------------------------------------------------------------
+;   SUB-ROTINA: GetTargetSector
+;   Calcula os deslocamentos (offsets) com base no quadrante do inimigo
+;-------------------------------------------------------------------------------
+.proc GetTargetSector
         lda a:VaderCrabStruct::Attack_Sector, y
         cmp #0                          
         beq @SetorSupDireito
@@ -338,7 +357,7 @@ DP_DRAW_ENEMY_TYPE = $10
         clc
         adc #SECTOR_OFFSET_Y
         sta z:DP_TEMP_05                
-        bra @ProcessaPerseguicao
+        rts
 
 @SetorSupDireito:
         lda BigHero + BigHeroStruct::X_Pos
@@ -349,7 +368,7 @@ DP_DRAW_ENEMY_TYPE = $10
         sec
         sbc #SECTOR_OFFSET_Y
         sta z:DP_TEMP_05
-        bra @ProcessaPerseguicao
+        rts
 
 @SetorSupEsquerdo:
         lda BigHero + BigHeroStruct::X_Pos
@@ -360,7 +379,7 @@ DP_DRAW_ENEMY_TYPE = $10
         sec
         sbc #SECTOR_OFFSET_Y
         sta z:DP_TEMP_05
-        bra @ProcessaPerseguicao
+        rts
 
 @SetorInfDireito:
         lda BigHero + BigHeroStruct::X_Pos
@@ -371,9 +390,14 @@ DP_DRAW_ENEMY_TYPE = $10
         clc
         adc #SECTOR_OFFSET_Y
         sta z:DP_TEMP_05
+        rts
+.endproc
 
-@ProcessaPerseguicao:
-        ldy z:DP_ENEMY_STRUCT_PTR
+;-------------------------------------------------------------------------------
+;   SUB-ROTINA: HandleBodyEvasion
+;   Retorna: Carry SET se houve evasão (bloqueia física padrão), CLEAR se não.
+;-------------------------------------------------------------------------------
+.proc HandleBodyEvasion
         lda a:VaderCrabStruct::X_Pos, y
         sec
         sbc BigHero + BigHeroStruct::X_Pos
@@ -383,7 +407,7 @@ DP_DRAW_ENEMY_TYPE = $10
         adc #1
 @AbsCorpoX:
         cmp #24
-        bcs @FisicaNormal
+        bcs @SemEvasao
 
         lda a:VaderCrabStruct::Y_Pos, y
         sec
@@ -394,8 +418,9 @@ DP_DRAW_ENEMY_TYPE = $10
         adc #1
 @AvaliaInimigoAbaixo:
         cmp #16
-        bcs @FisicaNormal
+        bcs @SemEvasao
 
+        ; --- Executa Evasão ---
         lda a:VaderCrabStruct::Y_Pos, y
         cmp BigHero + BigHeroStruct::Y_Pos
         bcs @ContornarPorCima
@@ -424,7 +449,7 @@ DP_DRAW_ENEMY_TYPE = $10
         sta a:VaderCrabStruct::X_Pos, y
         lda #0
         sta a:VaderCrabStruct::Facing, y
-        brl @FinalizaEvasao              
+        bra @FinalizaEvasao              
 @EvasaoDireita:
         lda a:VaderCrabStruct::X_Pos, y
         clc
@@ -436,12 +461,23 @@ DP_DRAW_ENEMY_TYPE = $10
 @FinalizaEvasao:
         lda a:VaderCrabStruct::State, y
         cmp #STATE_WALKING
-        beq @JumpFimEixoX
+        beq @FimEvasao
         lda #STATE_WALKING
         sta a:VaderCrabStruct::State, y
-@JumpFimEixoX:
-        brl CheckFimEixoX              
-@FisicaNormal:
+@FimEvasao:
+        sec                             ; Avisa o orquestrador que houve evasão
+        rts
+
+@SemEvasao:
+        clc                             ; Continua para física normal
+        rts
+.endproc
+
+;-------------------------------------------------------------------------------
+;   SUB-ROTINA: HandleNormalPhysics
+;   Move o inimigo até o setor e engaja o estado de preparação de ataque
+;-------------------------------------------------------------------------------
+.proc HandleNormalPhysics
         ; --- 1. ISOLAMENTO ABSOLUTO DO EIXO X ---
         lda a:VaderCrabStruct::X_Pos, y
         sec
@@ -452,16 +488,15 @@ DP_DRAW_ENEMY_TYPE = $10
         adc #1
 @CalcAbsX:
         cmp #ENEMY_ATTACK_DISTANCE
-        bcc PertoNoX                   ; SE ESTIVER PERTO NO X, VALIDA O EIXO Y
+        bcc @PertoNoX                   
 
-        ; --- CASO A: LONGE NO X (ANDA HORIZONTALMENTE E APENAS REPOSICIONA Y) ---
-        ;-- trava pra diminuir a velocidade. Nao funcona bem, mas ok
+        ; --- CASO A: LONGE NO X (Limitador de velocidade por FrameCounter) ---
         lda FrameCounter
-        AND #%00000001
-        beq Continua
-        jmp AbortaFisica
+        and #%00000001
+        beq @ContinuaAndar
+        rts
 
-Continua:
+@ContinuaAndar:
         lda a:VaderCrabStruct::X_Pos, y
         cmp z:DP_TEMP_04
         bcc @WalkRight
@@ -490,7 +525,6 @@ Continua:
         sta a:VaderCrabStruct::State, y
 
 @ApenasReposicionaY:
-        ; Se o X está longe, move o Y para alinhar, mas NUNCA dispara ataque
         lda a:VaderCrabStruct::Y_Pos, y
         sec
         sbc z:DP_TEMP_05
@@ -500,7 +534,7 @@ Continua:
         adc #1
 @AbsYApenas:
         cmp #ENEMY_ATTACK_Y_RANGE
-        bcc @FimApenas                  ; Altura correta, aborta sem atacar
+        bcc @FimApenas                  
 
         lda a:VaderCrabStruct::Y_Pos, y
         cmp z:DP_TEMP_05
@@ -510,17 +544,17 @@ Continua:
         sec
         sbc #WALK_SPEED
         sta a:VaderCrabStruct::Y_Pos, y
-        bra @FimApenas
+        rts
 @MoveDownApenas:
         lda a:VaderCrabStruct::Y_Pos, y
         clc
         adc #WALK_SPEED
         sta a:VaderCrabStruct::Y_Pos, y
 @FimApenas:
-        brl CheckFimEixoX              ; Aborta o frame como STATE_WALKING seguro
+        rts
 
-PertoNoX:
-        ; --- CASO B: PERTO NO X (SÓ ATACA SE O Y TAMBÉM CONFIRMAR) ---
+@PertoNoX:
+        ; --- CASO B: PERTO NO X ---
         lda a:VaderCrabStruct::Y_Pos, y
         sec
         sbc z:DP_TEMP_05
@@ -530,9 +564,9 @@ PertoNoX:
         adc #1
 @CalcAbsY:
         cmp #ENEMY_ATTACK_Y_RANGE
-        bcc @AtaqueConsolidado          ; PERTO NO X + PERTO NO Y = ATAQUE SEGURO
+        bcc @AtaqueConsolidado          
 
-        ; Perto no X, mas longe no Y: Anda verticalmente para fechar o cerco
+        ; Perto no X, mas longe no Y: Anda verticalmente
         lda a:VaderCrabStruct::Y_Pos, y
         cmp z:DP_TEMP_05
         bcc @MoveDownPertoX
@@ -556,16 +590,11 @@ PertoNoX:
         lda #STATE_WALKING
         sta a:VaderCrabStruct::State, y
 @FimPertoX:
-        brl CheckFimEixoX
+        rts
 
 @AtaqueConsolidado:
-        ; AMBOS OS EIXOS EM RAIO DE COLISÃO: Ativa preparação
         lda #STATE_PREPARING
         sta a:VaderCrabStruct::State, y
-        brl CheckFimEixoX
-
-CheckFimEixoX:
-AbortaFisica:
         rts
 .endproc
 

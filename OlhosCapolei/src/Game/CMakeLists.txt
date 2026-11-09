@@ -7,7 +7,6 @@ target_sources( ${PROJECT_NAME}
     PRIVATE Init.s
     PRIVATE Input.s 
     PRIVATE BigHero.s
-    PRIVATE PennyCrab.s
-    PRIVATE VaderCrab.s
     PRIVATE Weapon2.s
-    PRIVATE Bullet.s)
+    PRIVATE Bullet.s
+    PRIVATE MeleeCrab.s)

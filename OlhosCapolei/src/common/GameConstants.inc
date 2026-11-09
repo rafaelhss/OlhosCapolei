@@ -35,11 +35,9 @@ WEAPON_STATE_THROWN   = 2  ; Voando pelo ar em parábola
 SPRITE_SIZE     = $08   ; Sprites base são 8x8 pixels
 SPRITE_SPEED    = $01   ; Velocidade base do herói
 
-ENEMY_ATTACK_DISTANCE = $32   ; Distância de engajamento do ataque da IA   
-ENEMY_ATTACK_Y_RANGE  = $08   ; Tolerância no eixo Y para alinhamento tridimensional
 
-SECTOR_OFFSET_X = 40
-SECTOR_OFFSET_Y = 24
+SECTOR_OFFSET_X = 20 + 32 ; 32 = metade do crab
+SECTOR_OFFSET_Y = 8 + 32 ; 32 = metade do crab
 
 ; --- Limites Preventivos contra Underflow (Zonas de Amortecimento) ---
 HERO_SAFE_LIMIT         = (SPRITE_SPEED + SPRITE_SPEED) 
@@ -67,25 +65,40 @@ DP_TEMP_02              = $02
 DP_TEMP_03              = $03
 DP_TEMP_CALC            = $05   ; ◄ ADICIONE ISSO: Rascunho isolado para matemática de ponteiros
 
-DP_TEMP_04              = $06
+;DP_TARGET_ENEMY_X              = $06
+;DP_TARGET_ENEMY_Y              = $08
 
-DP_TEMP_05              = $08
 
 
 ; --- Zona Exclusiva do Subsistema do Herói (BigHero.s) ---
-DP_HERO_LAYOUT_PTR      = $0A   ; Ocupa $04 e $05 (Ponteiro de 16-bit para matriz de animação na ROM)
-DP_HERO_OAM_BACKUP      = $0C   ; Ocupa $06 e $07 (Preserva temporariamente o reg X OAM)
+DP_HERO_LAYOUT_PTR      = $0A   ; Ocupa $0A e $0B (Ponteiro de 16-bit para matriz de animação na ROM)
+DP_HERO_OAM_BACKUP      = $0C   ; Ocupa $0C e $0D (Preserva temporariamente o reg X OAM)
 
 ; --- Zona Exclusiva do Subsistema de Armas e Projéteis (Weapon.s) ---
-DP_WEAPON_TILE_TMP      = $10   ; Ocupa $08 (Guarda o Tile_ID do item arremessável)
-DP_WEAPON_OAM_BACKUP    = $12   ; Ocupa $0A e $0B (Preserva temporariamente o reg X OAM)
-DP_WEAPON_POOL_PTR      = $14   ; Ocupa $0C (Índice de controle de varredura da RAM do Pool)
+DP_WEAPON_TILE_TMP      = $10   ; Ocupa $10 (Guarda o Tile_ID do item arremessável)
+DP_WEAPON_OAM_BACKUP    = $12   ; Ocupa $12 e $13 (Preserva temporariamente o reg X OAM)
+DP_WEAPON_POOL_PTR      = $14   ; Ocupa $14 (Índice de controle de varredura da RAM do Pool)
 
 DP_VADER_LAYOUT_PTR   = $16 ; Usa $16, $17, $18 (Ponteiro Longo de 24 bits)
 DP_ENEMY_STRUCT_PTR   = $19 ; Usa $19, $1A, $1B (Ponteiro Longo de 24 bits)
 DP_ENEMY_X            = $1C ; Usa $1C, $1D
 DP_ENEMY_Y            = $1E ; Usa $1E, $1F
 DP_ENEMY_FACING       = $20 ; Usa $20, $21
+
+DP_MELEE_CRAB_LAYOUT_PTR   = $22 ; Usa $22, $23, $24 (Ponteiro Longo de 24 bits)
+DP_MELEE_CRAB_STRUCT_PTR   = $25 ; Usa $25, $26, $27 (Ponteiro Longo de 24 bits)
+DP_MELEE_CRAB_X            = $28 ; Usa $28, $29
+DP_MELEE_CRAB_Y            = $2A ; Usa $2A, $2B
+DP_MELEE_CRAB_FACING       = $2C ; Usa $2C, $2D
+
+DP_HERO_CENTER_X         = $2E ; Usa $2E
+DP_HERO_CENTER_Y         = $2F ; Usa $2F
+
+
+
+;DP_TARGET_ENEMY_X_DEBUGDENGUE              = $30    
+;DP_TARGET_ENEMY_Y_DEBUGDENGUE              = $31
+
 
 
 ; --- Categorias Unificadas de Armas ---
@@ -107,6 +120,7 @@ WEAPON_ID_HAMMER       = 7
 ;- tipos de inimigo
 ENEMY_TYPE_VADER = 0 ; dhart VaderCrab
 ENEMY_TYPE_RAPA  = 1 ; Rapa nui crab
+ENEMY_TYPE_DENGUE = 2 ; Dengue crab
 
 
 
@@ -189,8 +203,41 @@ ENEMY_TYPE_RAPA  = 1 ; Rapa nui crab
     HurtTimer            .byte
     Enemy_Type           .byte  
     Attack_Sector        .byte
+.endstruct
 
-      
+; ======== MeleeCrab IA
+.struct MeleeCrabStruct
+    X_Pos                .byte   
+    Y_Pos                .byte   
+    Tile_Count           .byte   
+    Walk_Anim_Speed      .byte 
+    Anim_Timer           .byte   
+    Anim_Frame           .byte   
+    Anim_Ptr             .res 2  
+    Facing               .byte   
+    State                .byte   
+    State_Timer          .byte   
+    Preparing_Timer      .byte   
+    Preparing_Anim_Timer .byte   
+    Preparing_Anim_Frame .byte
+    Attacking_Timer      .byte   
+    Attacking_Anim_Timer .byte   
+    Attacking_Anim_Frame .byte    
+    Resting_Timer        .byte 
+    Hitbox_Active        .byte   
+    Hitbox_X1            .byte   
+    Hitbox_X2            .byte   
+    Hitbox_Y1            .byte   
+    Hitbox_Y2            .byte 
+    Hurtbox_X1            .byte   
+    Hurtbox_X2            .byte   
+    Hurtbox_Y1            .byte   
+    Hurtbox_Y2            .byte 
+    HurtTimer            .byte
+    Enemy_Type           .byte  
+    Attack_Sector        .byte
+    Target_Attack_X        .byte
+    Target_Attack_Y        .byte
 .endstruct
 
 ; ======== Registro do Pool de Projéteis Dinâmicos

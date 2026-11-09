@@ -23,7 +23,7 @@
 
 
 .import  BigHero, PennyCrab, VaderCrab, WeaponA, WeaponB, WeaponC, WeaponD, WeaponE
-.import RapaCrab
+.import DengueCrab, RapaNuiCrab
 .import Bullet
 .import Bullet2
 .import InitRNG
@@ -214,79 +214,124 @@ Table_Init_Weapons:
 
 ;----------- VaderCrab
         lda #$20                        ; 
-        sta VaderCrab + VaderCrabStruct::X_Pos
+        sta VaderCrab + MeleeCrabStruct::X_Pos
         
         lda #(SCREEN_BOTTOM / 2)        ; Y
-        sta VaderCrab + VaderCrabStruct::Y_Pos
+        sta VaderCrab + MeleeCrabStruct::Y_Pos
 
         lda #12                        
-        sta VaderCrab + VaderCrabStruct::Tile_Count  
+        sta VaderCrab + MeleeCrabStruct::Tile_Count  
 
         lda #$09
-        sta VaderCrab + VaderCrabStruct::Walk_Anim_Speed 
+        sta VaderCrab + MeleeCrabStruct::Walk_Anim_Speed 
 
         lda #$04                       
-        sta VaderCrab + VaderCrabStruct::Anim_Timer
+        sta VaderCrab + MeleeCrabStruct::Anim_Timer
         lda #$00                       
-        sta VaderCrab + VaderCrabStruct::Anim_Frame   
+        sta VaderCrab + MeleeCrabStruct::Anim_Frame   
 
         ; ◄ CRÍTICO: INICIALIZAÇÃO CONTRA O BUG DOS 5 SEGUNDOS
         lda #$08                       
-        sta VaderCrab + VaderCrabStruct::Preparing_Anim_Timer
-        stz VaderCrab + VaderCrabStruct::Preparing_Anim_Frame
-        sta VaderCrab + VaderCrabStruct::Attacking_Anim_Timer
-        sta VaderCrab + VaderCrabStruct::Attacking_Timer
-        stz VaderCrab + VaderCrabStruct::Attacking_Anim_Frame
+        sta VaderCrab + MeleeCrabStruct::Preparing_Anim_Timer
+        stz VaderCrab + MeleeCrabStruct::Preparing_Anim_Frame
+        sta VaderCrab + MeleeCrabStruct::Attacking_Anim_Timer
+        sta VaderCrab + MeleeCrabStruct::Attacking_Timer
+        stz VaderCrab + MeleeCrabStruct::Attacking_Anim_Frame
         
         lda #STATE_WALKING
-        sta VaderCrab + VaderCrabStruct::State
+        sta VaderCrab + MeleeCrabStruct::State
 
         lda #ENEMY_TYPE_VADER
-        STA VaderCrab + VaderCrabStruct::Enemy_Type
+        STA VaderCrab + MeleeCrabStruct::Enemy_Type
 
-        lda #$02
-        sta VaderCrab + VaderCrabStruct::Attack_Sector
+        lda #$00
+        STA VaderCrab + MeleeCrabStruct::Attack_Sector
+        
+    stz VaderCrab + MeleeCrabStruct::Hitbox_Active
 
 ;=========== FIM Vader
 
 
-;----------- RapaCrab
+;----------- DengueCrab
         lda #$C8                        ; 
-        sta RapaCrab + VaderCrabStruct::X_Pos
+        sta DengueCrab + MeleeCrabStruct::X_Pos
         
         lda #(SCREEN_BOTTOM / 2)        ; Y
-        sta RapaCrab + VaderCrabStruct::Y_Pos
+        sta DengueCrab + MeleeCrabStruct::Y_Pos
 
         lda #12                        
-        sta RapaCrab + VaderCrabStruct::Tile_Count  
+        sta DengueCrab + MeleeCrabStruct::Tile_Count  
 
         lda #$09
-        sta RapaCrab + VaderCrabStruct::Walk_Anim_Speed 
+        sta DengueCrab + MeleeCrabStruct::Walk_Anim_Speed 
 
         lda #$04                       
-        sta RapaCrab + VaderCrabStruct::Anim_Timer
+        sta DengueCrab + MeleeCrabStruct::Anim_Timer
         lda #$00                       
-        sta RapaCrab + VaderCrabStruct::Anim_Frame   
+        sta DengueCrab + MeleeCrabStruct::Anim_Frame   
 
         ; ◄ CRÍTICO: INICIALIZAÇÃO CONTRA O BUG DOS 5 SEGUNDOS
         lda #$08                       
-        sta RapaCrab + VaderCrabStruct::Preparing_Anim_Timer
-        stz RapaCrab + VaderCrabStruct::Preparing_Anim_Frame
-        sta RapaCrab + VaderCrabStruct::Attacking_Anim_Timer
-        sta RapaCrab + VaderCrabStruct::Attacking_Timer
-        stz RapaCrab + VaderCrabStruct::Attacking_Anim_Frame
+        sta DengueCrab + MeleeCrabStruct::Preparing_Anim_Timer
+        stz DengueCrab + MeleeCrabStruct::Preparing_Anim_Frame
+        sta DengueCrab + MeleeCrabStruct::Attacking_Anim_Timer
+        sta DengueCrab + MeleeCrabStruct::Attacking_Timer
+        stz DengueCrab + MeleeCrabStruct::Attacking_Anim_Frame
         
         lda #STATE_WALKING
-        sta RapaCrab + VaderCrabStruct::State
+        sta DengueCrab + MeleeCrabStruct::State
 
-lda #ENEMY_TYPE_RAPA
-STA RapaCrab + VaderCrabStruct::Enemy_Type
+lda #ENEMY_TYPE_DENGUE
+STA DengueCrab + MeleeCrabStruct::Enemy_Type
 
 
     lda #$01
-    sta RapaCrab + VaderCrabStruct::Attack_Sector       
-;=========== FIM Rapa
+    STA DengueCrab + MeleeCrabStruct::Attack_Sector      
 
+
+    stz DengueCrab + MeleeCrabStruct::Hitbox_Active 
+;=========== FIM Dengue
+
+
+
+;----------- RapaNuiCrab
+        lda #$08                        ; 
+        sta RapaNuiCrab + MeleeCrabStruct::X_Pos
+        
+        lda #(SCREEN_BOTTOM - 20)        ; Y
+        sta RapaNuiCrab + MeleeCrabStruct::Y_Pos
+
+        lda #12                        
+        sta RapaNuiCrab + MeleeCrabStruct::Tile_Count  
+
+        lda #$09
+        sta RapaNuiCrab + MeleeCrabStruct::Walk_Anim_Speed 
+
+        lda #$04                       
+        sta RapaNuiCrab + MeleeCrabStruct::Anim_Timer
+        lda #$00                       
+        sta RapaNuiCrab + MeleeCrabStruct::Anim_Frame   
+
+        ; ◄ CRÍTICO: INICIALIZAÇÃO CONTRA O BUG DOS 5 SEGUNDOS
+        lda #$08                       
+        sta RapaNuiCrab + MeleeCrabStruct::Preparing_Anim_Timer
+        stz RapaNuiCrab + MeleeCrabStruct::Preparing_Anim_Frame
+        sta RapaNuiCrab + MeleeCrabStruct::Attacking_Anim_Timer
+        sta RapaNuiCrab + MeleeCrabStruct::Attacking_Timer
+        stz RapaNuiCrab + MeleeCrabStruct::Attacking_Anim_Frame
+        
+        lda #STATE_WALKING
+        sta RapaNuiCrab + MeleeCrabStruct::State
+
+lda #ENEMY_TYPE_RAPA
+STA RapaNuiCrab + MeleeCrabStruct::Enemy_Type
+
+
+    lda #$02
+    STA RapaNuiCrab + MeleeCrabStruct::Attack_Sector   
+    
+    stz RapaNuiCrab + MeleeCrabStruct::Hitbox_Active    
+;=========== FIM RapaNuiCrab
 
 
 ; -----------------------------------------------------------------------------

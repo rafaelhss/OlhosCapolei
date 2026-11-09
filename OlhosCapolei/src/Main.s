@@ -22,9 +22,8 @@
 .include "MemoryMapWRAM.inc"
 .include "PPU.inc"
 .include "Registers.inc"
-.include "BigHero.inc"
-.include "PennyCrab.inc"
-.include "VaderCrab.inc"
+.INCLUDE "BigHero.inc"
+.include "MeleeCrab.inc"
 .include "Weapon2.inc"
 .include "Bullet.inc"
 
@@ -94,17 +93,30 @@ _ResetAlign:
 
         ; 2. SESSÃO DE FÍSICA E MOVIMENTAcÃO
 
-        jsr MoveBigHero
-        jsr MovePennyCrab
+        JSR MoveBigHero
+        ;Atualiza a posicao central do heroi para o sistema de colisões
+        LDA BigHero + BigHeroStruct::X_Pos
+        CLC
+        ADC #16
+        STA z:DP_HERO_CENTER_X
+        LDA BigHero + BigHeroStruct::Y_Pos
+        CLC
+        ADC #32
+        STA z:DP_HERO_CENTER_Y
 
         ; --- MOVIMENTAcÃO DO VADERCRAB ---
         pea .loword(VaderCrab)
-        jsr MoveVaderCrab
+        jsr MoveMeleeCrab
         ply                             ; Limpa 2 bytes da pilha (.i16 ativo)
 
-        ; --- MOVIMENTAcÃO DO RAPACRAB ---
-        pea .loword(RapaCrab)
-        jsr MoveVaderCrab
+        ; --- MOVIMENTAcÃO DO DengueCRAB ---
+        pea .loword(DengueCrab)
+        jsr MoveMeleeCrab
+        ply                             ; Limpa 2 bytes da pilha
+       
+        ; --- MOVIMENTAcÃO DO RapaNUiCRAB ---
+        pea .loword(RapaNuiCrab)
+        jsr MoveMeleeCrab
         ply                             ; Limpa 2 bytes da pilha
 
 
@@ -136,7 +148,11 @@ _ResetAlign:
         jsr ApplyDamageToHero
         ply                             ; Limpa 2 bytes da pilha
 
-        pea .loword(RapaCrab)
+        pea .loword(DengueCrab)
+        jsr ApplyDamageToHero
+        ply                             ; Limpa 2 bytes da pilha
+
+        pea .loword(RapaNuiCrab)
         jsr ApplyDamageToHero
         ply                             ; Limpa 2 bytes da pilha
 
@@ -169,33 +185,66 @@ _ResetAlign:
 
 
 
-        ; === TESTES CONTRA O RAPACRAB ===
-        ldy #.loword(RapaCrab)
+        ; === TESTES CONTRA O DengueCRAB ===
+        ldy #.loword(DengueCrab)
         sty z:DP_ENEMY_STRUCT_PTR       ; Muda o alvo atual na Direct Page!
         
-        ; Checa colisões de pedradas (Slots A..E) contra o Rapa
+        ; Checa colisões de pedradas (Slots A..E) contra o Dengue
         .repeat 5, I
             ldy #.loword(.ident(.sprintf("Weapon%c", $41 + I)))
             jsr ApplyWeaponCollisions
         .endrepeat
         
-        ; Checa colisões de porretadas (Slots A..E) contra o Rapa
+        ; Checa colisões de porretadas (Slots A..E) contra o Dengue
         .repeat 5, I
             ldy #.loword(.ident(.sprintf("Weapon%c", $41 + I)))
             jsr ApplyMeleeWeaponCollisions
         .endrepeat
 
-        pea .loword(RapaCrab)
+        pea .loword(DengueCrab)
         jsr ApplyBulletCollisions
         ply
-        pea .loword(RapaCrab)
+        pea .loword(DengueCrab)
         jsr ApplyBullet2Collisions
         ply
         
+
+        ; === TESTES CONTRA O RapaNuiCrab ===
+        LDY #.loword(RapaNuiCrab)
+        sty z:DP_ENEMY_STRUCT_PTR       ; Muda o alvo atual na Direct Page!
+        
+        ; Checa colisões de pedradas (Slots A..E) contra o Dengue
+        .repeat 5, I
+            ldy #.loword(.ident(.sprintf("Weapon%c", $41 + I)))
+            jsr ApplyWeaponCollisions
+        .endrepeat
+        
+        ; Checa colisões de porretadas (Slots A..E) contra o Dengue
+        .repeat 5, I
+            ldy #.loword(.ident(.sprintf("Weapon%c", $41 + I)))
+            jsr ApplyMeleeWeaponCollisions
+        .endrepeat
+
+        pea .loword(RapaNuiCrab)
+        jsr ApplyBulletCollisions
+        ply
+        pea .loword(RapaNuiCrab)
+        jsr ApplyBullet2Collisions
+        ply
+        
+
+
         ; 4. SISTEMA DE RENDERIZAcÃO FINAL
         ldx #$0000     
 
-        jsr DrawPow ; tem que estar em cima de td
+        
+        JSR drawHeroCenterDebug
+        ;JSR DrawDengueHitboxDebug
+        jsr DrawHitboxDebug
+        ;JSR DrawtargetEnemyXYDebug
+        ;jsr DrawDengueAttackSectorDebug
+        ;JSR DrawPow ; tem que estar em cima de td
+        
         
    
         jsr DrawBullet
@@ -241,15 +290,25 @@ Draweapons:
         jsr DrawBigHero          
         
 Finish:
+
+
+
+; TODO Decidir a ordem com base no Y para nao ficar estranho a nocao de 3d
      ; --- RENDERIZAcÃO DO VADERCRAB ---
         pea .loword(VaderCrab)          ; Empilha o endereco de 16-bit diretamente (Y fica livre!)
-        jsr DrawVaderCrab
+        jsr DrawMeleeCrab
         ply                     ; Tentativa Param: reset stack pointer
 
 
         ; --- RENDERIZAcÃO DO VADERCRAB ---
-        pea .loword(RapaCrab)          ; Empilha o endereco de 16-bit diretamente (Y fica livre!)
-        jsr DrawVaderCrab
+        pea .loword(DengueCrab)          ; Empilha o endereco de 16-bit diretamente (Y fica livre!)
+        jsr DrawMeleeCrab
+        ply                     ; Tentativa Param: reset stack pointer
+
+
+        ; --- RENDERIZAcÃO DO VADERCRAB ---
+        pea .loword(RapaNuiCrab)          ; Empilha o endereco de 16-bit diretamente (Y fica livre!)
+        jsr DrawMeleeCrab
         ply                     ; Tentativa Param: reset stack pointer
 
 
@@ -281,8 +340,8 @@ Finish:
         rts
 
 @CheckVaderVulnerable:
-        ldy z:DP_ENEMY_STRUCT_PTR       ; Y = Inimigo ativo (Vader ou Rapa)
-        lda VaderCrabStruct::HurtTimer, y
+        ldy z:DP_ENEMY_STRUCT_PTR       ; Y = Inimigo ativo (Vader ou Dengue)
+        lda MeleeCrabStruct::HurtTimer, y
         beq @StartAABB
         rts
 
@@ -291,23 +350,23 @@ Finish:
         lda Bullet + BulletStruct::X_Pos
         clc
         adc #16                 
-        cmp VaderCrabStruct::Hurtbox_X1, y
+        cmp MeleeCrabStruct::Hurtbox_X1, y
         bcc @NoCollision
         beq @NoCollision
 
         lda Bullet + BulletStruct::X_Pos
-        cmp VaderCrabStruct::Hurtbox_X2, y
+        cmp MeleeCrabStruct::Hurtbox_X2, y
         bcs @NoCollision
 
         lda Bullet + BulletStruct::Y_Pos
         clc
         adc #16                 
-        cmp VaderCrabStruct::Hurtbox_Y1, y
+        cmp MeleeCrabStruct::Hurtbox_Y1, y
         bcc @NoCollision
         beq @NoCollision
 
         lda Bullet + BulletStruct::Y_Pos
-        cmp VaderCrabStruct::Hurtbox_Y2, y
+        cmp MeleeCrabStruct::Hurtbox_Y2, y
         bcs @NoCollision
 
         ; =====================================================================
@@ -318,7 +377,7 @@ Finish:
 
         ldy z:DP_ENEMY_STRUCT_PTR       
         lda #30
-        sta VaderCrabStruct::HurtTimer, y
+        sta MeleeCrabStruct::HurtTimer, y
 
 
         ldy z:DP_ENEMY_STRUCT_PTR 
@@ -330,17 +389,17 @@ Finish:
         bmi @BulletIndoParaEsquerda
 
 @BulletIndoParaDireita:
-        lda VaderCrabStruct::X_Pos, y
+        lda MeleeCrabStruct::X_Pos, y
         clc
         adc #VADER_KNOCKBACK
-        sta VaderCrabStruct::X_Pos, y
+        sta MeleeCrabStruct::X_Pos, y
         bra @Finish
 
 @BulletIndoParaEsquerda:
-        lda VaderCrabStruct::X_Pos, y
+        lda MeleeCrabStruct::X_Pos, y
         sec
         sbc #VADER_KNOCKBACK
-        sta VaderCrabStruct::X_Pos, y
+        sta MeleeCrabStruct::X_Pos, y
 
 @NoCollision:
 @Finish:
@@ -359,7 +418,7 @@ Finish:
 
 @CheckVaderVulnerable:
         ldy z:DP_ENEMY_STRUCT_PTR       
-        lda VaderCrabStruct::HurtTimer, y
+        lda MeleeCrabStruct::HurtTimer, y
         beq @StartAABB
         rts
 
@@ -368,23 +427,23 @@ Finish:
         lda Bullet2 + BulletStruct::X_Pos
         clc
         adc #16                 
-        cmp VaderCrabStruct::Hurtbox_X1, y
+        cmp MeleeCrabStruct::Hurtbox_X1, y
         bcc @NoCollision
         beq @NoCollision
 
         lda Bullet2 + BulletStruct::X_Pos
-        cmp VaderCrabStruct::Hurtbox_X2, y
+        cmp MeleeCrabStruct::Hurtbox_X2, y
         bcs @NoCollision
 
         lda Bullet2 + BulletStruct::Y_Pos
         clc
         adc #16                 
-        cmp VaderCrabStruct::Hurtbox_Y1, y
+        cmp MeleeCrabStruct::Hurtbox_Y1, y
         bcc @NoCollision
         beq @NoCollision
 
         lda Bullet2 + BulletStruct::Y_Pos
-        cmp VaderCrabStruct::Hurtbox_Y2, y
+        cmp MeleeCrabStruct::Hurtbox_Y2, y
         bcs @NoCollision
 
         ; =====================================================================
@@ -395,7 +454,7 @@ Finish:
 
         ldy z:DP_ENEMY_STRUCT_PTR       
         lda #30
-        sta VaderCrabStruct::HurtTimer, y
+        sta MeleeCrabStruct::HurtTimer, y
 
         ldy z:DP_ENEMY_STRUCT_PTR 
         jsr createEnemyPow
@@ -405,17 +464,17 @@ Finish:
         bmi @BulletIndoParaEsquerda
 
 @BulletIndoParaDireita:
-        lda VaderCrabStruct::X_Pos, y
+        lda MeleeCrabStruct::X_Pos, y
         clc
         adc #VADER_KNOCKBACK
-        sta VaderCrabStruct::X_Pos, y
+        sta MeleeCrabStruct::X_Pos, y
         bra @Finish
 
 @BulletIndoParaEsquerda:
-        lda VaderCrabStruct::X_Pos, y
+        lda MeleeCrabStruct::X_Pos, y
         sec
         sbc #VADER_KNOCKBACK
-        sta VaderCrabStruct::X_Pos, y
+        sta MeleeCrabStruct::X_Pos, y
 
 @NoCollision:
 @Finish:
@@ -440,7 +499,7 @@ Finish:
 @CheckVaderVulnerable:
         sty z:DP_WEAPON_POOL_PTR        ; Preserva Y da arma
         ldy z:DP_ENEMY_STRUCT_PTR       ; Carrega o inimigo atual
-        lda VaderCrabStruct::HurtTimer, y
+        lda MeleeCrabStruct::HurtTimer, y
         beq @StartAABB
         ldy z:DP_WEAPON_POOL_PTR        
         rts
@@ -452,30 +511,30 @@ Finish:
         lda a:WeaponStruct::X_Pos, y
         clc
         adc #16                 
-        cmp a:VaderCrabStruct::Hurtbox_X1, x
+        cmp a:MeleeCrabStruct::Hurtbox_X1, x
         bcc @NoCollision
         beq @NoCollision
 
         lda a:WeaponStruct::X_Pos, y
-        cmp a:VaderCrabStruct::Hurtbox_X2, x
+        cmp a:MeleeCrabStruct::Hurtbox_X2, x
         bcs @NoCollision
 
         lda a:WeaponStruct::Y_Pos, y
         clc
         adc #16                 
-        cmp a:VaderCrabStruct::Hurtbox_Y1, x
+        cmp a:MeleeCrabStruct::Hurtbox_Y1, x
         bcc @NoCollision
         beq @NoCollision
 
         lda a:WeaponStruct::Y_Pos, y
-        cmp a:VaderCrabStruct::Hurtbox_Y2, x
+        cmp a:MeleeCrabStruct::Hurtbox_Y2, x
         bcs @NoCollision
 
         ; =====================================================================
         ; IMPACTO CONFIRMADO
         ; =====================================================================
         lda #30
-        sta a:VaderCrabStruct::HurtTimer, x
+        sta a:MeleeCrabStruct::HurtTimer, x
 
         ldy z:DP_ENEMY_STRUCT_PTR 
         jsr createEnemyPow
@@ -490,27 +549,27 @@ Finish:
         bmi @PedraIndoParaEsquerda
 
 @PedraIndoParaDireita:
-        lda a:VaderCrabStruct::X_Pos, x
+        lda a:MeleeCrabStruct::X_Pos, x
         clc
         adc #VADER_KNOCKBACK
-        sta a:VaderCrabStruct::X_Pos, x
+        sta a:MeleeCrabStruct::X_Pos, x
 
         cmp #(SCREEN_RIGHT - 48)
         bcc @ForcaRicochete
         lda #(SCREEN_RIGHT - 48)
-        sta a:VaderCrabStruct::X_Pos, x
+        sta a:MeleeCrabStruct::X_Pos, x
         bra @ForcaRicochete
 
 @PedraIndoParaEsquerda:
-        lda a:VaderCrabStruct::X_Pos, x
+        lda a:MeleeCrabStruct::X_Pos, x
         sec
         sbc #VADER_KNOCKBACK
-        sta a:VaderCrabStruct::X_Pos, x
+        sta a:MeleeCrabStruct::X_Pos, x
 
         cmp #SCREEN_LEFT
         bcs @ForcaRicochete
         lda #SCREEN_LEFT
-        sta a:VaderCrabStruct::X_Pos, x
+        sta a:MeleeCrabStruct::X_Pos, x
 
 @ForcaRicochete:
         ; --- INVERSÃO MATEMÁTICA OBRIGATÓRIA DO VETOR ---
@@ -546,7 +605,7 @@ MeleeStart:
 @CheckVaderVulnerable:
         sty z:DP_WEAPON_POOL_PTR        ; Preserva Y da arma
         ldy z:DP_ENEMY_STRUCT_PTR       ; Carrega o inimigo atual
-        lda VaderCrabStruct::HurtTimer, y
+        lda MeleeCrabStruct::HurtTimer, y
         beq @StartAABB                  
         ldy z:DP_WEAPON_POOL_PTR        
         rts
@@ -561,7 +620,7 @@ MeleeStart:
         lda a:WeaponStruct::Hitbox_X2, y
         and #$00FF              
         sta $00                 
-        lda a:VaderCrabStruct::Hurtbox_X1, x
+        lda a:MeleeCrabStruct::Hurtbox_X1, x
         and #$00FF
         cmp $00
         bcc :+
@@ -570,7 +629,7 @@ MeleeStart:
 :       lda a:WeaponStruct::Hitbox_X1, y
         and #$00FF
         sta $00
-        lda a:VaderCrabStruct::Hurtbox_X2, x
+        lda a:MeleeCrabStruct::Hurtbox_X2, x
         and #$00FF
         cmp $00
         bcs :+          
@@ -579,7 +638,7 @@ MeleeStart:
 :       lda a:WeaponStruct::Hitbox_Y2, y
         and #$00FF
         sta $00
-        lda a:VaderCrabStruct::Hurtbox_Y1, x
+        lda a:MeleeCrabStruct::Hurtbox_Y1, x
         and #$00FF
         cmp $00
         bcc :+
@@ -588,7 +647,7 @@ MeleeStart:
 :       lda a:WeaponStruct::Hitbox_Y1, y
         and #$00FF
         sta $00
-        lda a:VaderCrabStruct::Hurtbox_Y2, x
+        lda a:MeleeCrabStruct::Hurtbox_Y2, x
         and #$00FF
         cmp $00
         bcs @MeleeConfirmouImpacto   
@@ -609,7 +668,7 @@ MeleeStart:
 
         ; Aplica o hitstun de 10 frames no caranguejo indexado em X
         lda #10
-        sta a:VaderCrabStruct::HurtTimer, x
+        sta a:MeleeCrabStruct::HurtTimer, x
 
         ; Desativa a hitbox da arma para evitar múltiplos hits no mesmo frame
         lda #$00
@@ -622,27 +681,27 @@ MeleeStart:
         bne @PushVaderLeft
 
 @PushVaderRight:
-        lda a:VaderCrabStruct::X_Pos, x
+        lda a:MeleeCrabStruct::X_Pos, x
         clc
         adc #VADER_MELEE_KNOCKBACK
-        sta a:VaderCrabStruct::X_Pos, x
+        sta a:MeleeCrabStruct::X_Pos, x
         
         cmp #(SCREEN_RIGHT - 48)
         bcc MeleeExit
         lda #(SCREEN_RIGHT - 48)
-        sta a:VaderCrabStruct::X_Pos, x
+        sta a:MeleeCrabStruct::X_Pos, x
         bra MeleeExit
 
 @PushVaderLeft:
-        lda a:VaderCrabStruct::X_Pos, x
+        lda a:MeleeCrabStruct::X_Pos, x
         sec
         sbc #VADER_MELEE_KNOCKBACK
-        sta a:VaderCrabStruct::X_Pos, x
+        sta a:MeleeCrabStruct::X_Pos, x
         
         cmp #SCREEN_LEFT
         bcs MeleeExit
         lda #SCREEN_LEFT
-        sta a:VaderCrabStruct::X_Pos, x
+        sta a:MeleeCrabStruct::X_Pos, x
         bra MeleeExit
 
 MeleeNoCollision:
@@ -666,7 +725,7 @@ MeleeExit:
         rep #$20
         .a16
         lda 3,s
-        tay                             ; Y agora aponta para o inimigo atual (Vader ou Rapa)
+        tay                             ; Y agora aponta para o inimigo atual (Vader ou Dengue)
         sep #$20
         .a8
 
@@ -680,7 +739,7 @@ MeleeExit:
 
 CheckEnemyHitbox:
         ; 2. Se a hitbox deste caranguejo específico não está ativa, aborta
-        lda VaderCrabStruct::Hitbox_Active, y
+        lda MeleeCrabStruct::Hitbox_Active, y
         bne CheckHeroHurtbox
         jmp AbortDamage
 
@@ -698,7 +757,7 @@ CheckHeroHurtbox:
         .a16
 
         ; --- TESTE DO EIXO X ---
-        lda VaderCrabStruct::Hitbox_X2, y
+        lda MeleeCrabStruct::Hitbox_X2, y
         and #$00FF              
         sta $00                 
         lda BigHero + BigHeroStruct::Hurtbox_X1
@@ -706,7 +765,7 @@ CheckHeroHurtbox:
         cmp $00
         bcs @NoCollision        
 
-        lda VaderCrabStruct::Hitbox_X1, y
+        lda MeleeCrabStruct::Hitbox_X1, y
         and #$00FF
         sta $00
         lda BigHero + BigHeroStruct::Hurtbox_X2
@@ -716,7 +775,7 @@ CheckHeroHurtbox:
         beq @NoCollision
 
         ; --- TESTE DO EIXO Y ---
-        lda VaderCrabStruct::Hitbox_Y2, y
+        lda MeleeCrabStruct::Hitbox_Y2, y
         and #$00FF
         sta $00
         lda BigHero + BigHeroStruct::Hurtbox_Y1
@@ -724,7 +783,7 @@ CheckHeroHurtbox:
         cmp $00
         bcs @NoCollision        
 
-        lda VaderCrabStruct::Hitbox_Y1, y
+        lda MeleeCrabStruct::Hitbox_Y1, y
         and #$00FF
         sta $00
         lda BigHero + BigHeroStruct::Hurtbox_Y2
@@ -740,7 +799,7 @@ CheckHeroHurtbox:
         .a8
 
 
-        jsr createHeroPow
+        ;jsr createHeroPow
         
         ; Liga o Hitstun imediatamente no Herói (30 frames)
         lda #30
@@ -750,7 +809,7 @@ CheckHeroHurtbox:
         stz BigHero + BigHeroStruct::Hurtbox_Active
         
         lda #0
-        sta VaderCrabStruct::Hitbox_Active, y
+        sta MeleeCrabStruct::Hitbox_Active, y
 
         ; Empilha o ponteiro do caranguejo agressor para empurrar o herói certo
         phy
@@ -786,18 +845,19 @@ AbortDamage:
         lda #HURT_TIME
         sta BigHero + BigHeroStruct::HurtTimer
 
-        lda z:$00
-        eor #$40                        
-        sta z:$00
+       ; LDA z:$00
+        ;eor #$40                        
+        ;sta z:$00
         
-        KNOCKBACK_FORCE = 16
+        KNOCKBACK_FORCE = 32
+
 
         ; 2. Verifica a direcão do caranguejo atual parametrizado em Y
-        lda VaderCrabStruct::Facing, y
+        lda MeleeCrabStruct::Facing, y
         bne @PushToRight        
 
 @PushToLeft:
-        lda BigHero + BigHeroStruct::X_Pos
+       lda BigHero + BigHeroStruct::X_Pos
         sec
         sbc #KNOCKBACK_FORCE
         sta BigHero + BigHeroStruct::X_Pos
@@ -921,14 +981,14 @@ CollisionDone:
         lda #08
         sta Pow + PowStruct::Active_timer
         
-        lda a:VaderCrabStruct::Hurtbox_X1, y
+        lda a:MeleeCrabStruct::Hurtbox_X1, y
         clc
-        adc a:VaderCrabStruct::Hurtbox_X2, y
+        adc a:MeleeCrabStruct::Hurtbox_X2, y
         ror a 
         sta Pow + PowStruct::X_Pos
-        lda a:VaderCrabStruct::Hurtbox_Y2, y
+        lda a:MeleeCrabStruct::Hurtbox_Y2, y
         clc
-        adc a:VaderCrabStruct::Hurtbox_Y1, y
+        adc a:MeleeCrabStruct::Hurtbox_Y1, y
         ror a 
         sta Pow + PowStruct::Y_Pos
 .endproc
@@ -964,6 +1024,220 @@ Finish:
 .endproc
 
 
+
+.proc drawHeroCenterDebug
+        
+        lda DP_HERO_CENTER_X
+        sta OAMMIRROR, x
+        inx
+        
+        lda DP_HERO_CENTER_Y
+        sta OAMMIRROR, x
+        inx
+        
+        lda #$86
+        sta OAMMIRROR, x
+        inx
+
+        lda #$30                         
+        sta OAMMIRROR, x
+        inx
+
+Finish:
+        rts    
+    
+.endproc
+
+
+.proc DrawDengueHitboxDebug
+        lda DengueCrab + MeleeCrabStruct::Hitbox_X1
+        sta a:OAMMIRROR, X
+        inx
+        lda DengueCrab + MeleeCrabStruct::Hitbox_Y1
+        sta a:OAMMIRROR, X
+        inx
+        lda #$86
+        sta a:OAMMIRROR, X
+        inx
+        lda #$30
+        sta a:OAMMIRROR, X
+        inx
+        lda DengueCrab + MeleeCrabStruct::Hitbox_X2
+        sta a:OAMMIRROR, X
+        inx
+        lda DengueCrab + MeleeCrabStruct::Hitbox_Y2
+        sta a:OAMMIRROR, X
+        inx
+        lda #$86
+        sta a:OAMMIRROR, X
+        inx
+        lda #$30
+        sta OAMMIRROR, X
+        inx
+        rts
+.endproc
+
+.proc DrawHitboxDebug
+        LDA VaderCrab + MeleeCrabStruct::Hitbox_X1
+        sta a:OAMMIRROR, X
+        inx
+        lda VaderCrab + MeleeCrabStruct::Hitbox_Y1
+        sta a:OAMMIRROR, X
+        inx
+        lda #$86
+        sta a:OAMMIRROR, X
+        inx
+        lda #$30
+        sta a:OAMMIRROR, X
+        inx
+        lda VaderCrab + MeleeCrabStruct::Hitbox_X2
+        sta a:OAMMIRROR, X
+        inx
+        lda VaderCrab + MeleeCrabStruct::Hitbox_Y2
+        sta a:OAMMIRROR, X
+        inx
+        lda #$86
+        sta a:OAMMIRROR, X
+        inx
+        lda #$30
+        sta OAMMIRROR, X
+        INX
+        
+        LDA DengueCrab + MeleeCrabStruct::Hitbox_X1
+        sta a:OAMMIRROR, X
+        inx
+        lda DengueCrab + MeleeCrabStruct::Hitbox_Y1
+        sta a:OAMMIRROR, X
+        inx
+        lda #$86
+        sta a:OAMMIRROR, X
+        inx
+        lda #$30
+        sta a:OAMMIRROR, X
+        inx
+        lda DengueCrab + MeleeCrabStruct::Hitbox_X2
+        sta a:OAMMIRROR, X
+        inx
+        lda DengueCrab + MeleeCrabStruct::Hitbox_Y2
+        sta a:OAMMIRROR, X
+        inx
+        lda #$86
+        sta a:OAMMIRROR, X
+        inx
+        lda #$30
+        sta OAMMIRROR, X
+        INX
+        
+        LDA RapaNuiCrab + MeleeCrabStruct::Hitbox_X1
+        sta a:OAMMIRROR, X
+        inx
+        lda RapaNuiCrab + MeleeCrabStruct::Hitbox_Y1
+        sta a:OAMMIRROR, X
+        inx
+        lda #$86
+        sta a:OAMMIRROR, X
+        inx
+        lda #$30
+        sta a:OAMMIRROR, X
+        inx
+        lda RapaNuiCrab + MeleeCrabStruct::Hitbox_X2
+        sta a:OAMMIRROR, X
+        inx
+        lda RapaNuiCrab + MeleeCrabStruct::Hitbox_Y2
+        sta a:OAMMIRROR, X
+        inx
+        lda #$86
+        sta a:OAMMIRROR, X
+        inx
+        lda #$30
+        sta OAMMIRROR, X
+        inx
+        rts
+.endproc
+
+
+.proc DrawtargetEnemyXYDebug
+        LDA VaderCrab + MeleeCrabStruct::Target_Attack_X
+        sta a:OAMMIRROR, X
+        inx
+        lda VaderCrab + MeleeCrabStruct::Target_Attack_Y
+        sta a:OAMMIRROR, X
+        inx
+        lda #$86
+        sta a:OAMMIRROR, X
+        inx
+        lda #$30
+        sta a:OAMMIRROR, X
+        INX
+        
+        LDA RapaNuiCrab + MeleeCrabStruct::Target_Attack_X
+        sta a:OAMMIRROR, X
+        inx
+        lda RapaNuiCrab + MeleeCrabStruct::Target_Attack_Y
+        sta a:OAMMIRROR, X
+        inx
+        lda #$86
+        sta a:OAMMIRROR, X
+        inx
+        lda #$30
+        sta a:OAMMIRROR, X
+        INX
+        
+        LDA DengueCrab + MeleeCrabStruct::Target_Attack_X
+        sta a:OAMMIRROR, X
+        inx
+        lda DengueCrab + MeleeCrabStruct::Target_Attack_Y
+        sta a:OAMMIRROR, X
+        inx
+        lda #$86
+        sta a:OAMMIRROR, X
+        inx
+        lda #$30
+        sta a:OAMMIRROR, X
+        inx
+        rts
+.endproc
+
+
+.proc DrawDengueAttackSectorDebug
+        
+        LDA DengueCrab + MeleeCrabStruct::X_Pos
+        sta a:OAMMIRROR, X
+        inx
+        lda DengueCrab + MeleeCrabStruct::Y_Pos
+        sta a:OAMMIRROR, X
+        inx
+        lda #$88
+        sta a:OAMMIRROR, X
+        INX
+        
+        LDA DengueCrab + MeleeCrabStruct::Attack_Sector
+        CMP #0                          
+        beq @SetorSupDireito
+        cmp #1                          
+        beq @SetorSupEsquerdo
+        cmp #2                          
+        beq @SetorInfDireito
+
+@SetorInfEsquerdo:
+        lda #$30
+
+@SetorSupDireito:
+        lda #$70
+
+@SetorSupEsquerdo:
+        lda #$B0
+
+@SetorInfDireito:
+        lda #$F0
+        
+@Continue:
+        sta a:OAMMIRROR, X
+        inx
+        RTS
+.endproc
+
+
 ;-------------------------------------------------------------------------------
 ;   EXECUcÃO AUTOMÁTICA EM V-BLANK (Hardware real manipula OAM aqui)
 ;-------------------------------------------------------------------------------
@@ -994,7 +1268,8 @@ Finish:
 .export BigHero 
 .export PennyCrab
 .export VaderCrab
-.export RapaCrab
+.export DengueCrab
+.export RapaNuiCrab
 .export WeaponA
 .export WeaponB
 .export WeaponC
@@ -1007,8 +1282,10 @@ Finish:
 
 BigHero:         .tag BigHeroStruct
 PennyCrab:       .tag PennyCrabStruct
-VaderCrab:       .tag VaderCrabStruct
-RapaCrab:       .tag VaderCrabStruct
+VaderCrab:       .tag MeleeCrabStruct
+DengueCrab:       .tag MeleeCrabStruct
+RapaNuiCrab:       .tag MeleeCrabStruct
+
 
 WeaponA:         .tag WeaponStruct
 WeaponB:         .tag WeaponStruct
