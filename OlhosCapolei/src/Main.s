@@ -868,7 +868,7 @@ AbortDamage:
         ;eor #$40                        
         ;sta z:$00
         
-        KNOCKBACK_FORCE = 0
+        KNOCKBACK_FORCE = 8
 
 
         ; 2. Verifica a direcão do caranguejo atual parametrizado em Y
