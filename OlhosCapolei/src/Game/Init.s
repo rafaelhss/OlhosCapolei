@@ -5,6 +5,7 @@
 
 ;----- Export ------------------------------------------------------------------
 .export     InitDemo
+.export SetupDefaultMeleeStats
 ;-------------------------------------------------------------------------------
 
 ;----- Assembler Directives ----------------------------------------------------
@@ -47,6 +48,27 @@ Table_Init_Weapons:
     ; WeaponE (Corrente - ID 6)
     .byte WEAPON_STATE_GROUND, WEAPON_ID_CHAIN,  $06, $04, $10, (SCREEN_BOTTOM / 2)
 
+
+
+
+; =============================================================================
+; TABELA DE BOOT DOS INIMIGOS MELEE (6 BYTES POR INIMIGO)
+; Formato: Endereço WRAM (2 bytes), X_Pos, Y_Pos, Enemy_Type, Attack_Sector
+; =============================================================================
+Table_Init_MeleeCrabs:
+    ; VaderCrab
+    .word .loword(VaderCrab)
+    .byte $20, (SCREEN_BOTTOM), ENEMY_TYPE_VADER, $00
+
+    ; DengueCrab
+    .word .loword(DengueCrab)
+    .byte $C8, (SCREEN_BOTTOM / 2), ENEMY_TYPE_DENGUE, $01
+
+    ; RapaNuiCrab
+    .word .loword(RapaNuiCrab)
+    .byte $08, (SCREEN_BOTTOM - 20), ENEMY_TYPE_RAPA, $02
+
+Table_Init_MeleeCrabs_End:
 
 ;-------------------------------------------------------------------------------
 ;   This initializes the demo
@@ -179,159 +201,11 @@ Table_Init_Weapons:
 
 
 
-
-;----------- PennyCrab
-        lda #$AA                         ; 
-        sta PennyCrab + PennyCrabStruct::X_Pos
-        
-        lda #(SCREEN_BOTTOM / 2)        ; Y
-        sta PennyCrab + PennyCrabStruct::Y_Pos
-
-        lda #12                        
-        sta PennyCrab + PennyCrabStruct::Tile_Count  
-
-        lda #$09
-        sta PennyCrab + PennyCrabStruct::Walk_Anim_Speed 
-
-        lda #$04                       
-        sta PennyCrab + PennyCrabStruct::Anim_Timer
-        lda #$00                       
-        sta PennyCrab + PennyCrabStruct::Anim_Frame   
-
-        ; ◄ CRÍTICO: INICIALIZAÇÃO CONTRA O BUG DOS 5 SEGUNDOS
-        lda #$08                       
-        sta PennyCrab + PennyCrabStruct::Preparing_Anim_Timer
-        stz PennyCrab + PennyCrabStruct::Preparing_Anim_Frame
-        sta PennyCrab + PennyCrabStruct::Attacking_Anim_Timer
-        sta PennyCrab + PennyCrabStruct::Attacking_Timer
-        stz PennyCrab + PennyCrabStruct::Attacking_Anim_Frame
-        
-        lda #STATE_WALKING
-        sta PennyCrab + PennyCrabStruct::State
-;=========== FIM Penny
+        ; --- INICIALIZAÇÃO DOS INIMIGOS MELEE ---
+        jsr InitAllMeleeCrabs
 
 
 
-;----------- VaderCrab
-        lda #$20                        ; 
-        sta VaderCrab + MeleeCrabStruct::X_Pos
-        
-        lda #(SCREEN_BOTTOM / 2)        ; Y
-        sta VaderCrab + MeleeCrabStruct::Y_Pos
-
-        lda #12                        
-        sta VaderCrab + MeleeCrabStruct::Tile_Count  
-
-        lda #$09
-        sta VaderCrab + MeleeCrabStruct::Walk_Anim_Speed 
-
-        lda #$04                       
-        sta VaderCrab + MeleeCrabStruct::Anim_Timer
-        lda #$00                       
-        sta VaderCrab + MeleeCrabStruct::Anim_Frame   
-
-        ; ◄ CRÍTICO: INICIALIZAÇÃO CONTRA O BUG DOS 5 SEGUNDOS
-        lda #$08                       
-        sta VaderCrab + MeleeCrabStruct::Preparing_Anim_Timer
-        stz VaderCrab + MeleeCrabStruct::Preparing_Anim_Frame
-        sta VaderCrab + MeleeCrabStruct::Attacking_Anim_Timer
-        sta VaderCrab + MeleeCrabStruct::Attacking_Timer
-        stz VaderCrab + MeleeCrabStruct::Attacking_Anim_Frame
-        
-        lda #STATE_WALKING
-        sta VaderCrab + MeleeCrabStruct::State
-
-        lda #ENEMY_TYPE_VADER
-        STA VaderCrab + MeleeCrabStruct::Enemy_Type
-
-        lda #$00
-        STA VaderCrab + MeleeCrabStruct::Attack_Sector
-        
-    stz VaderCrab + MeleeCrabStruct::Hitbox_Active
-
-;=========== FIM Vader
-
-
-;----------- DengueCrab
-        lda #$C8                        ; 
-        sta DengueCrab + MeleeCrabStruct::X_Pos
-        
-        lda #(SCREEN_BOTTOM / 2)        ; Y
-        sta DengueCrab + MeleeCrabStruct::Y_Pos
-
-        lda #12                        
-        sta DengueCrab + MeleeCrabStruct::Tile_Count  
-
-        lda #$09
-        sta DengueCrab + MeleeCrabStruct::Walk_Anim_Speed 
-
-        lda #$04                       
-        sta DengueCrab + MeleeCrabStruct::Anim_Timer
-        lda #$00                       
-        sta DengueCrab + MeleeCrabStruct::Anim_Frame   
-
-        ; ◄ CRÍTICO: INICIALIZAÇÃO CONTRA O BUG DOS 5 SEGUNDOS
-        lda #$08                       
-        sta DengueCrab + MeleeCrabStruct::Preparing_Anim_Timer
-        stz DengueCrab + MeleeCrabStruct::Preparing_Anim_Frame
-        sta DengueCrab + MeleeCrabStruct::Attacking_Anim_Timer
-        sta DengueCrab + MeleeCrabStruct::Attacking_Timer
-        stz DengueCrab + MeleeCrabStruct::Attacking_Anim_Frame
-        
-        lda #STATE_WALKING
-        sta DengueCrab + MeleeCrabStruct::State
-
-lda #ENEMY_TYPE_DENGUE
-STA DengueCrab + MeleeCrabStruct::Enemy_Type
-
-
-    lda #$01
-    STA DengueCrab + MeleeCrabStruct::Attack_Sector      
-
-
-    stz DengueCrab + MeleeCrabStruct::Hitbox_Active 
-;=========== FIM Dengue
-
-
-
-;----------- RapaNuiCrab
-        lda #$08                        ; 
-        sta RapaNuiCrab + MeleeCrabStruct::X_Pos
-        
-        lda #(SCREEN_BOTTOM - 20)        ; Y
-        sta RapaNuiCrab + MeleeCrabStruct::Y_Pos
-
-        lda #12                        
-        sta RapaNuiCrab + MeleeCrabStruct::Tile_Count  
-
-        lda #$09
-        sta RapaNuiCrab + MeleeCrabStruct::Walk_Anim_Speed 
-
-        lda #$04                       
-        sta RapaNuiCrab + MeleeCrabStruct::Anim_Timer
-        lda #$00                       
-        sta RapaNuiCrab + MeleeCrabStruct::Anim_Frame   
-
-        ; ◄ CRÍTICO: INICIALIZAÇÃO CONTRA O BUG DOS 5 SEGUNDOS
-        lda #$08                       
-        sta RapaNuiCrab + MeleeCrabStruct::Preparing_Anim_Timer
-        stz RapaNuiCrab + MeleeCrabStruct::Preparing_Anim_Frame
-        sta RapaNuiCrab + MeleeCrabStruct::Attacking_Anim_Timer
-        sta RapaNuiCrab + MeleeCrabStruct::Attacking_Timer
-        stz RapaNuiCrab + MeleeCrabStruct::Attacking_Anim_Frame
-        
-        lda #STATE_WALKING
-        sta RapaNuiCrab + MeleeCrabStruct::State
-
-lda #ENEMY_TYPE_RAPA
-STA RapaNuiCrab + MeleeCrabStruct::Enemy_Type
-
-
-    lda #$02
-    STA RapaNuiCrab + MeleeCrabStruct::Attack_Sector   
-    
-    stz RapaNuiCrab + MeleeCrabStruct::Hitbox_Active    
-;=========== FIM RapaNuiCrab
 
 
 ; -----------------------------------------------------------------------------
@@ -445,4 +319,97 @@ STA RapaNuiCrab + MeleeCrabStruct::Enemy_Type
         sta NMITIMEN
 
         rts                    
+.endproc
+
+;-------------------------------------------------------------------------------
+;   InitAllMeleeCrabs
+;   Lê a Table_Init_MeleeCrabs e configura todos os inimigos automaticamente
+;-------------------------------------------------------------------------------
+.proc   InitAllMeleeCrabs
+        php                             ; Salva flags atuais do processador
+        sep #$20                        ; Garante Acumulador 8-bit (.a8)
+        rep #$10                        ; Garante Índices 16-bit (.i16)
+        .a8
+        .i16
+
+        ldy #0                          ; Y = Offset de leitura na tabela da ROM
+
+@Loop:
+        ; 1. Carrega o endereço WRAM do inimigo para o registrador X (16-bit)
+        rep #$20                        ; Muda A para 16-bit temporariamente
+        .a16
+        lda a:Table_Init_MeleeCrabs + 0, y
+        tax                             ; X agora aponta para a struct (ex: VaderCrab)
+        sep #$20                        ; Volta A para 8-bit
+        .a8
+
+        ; 2. Lê os dados exclusivos da tabela
+        lda a:Table_Init_MeleeCrabs + 2, y
+        sta a:MeleeCrabStruct::X_Pos, x
+
+        lda a:Table_Init_MeleeCrabs + 3, y
+        sta a:MeleeCrabStruct::Y_Pos, x
+
+        lda a:Table_Init_MeleeCrabs + 4, y
+        sta a:MeleeCrabStruct::Enemy_Type, x
+
+        lda a:Table_Init_MeleeCrabs + 5, y
+        sta a:MeleeCrabStruct::Attack_Sector, x
+
+        ; 3. Preenche os valores padrão compartilhados por todos os MeleeCrabs
+        jsr SetupDefaultMeleeStats
+
+        ; 4. Avança Y em 6 bytes e verifica se chegou ao fim da tabela
+        tya
+        rep #$20
+        .a16
+        tya
+        clc
+        adc #6
+        tay
+        sep #$20
+        .a8
+
+        cpy #(Table_Init_MeleeCrabs_End - Table_Init_MeleeCrabs)
+        bcc @Loop
+
+        plp                             ; Restaura estado original do processador
+        rts
+.endproc
+
+;-------------------------------------------------------------------------------
+;   SetupDefaultMeleeStats (Rotina Reutilizável de Spawn!)
+;   Entrada: X = Ponteiro 16-bit para a MeleeCrabStruct na WRAM
+;-------------------------------------------------------------------------------
+.proc   SetupDefaultMeleeStats
+        .a8
+        .i16
+
+        lda #12
+        sta a:MeleeCrabStruct::Tile_Count, x
+
+        lda #$09
+        sta a:MeleeCrabStruct::Walk_Anim_Speed, x
+
+        lda #$04
+        sta a:MeleeCrabStruct::Anim_Timer, x
+        stz a:MeleeCrabStruct::Anim_Frame, x
+
+        ; Prevenção do bug dos 5 segundos
+        lda #$08
+        sta a:MeleeCrabStruct::Preparing_Anim_Timer, x
+        stz a:MeleeCrabStruct::Preparing_Anim_Frame, x
+        sta a:MeleeCrabStruct::Attacking_Anim_Timer, x
+        sta a:MeleeCrabStruct::Attacking_Timer, x
+        stz a:MeleeCrabStruct::Attacking_Anim_Frame, x
+
+        lda #STATE_WALKING
+        sta a:MeleeCrabStruct::State, x
+
+        stz a:MeleeCrabStruct::Hitbox_Active, x
+
+        lda #04
+        sta a:MeleeCrabStruct::HP, x
+
+        rts
 .endproc

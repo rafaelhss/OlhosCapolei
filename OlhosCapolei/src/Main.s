@@ -24,8 +24,9 @@
 .include "Registers.inc"
 .INCLUDE "BigHero.inc"
 .include "MeleeCrab.inc"
-.include "Weapon2.inc"
-.include "Bullet.inc"
+.INCLUDE "Weapon2.inc"
+.INCLUDE "Bullet.inc"
+.include "Util.inc"
 
 ;-------------------------------------------------------------------------------
 
@@ -89,8 +90,26 @@ _ResetAlign:
 
 
         ; 1. INPUT PIPELINE
-        jsr ReadJoypad1
+        JSR ReadJoypad1
+        
 
+
+        LDA #00
+        CMP FrameCounter
+        bne NaoRespawn
+        ;so teste 
+        pea .loword(VaderCrab)
+        jsr RespawnEnemy
+        ply 
+        pea .loword(DengueCrab)
+        jsr RespawnEnemy
+        ply 
+        pea .loword(RapaNuiCrab)
+        jsr RespawnEnemy
+        ply 
+
+
+NaoRespawn:
         ; 2. SESSÃO DE FÍSICA E MOVIMENTAcÃO
 
         JSR MoveBigHero
@@ -332,6 +351,23 @@ Finish:
 
 
 
+
+        pea .loword(VaderCrab)          ; Empilha o endereco de 16-bit diretamente (Y fica livre!)
+        jsr DrawMeleeCrabHP
+        ply                     ; Tentativa Param: reset stack pointer
+
+
+        pea .loword(DengueCrab)          ; Empilha o endereco de 16-bit diretamente (Y fica livre!)
+        jsr DrawMeleeCrabHP
+        ply                     ; Tentativa Param: reset stack pointer
+
+
+        pea .loword(RapaNuiCrab)          ; Empilha o endereco de 16-bit diretamente (Y fica livre!)
+        jsr DrawMeleeCrabHP
+        ply                     ; Tentativa Param: reset stack pointer
+
+
+
 @LimpezaFantasmas:
         cpx #512                        ; Chegou no fim da tabela de 128 sprites?
         bcs @TerminouLimpeza
@@ -391,39 +427,28 @@ Finish:
         ; =====================================================================
         ; IMPACTO CONFIRMADO
         ; =====================================================================
+        ; =====================================================================
+        ; IMPACTO CONFIRMADO (Bullet)
+        ; =====================================================================
         lda #BULLET_STATE_INACTIVE
         sta Bullet + BulletStruct::Active
 
-        ldy z:DP_ENEMY_STRUCT_PTR       
         lda #30
-        sta MeleeCrabStruct::HurtTimer, y
+        sta z:DP_TEMP_00                ; HurtTimer = 30
+        lda #1
+        sta z:DP_TEMP_01                ; Dano = 1
+        lda #VADER_KNOCKBACK
+        sta z:DP_TEMP_02                ; Knockback = 12
 
-
-        ldy z:DP_ENEMY_STRUCT_PTR 
-        jsr createEnemyPow
-        
-
-
+        ; Speed_X já é positivo (Direita) ou negativo (Esquerda)!
         lda Bullet + BulletStruct::Speed_X
-        bmi @BulletIndoParaEsquerda
+        sta z:DP_TEMP_03                ; Direção direta pelo sinal do Speed_X
 
-@BulletIndoParaDireita:
-        lda MeleeCrabStruct::X_Pos, y
-        clc
-        adc #VADER_KNOCKBACK
-        sta MeleeCrabStruct::X_Pos, y
-        bra @Finish
-
-@BulletIndoParaEsquerda:
-        lda MeleeCrabStruct::X_Pos, y
-        sec
-        sbc #VADER_KNOCKBACK
-        sta MeleeCrabStruct::X_Pos, y
-
+        JSR ApplyEnemyHit
 @NoCollision:
-@Finish:
         rts
 .endproc
+
 
 
 ;-------------------------------------------------------------------------------
@@ -436,6 +461,15 @@ Finish:
         rts
 
 @CheckVaderVulnerable:
+
+        ldy z:DP_ENEMY_STRUCT_PTR       ; Y = Inimigo ativo
+        
+        ; --- FILTRO: Ignora se State >= STATE_DYING (6 ou 7) ---
+        lda MeleeCrabStruct::State, y
+        cmp #STATE_DYING
+        bcs @NoCollision                ; Se estiver morrendo ou morto, sai!
+
+
         ldy z:DP_ENEMY_STRUCT_PTR       
         lda MeleeCrabStruct::HurtTimer, y
         beq @StartAABB
@@ -468,37 +502,28 @@ Finish:
         ; =====================================================================
         ; IMPACTO CONFIRMADO (Bullet 2)
         ; =====================================================================
+        ; =====================================================================
+        ; IMPACTO CONFIRMADO (Bullet)
+        ; =====================================================================
         lda #BULLET_STATE_INACTIVE
         sta Bullet2 + BulletStruct::Active
 
-        ldy z:DP_ENEMY_STRUCT_PTR       
         lda #30
-        sta MeleeCrabStruct::HurtTimer, y
+        sta z:DP_TEMP_00                ; HurtTimer = 30
+        lda #1
+        sta z:DP_TEMP_01                ; Dano = 1
+        lda #VADER_KNOCKBACK
+        sta z:DP_TEMP_02                ; Knockback = 12
 
-        ldy z:DP_ENEMY_STRUCT_PTR 
-        jsr createEnemyPow
-        
-        ldy z:DP_ENEMY_STRUCT_PTR
+        ; Speed_X já é positivo (Direita) ou negativo (Esquerda)!
         lda Bullet2 + BulletStruct::Speed_X
-        bmi @BulletIndoParaEsquerda
+        sta z:DP_TEMP_03                ; Direção direta pelo sinal do Speed_X
 
-@BulletIndoParaDireita:
-        lda MeleeCrabStruct::X_Pos, y
-        clc
-        adc #VADER_KNOCKBACK
-        sta MeleeCrabStruct::X_Pos, y
-        bra @Finish
-
-@BulletIndoParaEsquerda:
-        lda MeleeCrabStruct::X_Pos, y
-        sec
-        sbc #VADER_KNOCKBACK
-        sta MeleeCrabStruct::X_Pos, y
-
+          JSR ApplyEnemyHit
 @NoCollision:
-@Finish:
         rts
 .endproc
+
 
 
 
@@ -518,9 +543,17 @@ Finish:
 @CheckVaderVulnerable:
         sty z:DP_WEAPON_POOL_PTR        ; Preserva Y da arma
         ldy z:DP_ENEMY_STRUCT_PTR       ; Carrega o inimigo atual
+        
+        ; --- FILTRO: Ignora se State >= STATE_DYING ---
+        lda MeleeCrabStruct::State, y
+        cmp #STATE_DYING
+        bcs @EnemyDeadOrDying
+
         lda MeleeCrabStruct::HurtTimer, y
         beq @StartAABB
-        ldy z:DP_WEAPON_POOL_PTR        
+
+@EnemyDeadOrDying:
+        ldy z:DP_WEAPON_POOL_PTR        ; Restaura Y da arma
         rts
 
 @StartAABB:
@@ -552,61 +585,39 @@ Finish:
         ; =====================================================================
         ; IMPACTO CONFIRMADO
         ; =====================================================================
+        ; =====================================================================
+        ; IMPACTO CONFIRMADO (Arma Arremessada)
+        ; =====================================================================
         lda #30
-        sta a:MeleeCrabStruct::HurtTimer, x
+        sta z:DP_TEMP_00                ; HurtTimer = 30
+        LDA #1
+        sta z:DP_TEMP_01                ; Dano = 2
+        lda #VADER_KNOCKBACK
+        sta z:DP_TEMP_02                ; Knockback = 12
 
-        ldy z:DP_ENEMY_STRUCT_PTR 
-        jsr createEnemyPow
-
-        ; Restaura os contextos limpos de índice após o retorno do POW
-        ldy z:DP_WEAPON_POOL_PTR        
-        ldx z:DP_ENEMY_STRUCT_PTR       
-
-        ; Salva a direção horizontal da arma em um rascunho seguro
+        ; Speed_X já tem o sinal da direção do arremesso!
         lda a:WeaponStruct::Speed_X, y
-        sta z:DP_TEMP_00                
-        bmi @PedraIndoParaEsquerda
+        sta z:DP_TEMP_03                ; Salva direção antes do ricochete
 
-@PedraIndoParaDireita:
-        lda a:MeleeCrabStruct::X_Pos, x
-        clc
-        adc #VADER_KNOCKBACK
-        sta a:MeleeCrabStruct::X_Pos, x
+        jsr ApplyEnemyHit
 
-        cmp #(SCREEN_RIGHT - 48)
-        bcc @ForcaRicochete
-        lda #(SCREEN_RIGHT - 48)
-        sta a:MeleeCrabStruct::X_Pos, x
-        bra @ForcaRicochete
-
-@PedraIndoParaEsquerda:
-        lda a:MeleeCrabStruct::X_Pos, x
-        sec
-        sbc #VADER_KNOCKBACK
-        sta a:MeleeCrabStruct::X_Pos, x
-
-        cmp #SCREEN_LEFT
-        bcs @ForcaRicochete
-        lda #SCREEN_LEFT
-        sta a:MeleeCrabStruct::X_Pos, x
-
-@ForcaRicochete:
-        ; --- INVERSÃO MATEMÁTICA OBRIGATÓRIA DO VETOR ---
-        lda z:DP_TEMP_00                ; Recupera a velocidade original do rascunho
+        ; Restaura Y da arma e aplica o ricochete usando z:DP_TEMP_03 (Speed_X original)
+        ldy z:DP_WEAPON_POOL_PTR
+        lda z:DP_TEMP_03
         eor #$FF
         clc
         adc #1
-        sta a:WeaponStruct::Speed_X, y  ; Inverte o sinal (complemento de dois)
+        sta a:WeaponStruct::Speed_X, y  ; Inverte o vetor horizontal
 
-        ; Injeta o impulso vertical de quique para cima (-4)
-        lda #$FC                
+        LDA #$FC                        ; Quique para cima (-4)
         sta a:WeaponStruct::Speed_Y, y
         rts
 
 @NoCollision:
-        ldy z:DP_WEAPON_POOL_PTR        
+        ldy z:DP_WEAPON_POOL_PTR
         rts
 .endproc
+
 
 ;-------------------------------------------------------------------------------
 ;   ApplyMeleeWeaponCollisions (Leitura de Direct Page Direta)
@@ -624,9 +635,17 @@ MeleeStart:
 @CheckVaderVulnerable:
         sty z:DP_WEAPON_POOL_PTR        ; Preserva Y da arma
         ldy z:DP_ENEMY_STRUCT_PTR       ; Carrega o inimigo atual
+        
+        ; --- FILTRO: Ignora se State >= STATE_DYING ---
+        lda MeleeCrabStruct::State, y
+        cmp #STATE_DYING
+        bcs @EnemyDeadOrDying
+
         lda MeleeCrabStruct::HurtTimer, y
         beq @StartAABB                  
-        ldy z:DP_WEAPON_POOL_PTR        
+
+@EnemyDeadOrDying:
+        ldy z:DP_WEAPON_POOL_PTR        ; Restaura Y da arma
         rts
 
 @StartAABB:
@@ -673,55 +692,33 @@ MeleeStart:
         jmp MeleeNoCollision        
 
 @MeleeConfirmouImpacto:
-        sep #$20                
+        sep #$20
         .a8
 
-        ; Dispara o POW na tela
-        ldy z:DP_ENEMY_STRUCT_PTR 
-        jsr createEnemyPow
-
-        ; --- RECUPERAÇÃO DE CONTEXTO CRÍTICA ---
-        ; Como jsr createEnemyPow alterou registradores, re-sincronizamos X e Y!
-        ldy z:DP_WEAPON_POOL_PTR        ; Y volta a apontar para a Arma
-        ldx z:DP_ENEMY_STRUCT_PTR       ; X volta a apontar para o Inimigo
-
-        ; Aplica o hitstun de 10 frames no caranguejo indexado em X
-        lda #10
-        sta a:MeleeCrabStruct::HurtTimer, x
-
-        ; Desativa a hitbox da arma para evitar múltiplos hits no mesmo frame
+        ; Desativa hitbox da arma imediatamente
+        ldy z:DP_WEAPON_POOL_PTR
         lda #$00
         sta a:WeaponStruct::Hitbox_Active, y
 
-        VADER_MELEE_KNOCKBACK = 16
+        lda #10
+        sta z:DP_TEMP_00                ; HurtTimer = 10
+        lda #1
+        sta z:DP_TEMP_01                ; Dano = 2
+        lda #16
+        sta z:DP_TEMP_02                ; Knockback Melee = 16
 
-        ; --- MATEMÁTICA DE EMPURRÃO INDEXADA EM X ---
+        ; Converte Facing (0 = Direita, 1 = Esquerda) para sinal (0 ou $80)
+        stz z:DP_TEMP_03                ; Assume 0 (Direita)
         lda BigHero + BigHeroStruct::Facing
-        bne @PushVaderLeft
+        beq @DisparaHit
+        lda #$80                        ; Se Facing != 0, liga bit 7 (Esquerda)
+        sta z:DP_TEMP_03
 
-@PushVaderRight:
-        lda a:MeleeCrabStruct::X_Pos, x
-        clc
-        adc #VADER_MELEE_KNOCKBACK
-        sta a:MeleeCrabStruct::X_Pos, x
-        
-        cmp #(SCREEN_RIGHT - 48)
-        bcc MeleeExit
-        lda #(SCREEN_RIGHT - 48)
-        sta a:MeleeCrabStruct::X_Pos, x
-        bra MeleeExit
+@DisparaHit:
+        jsr ApplyEnemyHit
 
-@PushVaderLeft:
-        lda a:MeleeCrabStruct::X_Pos, x
-        sec
-        sbc #VADER_MELEE_KNOCKBACK
-        sta a:MeleeCrabStruct::X_Pos, x
-        
-        cmp #SCREEN_LEFT
-        bcs MeleeExit
-        lda #SCREEN_LEFT
-        sta a:MeleeCrabStruct::X_Pos, x
-        bra MeleeExit
+        ldy z:DP_WEAPON_POOL_PTR        ; Restaura Y para o loop .repeat
+        rts
 
 MeleeNoCollision:
         sep #$20                
@@ -963,6 +960,86 @@ CollisionDone:
 .endproc
 
 
+
+;-------------------------------------------------------------------------------
+;   ApplyEnemyHit (Centraliza Dano, HurtTimer, Pow, Knockback e Bordas)
+;   Entrada via Direct Page:
+;     z:DP_ENEMY_STRUCT_PTR = Ponteiro para o Inimigo atingido
+;     z:DP_TEMP_00          = Duração do HurtTimer (frames)
+;     z:DP_TEMP_01          = Dano a ser descontado do HP
+;     z:DP_TEMP_02          = Força do Knockback (pixels)
+;     z:DP_TEMP_03          = Direção (0 = Direita, Negativo/$80 = Esquerda)
+;-------------------------------------------------------------------------------
+.proc ApplyEnemyHit
+        ldy z:DP_ENEMY_STRUCT_PTR       ; Y = Inimigo atingido
+
+        ; 1. Aplica o HurtTimer parametrizado
+        lda z:DP_TEMP_00
+        sta a:MeleeCrabStruct::HurtTimer, y
+
+        ; 2. Dispara partícula POW (preserva Y)
+        jsr createEnemyPow
+
+        ; 3. Aplica Dano com Subtração Saturada (Anti-Underflow)
+        lda a:MeleeCrabStruct::HP, y
+        sec
+        sbc z:DP_TEMP_01
+        bcs @SalvaHP                    ; Se Carry = 1, HP >= 0
+        lda #0                          ; Satura em 0 se houve underflow
+@SalvaHP:
+        sta a:MeleeCrabStruct::HP, y
+        bne @AplicaKnockback          ; <-- Quando criar a morte, descomente aqui!
+        jmp IniciaMorte
+
+@AplicaKnockback:
+        lda z:DP_TEMP_03                ; Lê a direção salva na DP
+        bmi @EmpurraParaEsquerda        ; Se bit 7 = 1 (negativo), vai para a esquerda
+
+@EmpurraParaDireita:
+        lda a:MeleeCrabStruct::X_Pos, y
+        clc
+        adc z:DP_TEMP_02                ; Soma força do Knockback
+        sta a:MeleeCrabStruct::X_Pos, y
+
+        ; Blindagem Borda Direita
+        cmp #(SCREEN_RIGHT - 48)
+        bcc Finish
+        lda #(SCREEN_RIGHT - 48)
+        sta a:MeleeCrabStruct::X_Pos, y
+        bra Finish
+
+@EmpurraParaEsquerda:
+        lda a:MeleeCrabStruct::X_Pos, y
+        sec
+        sbc z:DP_TEMP_02                ; Subtrai força do Knockback
+        sta a:MeleeCrabStruct::X_Pos, y
+
+        ; Blindagem Borda Esquerda
+        cmp #SCREEN_LEFT
+        bcs Finish
+        lda #SCREEN_LEFT
+        STA a:MeleeCrabStruct::X_Pos, y
+        JMP Finish
+
+IniciaMorte:
+        lda #STATE_DYING
+        sta a:MeleeCrabStruct::State, y
+
+        lda #00
+        sta a:MeleeCrabStruct::Hitbox_Active, y  ; Garante que não dê dano póstumo
+        sta a:MeleeCrabStruct::HurtTimer, y      ; Zera HurtTimer (ou use para piscar)
+        sta a:MeleeCrabStruct::Dying_Timer, y
+        sta a:MeleeCrabStruct::Dying_Anim_Frame, y
+
+        lda #15                                  ; Velocidade de troca dos frames de morte
+        sta a:MeleeCrabStruct::Dying_Anim_Timer, y
+
+Finish:
+        rts
+.endproc
+
+
+
 ;-------------------------------------------------------------------------------
 ;   createHeroPow (Versão Blindada com Isolamento de Registradores)
 ;-------------------------------------------------------------------------------
@@ -1009,9 +1086,158 @@ CollisionDone:
         clc
         adc a:MeleeCrabStruct::Hurtbox_Y1, y
         ror a 
-        sta Pow + PowStruct::Y_Pos
+        STA Pow + PowStruct::Y_Pos
+        rts
 .endproc
 
+
+.proc DrawMeleeCrabHP
+        ; 1. Recupera o endereco do caranguejo enviado da pilha para o registrador Y
+        rep #$20
+        .a16
+        lda 3,s                         
+        tay
+        sep #$20
+        .a8
+        
+
+        LDA a:MeleeCrabStruct::State, y
+        cmp #STATE_DEAD
+        bne Draw
+        rts
+
+Draw:
+
+
+        
+
+        lda a:MeleeCrabStruct::HP, y
+        CMP #0
+        BEQ @ZeroHp
+        CMP #1
+        BEQ @OneHp
+        CMP #2
+        BEQ @TwoHp
+        CMP #3
+        BEQ @ThreeHp
+        CMP #4
+        BEQ @FourHp
+
+@ZeroHp:
+        rts
+        lda #$E0                         ; Tile ID do HP
+        sta OAMMIRROR, x
+        inx
+        JMP Finish
+@OneHp:
+         LDA a:MeleeCrabStruct::X_Pos, y
+        sta OAMMIRROR, x
+        inx
+        
+        lda a:MeleeCrabStruct::Y_Pos, y
+        sta OAMMIRROR, x
+        inx
+        lda #$8A                         ; Tile ID do HP
+        sta OAMMIRROR, x
+        inx
+        JMP Finish
+@TwoHp:
+         LDA a:MeleeCrabStruct::X_Pos, y
+        sta OAMMIRROR, x
+        inx
+        
+        lda a:MeleeCrabStruct::Y_Pos, y
+        sta OAMMIRROR, x
+        inx
+        LDA #$20                         ; Tile ID do HP
+        STA OAMMIRROR, x
+        inx
+        JMP Finish
+@ThreeHp:
+         LDA a:MeleeCrabStruct::X_Pos, y
+        sta OAMMIRROR, x
+        inx
+        
+        lda a:MeleeCrabStruct::Y_Pos, y
+        sta OAMMIRROR, x
+        inx
+        LDA #$2E                         ; Tile ID do HP
+        sta OAMMIRROR, x
+        inx
+        JMP Finish
+@FourHp:
+         LDA a:MeleeCrabStruct::X_Pos, y
+        sta OAMMIRROR, x
+        inx
+        
+        lda a:MeleeCrabStruct::Y_Pos, y
+        sta OAMMIRROR, x
+        inx
+        LDA #$0E                         ; Tile ID do HP
+        sta OAMMIRROR, x
+        inx
+        JMP Finish
+
+Finish:
+        lda #$31                         
+        sta OAMMIRROR, x
+        INX
+        
+        RTS
+.endproc
+
+
+
+;-------------------------------------------------------------------------------
+;   RespawnEnemy
+;   Entrada via Pilha (3,s): Endereço 16-bit da struct do inimigo
+;   Comportamento:
+;     - Verifica se o inimigo morreu (HP == 0)
+;     - Usa a sua rotina 'rand' para sortear o lado (esquerda/direita) e altura Y
+;     - Reseta todos os status via SetupDefaultMeleeStats
+;-------------------------------------------------------------------------------
+.proc   RespawnEnemy
+        ; 1. Pega o endereço do inimigo seguindo o seu padrão exato (3,s)
+        rep #$20
+        .a16
+        lda 3, s                        ; Lê ponteiro da struct do inimigo
+        tay                             ; Guarda em Y
+        sep #$20
+        .a8
+
+        ; 2. Só faz respawn se o inimigo estiver morto (HP == 0)
+        lda a:MeleeCrabStruct::HP, y
+        bne @Fim
+
+        ; --- 3. SORTEIA O LADO DO EIXO X (ESQUERDA OU DIREITA) ---
+        jsr rand                        ; Retorna byte aleatório em A (.a8)
+        and #$01                        ; Isola apenas o bit 0 (0 ou 1)
+        beq @NasceEsquerda
+
+@NasceDireita:
+        lda #$F0                        ; X = 240 (Borda direita)
+        bra @SalvaX
+
+@NasceEsquerda:
+        lda #$08                        ; X = 8 (Borda esquerda)
+
+@SalvaX:
+        sta a:MeleeCrabStruct::X_Pos, y
+
+        ; --- 4. SORTEIA A ALTURA DO CHÃO (EIXO Y) ---
+        jsr rand                        ; Pega um novo byte aleatório em A
+        and #$3F                        ; Limita o valor entre 0 e 63 ($00 a $3F)
+        clc
+        adc #(SCREEN_BOTTOM - 64)       ; Soma com o teto do chão (Ex: 224 - 64 = 160)
+        sta a:MeleeCrabStruct::Y_Pos, y
+
+        ; --- 5. RESETA OS STATUS PADRÃO ---
+        tyx                             ; Transfere ponteiro Y -> X
+        jsr SetupDefaultMeleeStats
+
+@Fim:
+        rts
+.endproc
 
 .proc DrawPow
 
@@ -1373,7 +1599,7 @@ Finish:
 
 
 BigHero:         .tag BigHeroStruct
-PennyCrab:       .tag PennyCrabStruct
+PennyCrab:       .tag MeleeCrabStruct
 VaderCrab:       .tag MeleeCrabStruct
 DengueCrab:       .tag MeleeCrabStruct
 RapaNuiCrab:       .tag MeleeCrabStruct

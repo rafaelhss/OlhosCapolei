@@ -44,15 +44,31 @@ ENEMY_HURTBOX_HEIGHT = $20
         sep #$20                        
         .a8
 
+
+        LDA a:MeleeCrabStruct::State, y
+        CMP #STATE_DEAD
+        bne @CheckDying
+        rts                 ; Morto: sai imediatamente sem atualizar física ou hurtbox!
+
+@CheckDying:
+        lda a:MeleeCrabStruct::State, y
+        cmp #STATE_DYING
+        bne CheckHurt
+        jsr UpdateDyingState
+        rts                 ; Enquanto morre, não executa IA nem atualiza hurtbox
+       
+
+CheckHurt:
         ; Verifica se o inimigo está em animação de dano (Hurt)
         lda a:MeleeCrabStruct::HurtTimer, y
         beq @ProcessIA                  
         
+
         ; Se estiver em dano, decrementa o timer de dano com segurança
         sec
         sbc #1
         sta a:MeleeCrabStruct::HurtTimer, y
-        brl @Done   
+        brl Done   
 
 @ProcessIA:
         ; --- RASTREAMENTO DINÂMICO DE FACING DURANTE O PREPARO [ eu acho que isso nao tinha que ser feito aqui e sim no UpdatePreparingState...]---
@@ -78,13 +94,13 @@ ENEMY_HURTBOX_HEIGHT = $20
         cmp #STATE_ATACKING
         bne @CheckPreparing  ;Se nao esta atacando, verifica se está preparando
         jsr UpdateAttackingState ;Esta atacando, atualiza o estado de ataque
-        bra @Done ;Apos atualizar o estado de ataque, fim
+        bra Done ;Apos atualizar o estado de ataque, fim
 
 @CheckPreparing:
         cmp #STATE_PREPARING
         bne @CheckResting ;Se nao esta preparando, verifica se está descansando
         jsr UpdatePreparingState ;Esta preparando, atualiza o estado de preparo
-        bra @Done ;Apos atualizar o estado de preparo, fim
+        bra Done ;Apos atualizar o estado de preparo, fim
 
 @CheckResting:
         ; Verifica primeiro se o timer já zerou para evitar underflow cíclico
@@ -111,7 +127,7 @@ ENEMY_HURTBOX_HEIGHT = $20
         ; Processa animação de caminhada padrão
         lda a:MeleeCrabStruct::State, y
         cmp #STATE_WALKING
-        bne @Done ;Se nao estiver caminhando, Sai Fora.
+        bne Done ;Se nao estiver caminhando, Sai Fora.
         
         jsr UpdateWalkAnimation
         bra @ExecuteMovement
@@ -125,7 +141,7 @@ ENEMY_HURTBOX_HEIGHT = $20
 @ExecuteMovement:
         jsr ApplyEnemyMovement
 
-@Done:
+Done:
         jsr UpdateMeleeCrabGeometry
         rts
 .endproc
@@ -135,6 +151,50 @@ ENEMY_HURTBOX_HEIGHT = $20
         sta a:MeleeCrabStruct::State, y
         rts
 .endproc
+
+
+
+DYING_DURATION_FRAMES = 45
+DYING_ANIM_SPEED      = 15
+DYING_MAX_FRAMES      = 2
+
+.proc UpdateDyingState
+        ; 1. Timer total da morte
+        lda a:MeleeCrabStruct::Dying_Timer, y
+        clc
+        adc #1
+        sta a:MeleeCrabStruct::Dying_Timer, y
+        cmp #DYING_DURATION_FRAMES
+        bne @Anim
+
+        ; Acabou o tempo de morte -> Transiciona para DEAD definitivo
+        lda #STATE_DEAD
+        sta a:MeleeCrabStruct::State, y
+        rts
+
+@Anim:
+        ; 2. Timer de troca de frame da animação de morte
+        lda a:MeleeCrabStruct::Dying_Anim_Timer, y
+        sec
+        sbc #1
+        sta a:MeleeCrabStruct::Dying_Anim_Timer, y
+        bne @Done
+
+        lda #DYING_ANIM_SPEED
+        sta a:MeleeCrabStruct::Dying_Anim_Timer, y
+
+        lda a:MeleeCrabStruct::Dying_Anim_Frame, y
+        clc
+        adc #1
+        cmp #DYING_MAX_FRAMES
+        bcc @SaveFrame
+        lda #0                          ; Alterna entre frame 0 e 1 (ou trave no último)
+@SaveFrame:
+        sta a:MeleeCrabStruct::Dying_Anim_Frame, y
+@Done:
+        rts
+.endproc
+
 
 
 .proc UpdateWalkAnimation
@@ -616,6 +676,13 @@ ENEMY_HURTBOX_HEIGHT = $20
         .a8
         .i16
 
+
+        LDA a:MeleeCrabStruct::State, y
+        cmp #STATE_DEAD
+        bne CheckHurtTimer
+        rts
+
+CheckHurtTimer:
         ; --- LÓGICA DE PISCAR (FLICKER EM HIT STUN) ---
         lda a:MeleeCrabStruct::HurtTimer, y  ; Carrega o timer de dano atual
         beq @IniciaDesenho                   ; Se for 0, desenha normalmente
@@ -670,6 +737,19 @@ ENEMY_HURTBOX_HEIGHT = $20
         lda #4                          ; Se tiver HurtTimer ativo, força o frame de Hurt
         rts
 @CheckStates:
+        lda a:MeleeCrabStruct::State, y
+        cmp #STATE_DYING
+        bne @CheckResting
+
+        lda a:MeleeCrabStruct::Dying_Anim_Frame, y
+        bne @Dying1
+@Dying0:
+        lda #16
+        rts
+@Dying1:
+        lda #18
+        rts
+@CheckResting:
         lda a:MeleeCrabStruct::State, y
         cmp #STATE_RESTING              
         beq @Walk0
@@ -784,132 +864,164 @@ ENEMY_HURTBOX_HEIGHT = $20
 ; =============================================================================
 VaderCrab_Layout:
 .byte 0,  0,$00,$01, 16,  0,$02,$01, 32,  0,$04,$01, 48,  0,$00,$01
-.byte 0, 16,$20,$01, 16, 16,$22,$01, 32, 16,$24,$01, 48, 16,$20,$01
+.byte 0, 16,$00,$01, 16, 16,$22,$01, 32, 16,$24,$01, 48, 16,$00,$01
 .byte 0, 32,$40,$01, 16, 32,$42,$01, 32, 32,$44,$01, 48, 32,$46,$01
 .byte 0, 48,$60,$01, 16, 48,$62,$01, 32, 48,$64,$01, 48, 48,$66,$01
 VaderCrab_Layout_Frame1:
 .byte 0,  0,$00,$01, 16,  0,$02,$01, 32,  0,$04,$01, 48,  0,$00,$01
-.byte 0, 16,$20,$01, 16, 16,$22,$01, 32, 16,$24,$01, 48, 16,$20,$01
+.byte 0, 16,$00,$01, 16, 16,$22,$01, 32, 16,$24,$01, 48, 16,$00,$01
 .byte 0, 32,$48,$01, 16, 32,$42,$01, 32, 32,$44,$01, 48, 32,$4E,$01
 .byte 0, 48,$68,$01, 16, 48,$6A,$01, 32, 48,$6C,$01, 48, 48,$6E,$01
 VaderCrab_Layout_Hurt:
 .byte 0,  10,$00,$01, 16,  10,$02,$01, 32,  10,$04,$01, 48,  10,$00,$01
-.byte 0, 16,$20,$01, 16, 16,$22,$01, 32, 16,$24,$01, 48, 16,$20,$01
+.byte 0, 16,$00,$01, 16, 16,$22,$01, 32, 16,$24,$01, 48, 16,$00,$01
 .byte 0, 32,$48,$01, 16, 32,$4A,$01, 32, 32,$4C,$01, 48, 32,$4E,$01
 .byte 0, 48,$68,$01, 16, 48,$6A,$01, 32, 48,$6C,$01, 48, 48,$6E,$01
 VaderCrab_Layout_FramePreparing0:
 .byte 0,  0,$00,$01, 16,  0,$02,$01, 32,  0,$04,$01, 48,  0,$00,$01
-.byte 0, 16,$20,$01, 16, 16,$22,$01, 32, 16,$24,$01, 48, 16,$20,$01
+.byte 0, 16,$00,$01, 16, 16,$22,$01, 32, 16,$24,$01, 48, 16,$00,$01
 .byte 0, 32,$48,$01, 16, 32,$4A,$01, 32, 32,$4C,$01, 48, 32,$4E,$01
 .byte 0, 48,$C0,$01, 16, 48,$C2,$01, 32, 48,$C4,$01, 48, 48,$C6,$01
 VaderCrab_Layout_FramePreparing1:
 .byte 0,  0,$00,$01, 16,  0,$02,$01, 32,  0,$04,$01, 48,  0,$00,$01
-.byte 0, 16,$20,$01, 16, 16,$22,$01, 32, 16,$24,$01, 48, 16,$20,$01
+.byte 0, 16,$00,$01, 16, 16,$22,$01, 32, 16,$24,$01, 48, 16,$00,$01
 .byte 0, 32,$A0,$01, 16, 32,$A2,$01, 32, 32,$A4,$01, 48, 32,$A6,$01
 .byte 0, 48,$C0,$01, 16, 48,$C2,$01, 32, 48,$C4,$01, 48, 48,$C6,$01
 VaderCrab_Layout_FramePreparing2:
 .byte 0,  0,$00,$01, 16,  0,$02,$01, 32,  0,$04,$01, 48,  0,$00,$01
-.byte 0, 16,$80,$01, 16, 16,$22,$01, 32, 16,$24,$01, 48, 16,$20,$01
+.byte 0, 16,$80,$01, 16, 16,$22,$01, 32, 16,$24,$01, 48, 16,$00,$01
 .byte 0, 32,$A0,$01, 16, 32,$A2,$01, 32, 32,$A4,$01, 48, 32,$A6,$01
 .byte 0, 48,$C0,$01, 16, 48,$C2,$01, 32, 48,$C4,$01, 48, 48,$C6,$01
 VaderCrab_Layout_FrameAttacking0:
 .byte 0,  0,$00,$01, 16,  0,$0A,$01, 32,  0,$0C,$01, 48,  0,$00,$01
-.byte 0, 16,$80,$01, 16, 16,$2A,$01, 32, 16,$2C,$01, 48, 16,$20,$01
+.byte 0, 16,$80,$01, 16, 16,$2A,$01, 32, 16,$2C,$01, 48, 16,$00,$01
 .byte 0, 32,$A0,$31, 16, 32,$A2,$31, 32, 32,$A4,$31, 48, 32,$A6,$31
 .byte 0, 48,$C0,$31, 16, 48,$C2,$31, 32, 48,$C4,$31, 48, 48,$C6,$31
 VaderCrab_Layout_FrameAttacking1:
 .byte 0,  0,$00,$01, 16,  0,$0A,$01, 32,  0,$0C,$01, 48,  0,$00,$01
-.byte 0, 16,$20,$01, 16, 16,$2A,$01, 32, 16,$2C,$01, 48, 16,$8E,$01
+.byte 0, 16,$00,$01, 16, 16,$2A,$01, 32, 16,$2C,$01, 48, 16,$8E,$01
 .byte 0, 32,$A8,$01, 16, 32,$AA,$01, 32, 32,$AC,$01, 48, 32,$AE,$01
 .byte 0, 48,$C8,$01, 16, 48,$CA,$01, 32, 48,$CC,$01, 48, 48,$CE,$01
+VaderCrab_Layout_Dying0:
+.byte 0,  0,$EE,$01, 16,  0,$EE,$01, 32,  0,$EE,$01, 48,  0,$EE,$01
+.byte 0, 16,$EE,$01, 16, 16,$EE,$01, 32, 16,$EE,$01, 48, 16,$EE,$01
+.byte 0, 32,$EE,$01, 16, 32,$EE,$01, 32, 32,$EE,$01, 48, 32,$EE,$01
+.byte 0, 48,$EE,$01, 16, 48,$EE,$01, 32, 48,$EE,$01, 48, 48,$EE,$01
+VaderCrab_Layout_Dying1:
+.byte 3,  2,$EE,$01, 14,  2,$EE,$01, 30,  1,$EE,$01, 47,  0,$EE,$01
+.byte 1, 14,$EE,$01, 18, 14,$EE,$01, 34, 18,$EE,$01, 50, 16,$EE,$01
+.byte 2, 30,$EE,$01, 17, 30,$EE,$01, 31, 30,$EE,$01, 49, 32,$EE,$01
+.byte 3, 46,$EE,$01, 15, 47,$EE,$01, 33, 50,$EE,$01, 47, 48,$EE,$01
 
 ; =============================================================================
 ; BANCO DE MATRIZES DE ANIMAÇÃO DO DengueCRAB
 ; =============================================================================
 DengueCrab_Layout:
 .byte 30, 18,$EA,$01, 46,  18,$EC,$01, 16,  0,$06,$01, 30,  0,$08,$01
-.byte 0, 16,$20,$01, 16, 16,$26,$01, 32, 16,$28,$01, 48, 16,$20,$01
+.byte 0, 16,$00,$01, 16, 16,$26,$01, 32, 16,$28,$01, 48, 16,$00,$01
 .byte 0, 32,$40,$01, 16, 32,$42,$01, 32, 32,$44,$01, 48, 32,$46,$01
 .byte 0, 48,$60,$01, 16, 48,$62,$01, 32, 48,$64,$01, 48, 48,$66,$01
 DengueCrab_Layout_Frame1:
 .byte 30, 18,$EA,$01, 46,  18,$EC,$01, 16,  0,$06,$01, 30,  0,$08,$01
-.byte 0, 16,$20,$01, 16, 16,$26,$01, 32, 16,$28,$01, 48, 16,$20,$01
+.byte 0, 16,$00,$01, 16, 16,$26,$01, 32, 16,$28,$01, 48, 16,$00,$01
 .byte 0, 32,$48,$01, 16, 32,$42,$01, 32, 32,$44,$01, 48, 32,$4E,$01
 .byte 0, 48,$68,$01, 16, 48,$6A,$01, 32, 48,$6C,$01, 48, 48,$6E,$01
 DengueCrab_Layout_Hurt:
 .byte 30, 26,$EA,$01, 46,  26,$EC,$01, 16,  8,$06,$01, 30,  8,$08,$01
-.byte 0, 24,$20,$01, 16, 24,$26,$01, 32, 24,$28,$01, 48, 24,$20,$01
+.byte 0, 24,$00,$01, 16, 24,$26,$01, 32, 24,$28,$01, 48, 24,$00,$01
 .byte 0, 32,$48,$01, 16, 32,$4A,$01, 32, 32,$4C,$01, 48, 32,$4E,$01
 .byte 0, 48,$68,$01, 16, 48,$6A,$01, 32, 48,$6C,$01, 48, 48,$6E,$01
 DengueCrab_Layout_FramePreparing0:
 .byte 27, 18,$EA,$01, 43,  18,$EC,$01, 13,  0,$06,$01, 27,  0,$08,$01
-.byte <(-3), 16,$20,$01, 13, 16,$26,$01, 29, 16,$28,$01, 45, 16,$20,$01
+.byte <(-3), 16,$00,$01, 13, 16,$26,$01, 29, 16,$28,$01, 45, 16,$00,$01
 .byte 0, 32,$40,$01, 16, 32,$42,$01, 32, 32,$44,$01, 48, 32,$46,$01
 .byte 0, 48,$60,$01, 16, 48,$62,$01, 32, 48,$64,$01, 48, 48,$66,$01
 DengueCrab_Layout_FramePreparing1:
 .byte 30, 18,$EA,$01, 46,  18,$EC,$01, 16,  0,$06,$01, 30,  0,$08,$01
-.byte 0, 16,$20,$01, 16, 16,$26,$01, 32, 16,$28,$01, 48, 16,$20,$01
+.byte 0, 16,$00,$01, 16, 16,$26,$01, 32, 16,$28,$01, 48, 16,$00,$01
 .byte 0, 32,$40,$01, 16, 32,$42,$01, 32, 32,$44,$01, 48, 32,$46,$01
 .byte 0, 48,$60,$01, 16, 48,$62,$01, 32, 48,$64,$01, 48, 48,$66,$01
 DengueCrab_Layout_FramePreparing2:
 .byte 24, 18,$EA,$01, 40,  18,$EC,$01, 10,  0,$06,$01, 24,  0,$08,$01
-.byte <(-6), 16,$00,$01, 10, 16,$26,$01, 26, 16,$28,$01, 42, 16,$20,$01
+.byte <(-6), 16,$00,$01, 10, 16,$26,$01, 26, 16,$28,$01, 42, 16,$00,$01
 .byte 0, 32,$40,$01, 16, 32,$42,$01, 32, 32,$44,$01, 48, 32,$46,$01
 .byte 0, 48,$60,$01, 16, 48,$62,$01, 32, 48,$64,$01, 48, 48,$66,$01
 DengueCrab_Layout_FrameAttacking0:
 .byte 33, 18,$EA,$01, 49,  18,$EC,$01, 19,  0,$06,$01, 33,  0,$08,$01
-.byte 3, 16,$00,$01, 19, 16,$26,$01, 35, 16,$28,$01, 51, 16,$20,$01
+.byte 3, 16,$00,$01, 19, 16,$26,$01, 35, 16,$28,$01, 51, 16,$00,$01
 .byte 0, 32,$40,$01, 16, 32,$42,$01, 32, 32,$44,$01, 48, 32,$46,$01
 .byte 0, 48,$60,$01, 16, 48,$62,$01, 32, 48,$64,$01, 48, 48,$66,$01
 DengueCrab_Layout_FrameAttacking1:
 .byte 36, 18,$EA,$01, 52,  18,$EC,$01, 19,  0,$06,$01, 33,  0,$08,$01
-.byte 3, 16,$00,$01, 19, 16,$26,$01, 35, 16,$28,$01, 51, 16,$20,$01
+.byte 3, 16,$00,$01, 19, 16,$26,$01, 35, 16,$28,$01, 51, 16,$00,$01
 .byte 0, 32,$40,$01, 16, 32,$42,$01, 32, 32,$44,$01, 48, 32,$46,$01
 .byte 0, 48,$60,$01, 16, 48,$62,$01, 32, 48,$64,$01, 48, 48,$66,$01
+DengueCrab_Layout_Dying0:
+.byte 0,  0,$EE,$01, 16,  0,$EE,$01, 32,  0,$EE,$01, 48,  0,$EE,$01
+.byte 0, 16,$EE,$01, 16, 16,$EE,$01, 32, 16,$EE,$01, 48, 16,$EE,$01
+.byte 0, 32,$EE,$01, 16, 32,$EE,$01, 32, 32,$EE,$01, 48, 32,$EE,$01
+.byte 0, 48,$EE,$01, 16, 48,$EE,$01, 32, 48,$EE,$01, 48, 48,$EE,$01
+DengueCrab_Layout_Dying1:
+.byte 3,  2,$EE,$01, 14,  2,$EE,$01, 30,  1,$EE,$01, 47,  0,$EE,$01
+.byte 1, 14,$EE,$01, 18, 14,$EE,$01, 34, 18,$EE,$01, 50, 16,$EE,$01
+.byte 2, 30,$EE,$01, 17, 30,$EE,$01, 31, 30,$EE,$01, 49, 32,$EE,$01
+.byte 3, 46,$EE,$01, 15, 47,$EE,$01, 33, 50,$EE,$01, 47, 48,$EE,$01
 
 ; =============================================================================
 ; BANCO DE MATRIZES DE ANIMAÇÃO DO RapaCRAB
 ; =============================================================================
 RapaNuiCrab_Layout:
 .byte 0,  0,$00,$01, 16,  0,$E2,$01, 32,  0,$E4,$01, 48,  0,$00,$01
-.byte 0, 16,$20,$01, 16, 16,$E6,$01, 32, 16,$E8,$01, 48, 16,$20,$01
+.byte 0, 16,$00,$01, 16, 16,$E6,$01, 32, 16,$E8,$01, 48, 16,$00,$01
 .byte 0, 32,$40,$01, 16, 32,$42,$01, 32, 32,$44,$01, 48, 32,$46,$01
 .byte 0, 48,$60,$01, 16, 48,$62,$01, 32, 48,$64,$01, 48, 48,$66,$01
 RapaNuiCrab_Layout_Frame1:
 .byte 0,  0,$00,$01, 16,  0,$E2,$01, 32,  0,$E4,$01, 48,  0,$00,$01
-.byte 0, 16,$20,$01, 16, 16,$E6,$01, 32, 16,$E8,$01, 48, 16,$20,$01
+.byte 0, 16,$00,$01, 16, 16,$E6,$01, 32, 16,$E8,$01, 48, 16,$00,$01
 .byte 0, 32,$48,$01, 16, 32,$42,$01, 32, 32,$44,$01, 48, 32,$4E,$01
 .byte 0, 48,$68,$01, 16, 48,$6A,$01, 32, 48,$6C,$01, 48, 48,$6E,$01
 RapaNuiCrab_Layout_Hurt:
 .byte 0,  0,$00,$01, 16,  8,$E2,$01, 32,  8,$E4,$01, 48,  0,$00,$01
-.byte 0, 16,$20,$01, 16, 16,$E6,$01, 32, 16,$E8,$01, 48, 16,$20,$01
+.byte 0, 16,$00,$01, 16, 16,$E6,$01, 32, 16,$E8,$01, 48, 16,$00,$01
 .byte 0, 32,$40,$01, 16, 32,$42,$01, 32, 32,$44,$01, 48, 32,$46,$01
 .byte 0, 48,$60,$01, 16, 48,$62,$01, 32, 48,$64,$01, 48, 48,$66,$01
 RapaNuiCrab_Layout_FramePreparing0:
 .byte 0,  0,$00,$01, 16,  0,$E2,$01, 32,  0,$E4,$01, 48,  0,$00,$01
-.byte 0, 16,$20,$01, 16, 16,$E6,$01, 32, 16,$E8,$01, 48, 16,$20,$01
+.byte 0, 16,$00,$01, 16, 16,$E6,$01, 32, 16,$E8,$01, 48, 16,$00,$01
 .byte 0, 32,$40,$01, 16, 32,$42,$01, 32, 32,$44,$01, 48, 32,$46,$01
 .byte 0, 48,$60,$01, 16, 48,$62,$01, 32, 48,$64,$01, 48, 48,$66,$01
 RapaNuiCrab_Layout_FramePreparing1:
 .byte 0,  0,$00,$01, 16,  0,$E2,$01, 32,  0,$E4,$01, 48,  0,$00,$01
-.byte 0, 16,$20,$01, 16, 16,$E6,$01, 32, 16,$E8,$01, 48, 16,$20,$01
+.byte 0, 16,$00,$01, 16, 16,$E6,$01, 32, 16,$E8,$01, 48, 16,$00,$01
 .byte 0, 32,$40,$01, 16, 32,$42,$01, 32, 32,$44,$01, 48, 32,$46,$01
 .byte 0, 48,$60,$01, 16, 48,$62,$01, 32, 48,$64,$01, 48, 48,$66,$01
 RapaNuiCrab_Layout_FramePreparing2:
 .byte 0,  0,$00,$01, 16,  0,$E2,$01, 32,  0,$E4,$01, 48,  0,$00,$01
-.byte 0, 16,$20,$01, 16, 16,$E6,$01, 32, 16,$E8,$01, 48, 16,$20,$01
+.byte 0, 16,$00,$01, 16, 16,$E6,$01, 32, 16,$E8,$01, 48, 16,$00,$01
 .byte 0, 32,$40,$01, 16, 32,$42,$01, 32, 32,$44,$01, 48, 32,$46,$01
 .byte 0, 48,$60,$01, 16, 48,$62,$01, 32, 48,$64,$01, 48, 48,$66,$01
 RapaNuiCrab_Layout_FrameAttacking0:
 .byte 0,  0,$00,$01, 16,  0,$86,$01, 32,  0,$88,$01, 48,  0,$00,$01
-.byte 0, 16,$20,$01, 16, 16,$82,$01, 32, 16,$84,$01, 48, 16,$20,$01
+.byte 0, 16,$00,$01, 16, 16,$82,$01, 32, 16,$84,$01, 48, 16,$00,$01
 .byte 0, 32,$40,$01, 16, 32,$42,$01, 32, 32,$44,$01, 48, 32,$46,$01
 .byte 0, 48,$60,$01, 16, 48,$62,$01, 32, 48,$64,$01, 48, 48,$66,$01
 RapaNuiCrab_Layout_FrameAttacking1:
 .byte 0,  0,$00,$01, 16,  0,$86,$01, 32,  0,$88,$01, 48,  0,$00,$01
-.byte 0, 16,$20,$01, 16, 16,$82,$01, 32, 16,$84,$01, 48, 16,$20,$01
+.byte 0, 16,$00,$01, 16, 16,$82,$01, 32, 16,$84,$01, 48, 16,$00,$01
 .byte 0, 32,$40,$01, 16, 32,$42,$01, 32, 32,$44,$01, 48, 32,$46,$01
 .byte 0, 48,$60,$01, 16, 48,$62,$01, 32, 48,$64,$01, 48, 48,$66,$01
+RapaNuiCrab_Layout_Dying0:
+.byte 0,  0,$EE,$01, 16,  0,$EE,$01, 32,  0,$EE,$01, 48,  0,$EE,$01
+.byte 0, 16,$EE,$01, 16, 16,$EE,$01, 32, 16,$EE,$01, 48, 16,$EE,$01
+.byte 0, 32,$EE,$01, 16, 32,$EE,$01, 32, 32,$EE,$01, 48, 32,$EE,$01
+.byte 0, 48,$EE,$01, 16, 48,$EE,$01, 32, 48,$EE,$01, 48, 48,$EE,$01
+RapaNuiCrab_Layout_Dying1:
+.byte 3,  2,$EE,$01, 14,  2,$EE,$01, 30,  1,$EE,$01, 47,  0,$EE,$01
+.byte 1, 14,$EE,$01, 18, 14,$EE,$01, 34, 18,$EE,$01, 50, 16,$EE,$01
+.byte 2, 30,$EE,$01, 17, 30,$EE,$01, 31, 30,$EE,$01, 49, 32,$EE,$01
+.byte 3, 46,$EE,$01, 15, 47,$EE,$01, 33, 50,$EE,$01, 47, 48,$EE,$01
+
+
 
 ; --- Tabelas de Animação de 16-bit ---
 Vader_Animation_Table:
@@ -921,6 +1033,8 @@ Vader_Animation_Table:
 .word .loword(VaderCrab_Layout_FramePreparing2)
 .word .loword(VaderCrab_Layout_FrameAttacking0)
 .word .loword(VaderCrab_Layout_FrameAttacking1)
+.word .loword(VaderCrab_Layout_Dying0)    ; Índice 16 (Dying 0)
+.word .loword(VaderCrab_Layout_Dying1)    ; Índice 18 (Dying 1)
 Dengue_Animation_Table:
 .word .loword(DengueCrab_Layout)
 .word .loword(DengueCrab_Layout_Frame1)
@@ -930,6 +1044,8 @@ Dengue_Animation_Table:
 .word .loword(DengueCrab_Layout_FramePreparing2)
 .word .loword(DengueCrab_Layout_FrameAttacking0)
 .word .loword(DengueCrab_Layout_FrameAttacking1)
+.word .loword(DengueCrab_Layout_Dying0)    ; Índice 16 (Dying 0)
+.word .loword(DengueCrab_Layout_Dying1)    ; Índice 18 (Dying 1)
 Rapa_Animation_Table:
 .word .loword(RapaNuiCrab_Layout)
 .word .loword(RapaNuiCrab_Layout_Frame1)
@@ -939,6 +1055,8 @@ Rapa_Animation_Table:
 .word .loword(RapaNuiCrab_Layout_FramePreparing2)
 .word .loword(RapaNuiCrab_Layout_FrameAttacking0)
 .word .loword(RapaNuiCrab_Layout_FrameAttacking1)
+.word .loword(RapaNuiCrab_Layout_Dying0)    ; Índice 16 (Dying 0)
+.word .loword(RapaNuiCrab_Layout_Dying1)    ; Índice 18 (Dying 1)
 Enemy_Master_Animation_Table:
 .word .loword(Vader_Animation_Table)
 .word .loword(Dengue_Animation_Table)

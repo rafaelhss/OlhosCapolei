@@ -18,8 +18,15 @@ STATE_PREPARING = 1
 STATE_ATACKING  = 2
 STATE_RESTING   = 3
 
-STATE_HURT_NOT  = 0
-STATE_HURT      = 1
+STATE_HURT_NOT  = 4
+STATE_HURT      = 5
+
+STATE_DYING     = 6
+STATE_DEAD      = 7
+
+
+
+
 
 
 BULLET_STATE_INACTIVE = 0
@@ -142,66 +149,10 @@ ENEMY_TYPE_DENGUE = 2 ; Dengue crab
     Hurtbox_Y2          .byte   ; Retângulo AABB - Base
     HurtTimer           .byte   ; Contador de hitstun (cara amassada)
     Current_Weapon_ID   .byte   ; Endereco da arma atualmente equipada (0 a 6)
+    HP                 .byte    ; Pontos de vida do herói (0 a 255)
+    Max_HP              .byte   ; Pontos de vida máximos do herói (0 a 255)
 .endstruct
 
-; ======== PennyCrab IA
-.struct PennyCrabStruct
-    X_Pos                .byte   
-    Y_Pos                .byte   
-    Tile_Count           .byte   
-    Walk_Anim_Speed      .byte 
-    Anim_Timer           .byte   
-    Anim_Frame           .byte   
-    Anim_Ptr             .res 2  
-    Facing               .byte   
-    State                .byte   
-    State_Timer          .byte   
-    Preparing_Timer      .byte   
-    Preparing_Anim_Timer .byte   
-    Preparing_Anim_Frame .byte
-    Attacking_Timer      .byte   
-    Attacking_Anim_Timer .byte   
-    Attacking_Anim_Frame .byte    
-    Resting_Timer        .byte 
-    Hitbox_Active        .byte   
-    Hitbox_X1            .byte   
-    Hitbox_X2            .byte   
-    Hitbox_Y1            .byte   
-    Hitbox_Y2            .byte   
-.endstruct
-
-; ======== VaderCrab IA
-.struct VaderCrabStruct
-    X_Pos                .byte   
-    Y_Pos                .byte   
-    Tile_Count           .byte   
-    Walk_Anim_Speed      .byte 
-    Anim_Timer           .byte   
-    Anim_Frame           .byte   
-    Anim_Ptr             .res 2  
-    Facing               .byte   
-    State                .byte   
-    State_Timer          .byte   
-    Preparing_Timer      .byte   
-    Preparing_Anim_Timer .byte   
-    Preparing_Anim_Frame .byte
-    Attacking_Timer      .byte   
-    Attacking_Anim_Timer .byte   
-    Attacking_Anim_Frame .byte    
-    Resting_Timer        .byte 
-    Hitbox_Active        .byte   
-    Hitbox_X1            .byte   
-    Hitbox_X2            .byte   
-    Hitbox_Y1            .byte   
-    Hitbox_Y2            .byte 
-    Hurtbox_X1            .byte   
-    Hurtbox_X2            .byte   
-    Hurtbox_Y1            .byte   
-    Hurtbox_Y2            .byte 
-    HurtTimer            .byte
-    Enemy_Type           .byte  
-    Attack_Sector        .byte
-.endstruct
 
 ; ======== MeleeCrab IA
 .struct MeleeCrabStruct
@@ -220,7 +171,10 @@ ENEMY_TYPE_DENGUE = 2 ; Dengue crab
     Preparing_Anim_Frame .byte
     Attacking_Timer      .byte   
     Attacking_Anim_Timer .byte   
-    Attacking_Anim_Frame .byte    
+    Attacking_Anim_Frame .byte  
+    Dying_Timer      .byte   
+    Dying_Anim_Timer .byte   
+    Dying_Anim_Frame .byte    
     Resting_Timer        .byte 
     Hitbox_Active        .byte   
     Hitbox_X1            .byte   
@@ -236,6 +190,8 @@ ENEMY_TYPE_DENGUE = 2 ; Dengue crab
     Attack_Sector        .byte
     Target_Attack_X        .byte
     Target_Attack_Y        .byte
+    HP                    .byte ;   Pontos de vida do inimigo (0 a 255)
+    Max_HP                .byte ;   Pontos de vida máximos do inimigo (0 a 255)    
 .endstruct
 
 ; ======== Registro do Pool de Projéteis Dinâmicos
