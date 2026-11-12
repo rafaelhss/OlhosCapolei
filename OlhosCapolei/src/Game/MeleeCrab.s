@@ -342,15 +342,15 @@ ENEMY_HURTBOX_HEIGHT = $20
 @SetorInfEsquerdo:
         lda z:DP_HERO_CENTER_X
         sec
-        sbc #SECTOR_OFFSET_X + 64
+        sbc #20 + 64
         STA a:MeleeCrabStruct::Target_Attack_X, y
         ;sta z:DP_TARGET_ENEMY_X_DEBUGDENGUE               
         lda z:DP_HERO_CENTER_Y
         ;clc
         ;adc #SECTOR_OFFSET_Y
-        SEC
-        ;SBC #SECTOR_OFFSET_Y
-        SBC #8
+        ; SEC
+        ; ;SBC #SECTOR_OFFSET_Y
+        ; SBC #16
         STA a:MeleeCrabStruct::Target_Attack_Y, y
         ;sta z:DP_TARGET_ENEMY_Y_DEBUGDENGUE               
         rts
@@ -358,13 +358,13 @@ ENEMY_HURTBOX_HEIGHT = $20
 @SetorSupDireito:
         lda z:DP_HERO_CENTER_X
         clc
-        adc #SECTOR_OFFSET_X
+        adc #20
         STA a:MeleeCrabStruct::Target_Attack_X, y
         ;sta z:DP_TARGET_ENEMY_X_DEBUGDENGUE
         lda z:DP_HERO_CENTER_Y
         sec
         ;SBC #SECTOR_OFFSET_Y
-        SBC #56
+        SBC #64
         STA a:MeleeCrabStruct::Target_Attack_Y, y
         ;sta z:DP_TARGET_ENEMY_Y_DEBUGDENGUE
         rts
@@ -372,13 +372,13 @@ ENEMY_HURTBOX_HEIGHT = $20
 @SetorSupEsquerdo:
         lda z:DP_HERO_CENTER_X
         sec
-        sbc #SECTOR_OFFSET_X + 64
+        sbc #20 + 64
         STA a:MeleeCrabStruct::Target_Attack_X, y
         ;sta z:DP_TARGET_ENEMY_X_DEBUGDENGUE
         lda z:DP_HERO_CENTER_Y
         sec
         ;SBC #SECTOR_OFFSET_Y
-        SBC #56
+        SBC #64
         STA a:MeleeCrabStruct::Target_Attack_Y, y
         ;sta z:DP_TARGET_ENEMY_Y_DEBUGDENGUE
         rts
@@ -386,14 +386,14 @@ ENEMY_HURTBOX_HEIGHT = $20
 @SetorInfDireito:
         lda z:DP_HERO_CENTER_X
         clc
-        adc #SECTOR_OFFSET_X
+        adc #20
         STA a:MeleeCrabStruct::Target_Attack_X, y
         ;sta z:DP_TARGET_ENEMY_X_DEBUGDENGUE
         lda z:DP_HERO_CENTER_Y
         ;clc
         ;adc #SECTOR_OFFSET_Y
-        SEC
-        SBC #8
+        ; SEC
+        ; SBC #
         STA a:MeleeCrabStruct::Target_Attack_Y, y
         ;sta z:DP_TARGET_ENEMY_Y_DEBUGDENGUE
         rts

@@ -36,8 +36,6 @@ SPRITE_SIZE     = $08   ; Sprites base são 8x8 pixels
 SPRITE_SPEED    = $01   ; Velocidade base do herói
 
 
-SECTOR_OFFSET_X = 20
-SECTOR_OFFSET_Y = 8 + 32 ; 32 = metade do crab
 
 ; --- Limites Preventivos contra Underflow (Zonas de Amortecimento) ---
 HERO_SAFE_LIMIT         = (SPRITE_SPEED + SPRITE_SPEED) 
