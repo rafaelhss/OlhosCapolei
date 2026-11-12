@@ -103,8 +103,24 @@ _ResetAlign:
         CLC
         ADC #32
         STA z:DP_HERO_CENTER_Y
+        
+        pea .loword(VaderCrab)
+        jsr UpdateTargetSector
+        ply 
+         
+        pea .loword(RapaNuiCrab)
+        jsr UpdateTargetSector
+        ply  
 
-        ; --- MOVIMENTAcÃO DO VADERCRAB ---
+        pea .loword(DengueCrab)
+        jsr UpdateTargetSector
+        ply  
+        
+
+
+
+
+        ; ; --- MOVIMENTAcÃO DO VADERCRAB ---
         pea .loword(VaderCrab)
         jsr MoveMeleeCrab
         ply                             ; Limpa 2 bytes da pilha (.i16 ativo)
@@ -114,7 +130,7 @@ _ResetAlign:
         jsr MoveMeleeCrab
         ply                             ; Limpa 2 bytes da pilha
        
-        ; --- MOVIMENTAcÃO DO RapaNUiCRAB ---
+        ; ; --- MOVIMENTAcÃO DO RapaNUiCRAB ---
         pea .loword(RapaNuiCrab)
         jsr MoveMeleeCrab
         ply                             ; Limpa 2 bytes da pilha
@@ -238,12 +254,15 @@ _ResetAlign:
         ldx #$0000     
 
         
-        JSR drawHeroCenterDebug
-        ;JSR DrawDengueHitboxDebug
-        jsr DrawHitboxDebug
-        ;JSR DrawtargetEnemyXYDebug
-        ;jsr DrawDengueAttackSectorDebug
-        ;JSR DrawPow ; tem que estar em cima de td
+        ; ; JSR drawHeroCenterDebug
+        ; ; JSR drawHeroHitBoxDebug
+        ; ; ;JSR DrawDengueHitboxDebug
+        ; ; jsr DrawHitboxDebug
+        ;  JSR DrawtargetEnemyXYDebug
+        ;  jsr drawDengueXYDebug
+        ; ; jsr drawVaderXYDebug
+        ; ; ;jsr DrawDengueAttackSectorDebug
+        ; ; ;JSR DrawPow ; tem que estar em cima de td
         
         
    
@@ -849,7 +868,7 @@ AbortDamage:
         ;eor #$40                        
         ;sta z:$00
         
-        KNOCKBACK_FORCE = 32
+        KNOCKBACK_FORCE = 0
 
 
         ; 2. Verifica a direcão do caranguejo atual parametrizado em Y
@@ -1023,7 +1042,46 @@ Finish:
     
 .endproc
 
+.proc drawVaderXYDebug
+        
+        lda VaderCrab + MeleeCrabStruct::X_Pos
+        sta OAMMIRROR, x
+        inx
+        
+        lda VaderCrab + MeleeCrabStruct::Y_Pos
+        sta OAMMIRROR, x
+        inx
+        
+        lda #$CE
+        sta OAMMIRROR, x
+        inx
 
+        lda #$30                         
+        sta OAMMIRROR, x
+        INX
+        RTS
+        
+.endproc
+
+.proc drawDengueXYDebug
+        
+        lda DengueCrab + MeleeCrabStruct::X_Pos
+        sta OAMMIRROR, x
+        inx
+        
+        lda DengueCrab + MeleeCrabStruct::Y_Pos
+        sta OAMMIRROR, x
+        inx
+        
+        lda #$CE
+        sta OAMMIRROR, x
+        inx
+
+        lda #$30                         
+        sta OAMMIRROR, x
+        INX
+        RTS
+.endproc
 
 .proc drawHeroCenterDebug
         
@@ -1035,7 +1093,7 @@ Finish:
         sta OAMMIRROR, x
         inx
         
-        lda #$86
+        lda #$88
         sta OAMMIRROR, x
         inx
 
@@ -1056,7 +1114,7 @@ Finish:
         lda DengueCrab + MeleeCrabStruct::Hitbox_Y1
         sta a:OAMMIRROR, X
         inx
-        lda #$86
+        lda #$88
         sta a:OAMMIRROR, X
         inx
         lda #$30
@@ -1084,7 +1142,7 @@ Finish:
         lda VaderCrab + MeleeCrabStruct::Hitbox_Y1
         sta a:OAMMIRROR, X
         inx
-        lda #$86
+        lda #$88
         sta a:OAMMIRROR, X
         inx
         lda #$30
@@ -1096,7 +1154,7 @@ Finish:
         lda VaderCrab + MeleeCrabStruct::Hitbox_Y2
         sta a:OAMMIRROR, X
         inx
-        lda #$86
+        lda #$88
         sta a:OAMMIRROR, X
         inx
         lda #$30
@@ -1109,7 +1167,7 @@ Finish:
         lda DengueCrab + MeleeCrabStruct::Hitbox_Y1
         sta a:OAMMIRROR, X
         inx
-        lda #$86
+        lda #$88
         sta a:OAMMIRROR, X
         inx
         lda #$30
@@ -1121,7 +1179,7 @@ Finish:
         lda DengueCrab + MeleeCrabStruct::Hitbox_Y2
         sta a:OAMMIRROR, X
         inx
-        lda #$86
+        lda #$88
         sta a:OAMMIRROR, X
         inx
         lda #$30
@@ -1134,7 +1192,7 @@ Finish:
         lda RapaNuiCrab + MeleeCrabStruct::Hitbox_Y1
         sta a:OAMMIRROR, X
         inx
-        lda #$86
+        lda #$88
         sta a:OAMMIRROR, X
         inx
         lda #$30
@@ -1146,7 +1204,7 @@ Finish:
         lda RapaNuiCrab + MeleeCrabStruct::Hitbox_Y2
         sta a:OAMMIRROR, X
         inx
-        lda #$86
+        lda #$88
         sta a:OAMMIRROR, X
         inx
         lda #$30
@@ -1238,6 +1296,40 @@ Finish:
 .endproc
 
 
+.proc drawHeroHitBoxDebug
+        LDA BigHero + BigHeroStruct::Hurtbox_X1
+        sta OAMMIRROR, x
+        inx
+        
+        lda BigHero + BigHeroStruct::Hurtbox_Y1
+        sta OAMMIRROR, x
+        inx
+        
+        lda #$8A
+        sta OAMMIRROR, x
+        inx
+
+        lda #$30                         
+        sta OAMMIRROR, x
+        inx
+
+        lda BigHero + BigHeroStruct::Hurtbox_X2
+        sta OAMMIRROR, x
+        inx
+        
+        lda BigHero + BigHeroStruct::Hurtbox_Y2
+        sta OAMMIRROR, x
+        inx
+        
+        lda #$8A
+        sta OAMMIRROR, x
+        inx
+
+        lda #$30                         
+        sta OAMMIRROR, x
+        INX
+        rts
+.endproc
 ;-------------------------------------------------------------------------------
 ;   EXECUcÃO AUTOMÁTICA EM V-BLANK (Hardware real manipula OAM aqui)
 ;-------------------------------------------------------------------------------

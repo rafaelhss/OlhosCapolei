@@ -1,5 +1,6 @@
 .export     MoveMeleeCrab
 .export     DrawMeleeCrab
+.export    UpdateTargetSector
 
 .p816
 .a8
@@ -21,8 +22,11 @@ ATTACKING_DURATION_FRAMES = 45
 ATTACK_MAX_FRAMES = 2  
 
 
-ENEMY_ATTACK_DISTANCE = $24   ; Distância de engajamento do ataque da IA   
+ENEMY_ATTACK_DISTANCE = $1   ; Distância de engajamento do ataque da IA. Com  introduçao do Setor de Ataque, esse valor perdeu sentido.  
 ENEMY_ATTACK_Y_RANGE  = $08   ; Tolerância no eixo Y para alinhamento tridimensional
+
+ENEMY_HURTBOX_WIDTH  = $10
+ENEMY_HURTBOX_HEIGHT = $20      
 
 .import BigHero
 .import FrameCounter
@@ -267,7 +271,7 @@ ENEMY_ATTACK_Y_RANGE  = $08   ; Tolerância no eixo Y para alinhamento tridimens
         adc #16                             
         sta a:MeleeCrabStruct::Hitbox_Y1, y
         clc
-        adc #16                             
+        adc #ENEMY_HURTBOX_HEIGHT                             
         sta a:MeleeCrabStruct::Hitbox_Y2, y
 
         lda a:MeleeCrabStruct::Facing, y
@@ -276,7 +280,7 @@ ENEMY_ATTACK_Y_RANGE  = $08   ; Tolerância no eixo Y para alinhamento tridimens
 @HitboxEsquerdaAtaque:
         lda a:MeleeCrabStruct::X_Pos, y
         sec
-        sbc #32                            
+        sbc #ENEMY_HURTBOX_WIDTH                            
         sta a:MeleeCrabStruct::Hitbox_X1, y
         lda a:MeleeCrabStruct::X_Pos, y 
         sta a:MeleeCrabStruct::Hitbox_X2, y
@@ -288,7 +292,7 @@ ENEMY_ATTACK_Y_RANGE  = $08   ; Tolerância no eixo Y para alinhamento tridimens
         adc #64                             
         sta a:MeleeCrabStruct::Hitbox_X1, y
         clc
-        adc #32                             
+        adc #ENEMY_HURTBOX_WIDTH                             
         sta a:MeleeCrabStruct::Hitbox_X2, y
 @Done:
         rts
@@ -301,7 +305,7 @@ ENEMY_ATTACK_Y_RANGE  = $08   ; Tolerância no eixo Y para alinhamento tridimens
         sty z:DP_ENEMY_STRUCT_PTR
 
         ; 1. Calcula o alvo com base no setor do inimigo
-        jsr GetTargetSector
+        ;jsr UpdateTargetSector
 
         ; 2. Verifica se há colisão/necessidade de evasão de corpo do hero
         jsr HandleBodyEvasion
@@ -315,10 +319,17 @@ ENEMY_ATTACK_Y_RANGE  = $08   ; Tolerância no eixo Y para alinhamento tridimens
 .endproc
 
 ;-------------------------------------------------------------------------------
-;   SUB-ROTINA: GetTargetSector
+;   SUB-ROTINA: UpdateTargetSector
 ;   Calcula os deslocamentos (offsets) com base no quadrante do inimigo
 ;-------------------------------------------------------------------------------
-.proc GetTargetSector
+.proc UpdateTargetSector
+
+        rep #$20                        
+        .a16
+        lda 3,s                         
+        tay                             
+        sep #$20                        
+        .a8
 
         lda a:MeleeCrabStruct::Attack_Sector, y
         cmp #0                          
@@ -331,7 +342,7 @@ ENEMY_ATTACK_Y_RANGE  = $08   ; Tolerância no eixo Y para alinhamento tridimens
 @SetorInfEsquerdo:
         lda z:DP_HERO_CENTER_X
         sec
-        sbc #SECTOR_OFFSET_X
+        sbc #SECTOR_OFFSET_X + 64
         STA a:MeleeCrabStruct::Target_Attack_X, y
         ;sta z:DP_TARGET_ENEMY_X_DEBUGDENGUE               
         lda z:DP_HERO_CENTER_Y
@@ -361,7 +372,7 @@ ENEMY_ATTACK_Y_RANGE  = $08   ; Tolerância no eixo Y para alinhamento tridimens
 @SetorSupEsquerdo:
         lda z:DP_HERO_CENTER_X
         sec
-        sbc #SECTOR_OFFSET_X
+        sbc #SECTOR_OFFSET_X + 64
         STA a:MeleeCrabStruct::Target_Attack_X, y
         ;sta z:DP_TARGET_ENEMY_X_DEBUGDENGUE
         lda z:DP_HERO_CENTER_Y

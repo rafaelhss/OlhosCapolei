@@ -9,6 +9,7 @@ MELEECRAB_INC = 1
 .import     MoveMeleeCrab
 .import     DrawMeleeCrab
 .import     DrawMeleeHitboxDebug
+.import     UpdateTargetSector
 ;-------------------------------------------------------------------------------
 
 .endif
