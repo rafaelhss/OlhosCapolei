@@ -935,14 +935,16 @@ CheckHeroRight:
         sta BigHero + BigHeroStruct::X_Pos
 
         ; === BLINDAGEM DO EIXO Y (TETO / BASE) ===
+        ; === BLINDAGEM DO EIXO Y (TETO / BASE DA RUA) ===
 CheckHeroTop:
+        ; Limite superior da rua: Y_Pos = 96 (Pés ficam em 96 + 64 = 160, exato no meio-fio!)
+        ; Como 96 é menor que 240, essa única checagem já protege tanto contra subir nos prédios
+        ; quanto contra underflow ($FF) no topo da tela!
         lda BigHero + BigHeroStruct::Y_Pos
-        ; Se o herói passou do teto (underflow), o valor capotou para perto de $FF
-        cmp #240
-        bcc CheckHeroBottom         ; Se Y < 240, altura está normal. Checa a base.
+        cmp #96
+        bcs CheckHeroBottom         ; Se Y >= 96, está dentro da rua. Checa a base.
         
-        ; Se caiu aqui, houve underflow no teto. Forca na borda superior!
-        lda #SCREEN_TOP             
+        lda #96                     ; Se Y < 96, trava os pés no meio-fio
         sta BigHero + BigHeroStruct::Y_Pos
         bra CollisionDone          
 
@@ -950,9 +952,9 @@ CheckHeroBottom:
         ; Limite físico da base: SCREEN_BOTTOM (223) - altura do sprite (64px) = 159
         lda BigHero + BigHeroStruct::Y_Pos
         cmp #159
-        bcc CollisionDone          ; Se Y < 159, está seguro dentro do cenário.
+        bcc CollisionDone           ; Se Y < 159, está seguro dentro da rua.
         
-        lda #159                    ; Se Y >= 159, satura no limite inferior do cenário
+        lda #159                    ; Se Y >= 159, satura na borda inferior da tela
         sta BigHero + BigHeroStruct::Y_Pos
 
 CollisionDone:

@@ -28,19 +28,20 @@ BackgroundData: .incbin "Background.pal"
 ; DADOS DE TESTE PARA BACKGROUND (4BPP = 32 BYTES POR TILE)
 ; =============================================================================
 Test_BG_Palettes:
-    ; Paleta 0 (BG1 - Chão / Asfalto)
-    .word $7C00     ; Cor 0: Fundo/Transparente (Azul)
-    .word $2108     ; Cor 1: Cinza Escuro (Asfalto)
-    .word $4210     ; Cor 2: Cinza Médio (Detalhes)
-    .word $03FF     ; Cor 3: Amarelo (Faixa da rua)
-    .res 24, $00    ; Completa os 32 bytes (16 cores) da Paleta 0
+    ; Paleta 0 (BG1 - Rua)
+    .word $6739     ; Cor 0: Céu (#CCCCCC)
+    .word $19B3     ; Cor 1: Rua (#9E6831)
+    .word $19B3     ; Cor 2: Entre tijolos da rua (#9E6831)
+    .word $112D     ; Cor 3: Faixa da rua (#6E471F)
+    .res 24, $00    ; Completa os 32 bytes da Paleta 0
 
-    ; Paleta 1 (BG2 - Fundo / Prédios)
-    .word $0000     ; Cor 0: Transparente (Ignorado pelo hardware no BG2)
-    .word $3C00     ; Cor 1: Azul Escuro (Silhueta dos prédios)
-    .word $5C00     ; Cor 2: Azul Médio (Janelas)
-    .word $7FFF     ; Cor 3: Branco (Nuvens)
-    .res 24, $00    ; Completa os 32 bytes (16 cores) da Paleta 1
+    ; Paleta 1 (BG2 - Prédios)
+    .word $0000     ; Cor 0: Transparente
+    .word $0000     ; Cor 1: Prédio - tijolo (#666666)
+    .word $318C     ; Cor 2: Prédio - entre tijolos (#000000)
+    .word $7FFF     ; Cor 3: Branco (opcional/extra)
+    .res 24, $00    ; Completa os 32 bytes da Paleta 1
+
 
 Test_BG_Tiles:
     ; --- TILE 0: Vazio / Transparente (32 bytes zerados) ---
