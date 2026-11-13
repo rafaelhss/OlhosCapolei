@@ -58,7 +58,6 @@ Test_BG_Tiles:
     .byte $FF, $FF, $00, $00, $00, $00, $00, $00
     .res 16, $00
 
-
 .proc BuildTestBackgrounds
         php
         sep #$20
@@ -66,62 +65,99 @@ Test_BG_Tiles:
         .a8
         .i16
 
-        ; --- CONFIGURA INCREMENTO DA VRAM (+1 palavra após escrita no byte alto) ---
         lda #$80
         sta VMAINC
 
         ; =====================================================================
-        ; 1. PREENCHER TILEMAP DO BG1 (CHÃO - VRAM $4000)
+        ; 1. PREENCHER BG1 (CHÃO) NAS DUAS TELAS ($4000 E $4400)
         ; =====================================================================
         ldx #$4000
-        stx VMADDL
-
-        ; Linhas 0 a 19 (160 pixels superiores): Céu transparente (Tile 0)
-        ldx #0
-@BG1_Ceu:
-        stz VMDATAL
-        stz VMDATAH
-        inx
-        cpx #(32 * 20)                  ; 20 linhas de 32 tiles
-        bcc @BG1_Ceu
-
-        ; Linhas 20 a 27 (64 pixels inferiores): Asfalto (Tile 1, Paleta 0 = $0001)
-        ldx #0
-@BG1_Chao:
-        lda #$01                        ; Tile 1
-        sta VMDATAL
-        lda #$00                        ; Paleta 0
-        sta VMDATAH
-        inx
-        cpx #(32 * 8)                   ; 8 linhas de 32 tiles
-        bcc @BG1_Chao
+        jsr @FillBG1Screen
+        ldx #$4400
+        jsr @FillBG1Screen
 
         ; =====================================================================
-        ; 2. PREENCHER TILEMAP DO BG2 (PRÉDIOS AO FUNDO - VRAM $4800)
+        ; 2. PREENCHER BG2 (PRÉDIOS) NAS DUAS TELAS ($4800 E $4C00)
         ; =====================================================================
         ldx #$4800
-        stx VMADDL
+        jsr @FillBG2Screen
+        ldx #$4C00
+        jsr @FillBG2Screen
 
+        plp
+        rts
+
+; --- Sub-rotina interna para preencher uma tela 32x32 do BG1 ---
+@FillBG1Screen:
+        stx VMADDL
+        ; Linhas 0 a 19: Céu transparente (Tile 0)
+        ldx #0
+:       stz VMDATAL
+        stz VMDATAH
+        inx
+        cpx #(32 * 20)
+        bcc :-
+
+        ; Linhas 20 a 22: Asfalto superior (Tile 1)
+        ldx #0
+:       lda #$01
+        sta VMDATAL
+        stz VMDATAH
+        inx
+        cpx #(32 * 3)
+        bcc :-
+
+        ; Linha 23: Faixa amarela central (Tile 2)
+        ldx #0
+:       lda #$02
+        sta VMDATAL
+        stz VMDATAH
+        inx
+        cpx #32
+        bcc :-
+
+        ; Linhas 24 a 27: Asfalto inferior (Tile 1)
+        ldx #0
+:       lda #$01
+        sta VMDATAL
+        stz VMDATAH
+        inx
+        cpx #(32 * 4)
+        bcc :-
+        rts
+
+; --- Sub-rotina interna para preencher uma tela 32x32 do BG2 (com colunas alternadas) ---
+@FillBG2Screen:
+        stx VMADDL
         ; Linhas 0 a 9: Céu vazio
         ldx #0
-@BG2_Ceu:
-        stz VMDATAL
+:       stz VMDATAL
         stz VMDATAH
         inx
         cpx #(32 * 10)
-        bcc @BG2_Ceu
+        bcc :-
 
-        ; Linhas 10 a 19: Prédios ao fundo (Tile 1, Paleta 1 = $0401)
+        ; Linhas 10 a 19: Prédios alternando bloco sólido e espaço para ver o movimento
         ldx #0
-@BG2_Predios:
-        lda #$01                        ; Tile 1
+@BG2_Loop:
+        txa
+        and #$03                        ; A cada 4 tiles, deixa 1 coluna vazia (céu)
+        cmp #$03
+        beq @BG2_Vazio
+
+        lda #$01                        ; Tile 1 (Bloco azul)
         sta VMDATAL
-        lda #$04                        ; Bit 2 do byte alto = Paleta 1!
+        lda #$04                        ; Paleta 1
         sta VMDATAH
+        bra @BG2_Next
+
+@BG2_Vazio:
+        stz VMDATAL
+        stz VMDATAH
+
+@BG2_Next:
         inx
         cpx #(32 * 10)
-        bcc @BG2_Predios
-
-        plp
+        bcc @BG2_Loop
         rts
 .endproc

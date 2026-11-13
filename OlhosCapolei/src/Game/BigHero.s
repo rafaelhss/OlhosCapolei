@@ -20,6 +20,7 @@
 .import ProcessMeleeAttack
 .import ProcessFireAttack
 .import rand
+.import ScrollWorldLeft
 
 .export DrawBigHero, MoveBigHero
 .export DrawBigHeroHurtboxDebug
@@ -334,13 +335,26 @@ CheckRight:
         sep #$20                
         .a8
 MoveRight:
+        LDA #1
+        sta z:$02               ; Ativa flag de movimento
         stz BigHero + BigHeroStruct::Facing     
         lda BigHero + BigHeroStruct::X_Pos
         clc
         adc HOR_SPEED               
-        sta BigHero + BigHeroStruct::X_Pos 
-        lda #1
-        sta z:$02               ; Ativa flag de movimento
+        CMP #140                        ; Passou do meio da tela (X >= 120)?
+        bcc @MoveHeroNormal             ; Se X < 120, apenas move o herói na tela
+
+        ; Se chegou no meio da tela (X >= 120):
+        lda #140                        ; Trava o herói no meio da tela
+        sta BigHero + BigHeroStruct::X_Pos
+
+        lda HOR_SPEED                   ; Passa a velocidade para A
+        jsr ScrollWorldLeft             ; Empurra a câmera e puxa os inimigos/itens!
+        bra CheckUp
+
+@MoveHeroNormal:
+        sta BigHero + BigHeroStruct::X_Pos
+        
 
 CheckLeft:
         rep #$20                

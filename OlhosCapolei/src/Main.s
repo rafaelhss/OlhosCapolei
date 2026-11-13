@@ -93,7 +93,7 @@ _ResetAlign:
         JSR ReadJoypad1
         
 
-
+;TODO melhorar a inteligencia de respawn
         LDA #00
         CMP FrameCounter
         bne NaoRespawn
@@ -1239,6 +1239,87 @@ Finish:
         rts
 .endproc
 
+
+; =============================================================================
+; ScrollWorldLeft
+; Entrada: A (.a8) = Quantidade de pixels que a câmera avançou para a direita
+; Efeito:  Soma A em Camera_X (16-bit) e subtrai A do X_Pos de todas as entidades
+; =============================================================================
+.proc ScrollWorldLeft
+        php
+        sep #$20
+        .a8
+        sta z:DP_TEMP_00                ; Salva o deslocamento (speed) em DP_TEMP_00
+
+        ; 1. Avança Camera_X (16-bit)
+        rep #$20
+        .a16
+        lda z:DP_TEMP_00
+        and #$00FF                      ; Isola apenas o byte baixo
+        clc
+        adc Camera_X
+        sta Camera_X
+        sep #$20
+        .a8
+
+        ; 2. Puxa os Inimigos para a esquerda (X_Pos -= speed)
+        lda VaderCrab + MeleeCrabStruct::X_Pos
+        sec
+        sbc z:DP_TEMP_00
+        sta VaderCrab + MeleeCrabStruct::X_Pos
+
+        lda DengueCrab + MeleeCrabStruct::X_Pos
+        sec
+        sbc z:DP_TEMP_00
+        sta DengueCrab + MeleeCrabStruct::X_Pos
+
+        lda RapaNuiCrab + MeleeCrabStruct::X_Pos
+        sec
+        sbc z:DP_TEMP_00
+        sta RapaNuiCrab + MeleeCrabStruct::X_Pos
+
+        ; 3. Puxa as Armas no chão / arremessadas para a esquerda
+        lda WeaponA + WeaponStruct::X_Pos
+        sec
+        sbc z:DP_TEMP_00
+        sta WeaponA + WeaponStruct::X_Pos
+
+        lda WeaponB + WeaponStruct::X_Pos
+        sec
+        sbc z:DP_TEMP_00
+        sta WeaponB + WeaponStruct::X_Pos
+
+        lda WeaponC + WeaponStruct::X_Pos
+        sec
+        sbc z:DP_TEMP_00
+        sta WeaponC + WeaponStruct::X_Pos
+
+        lda WeaponD + WeaponStruct::X_Pos
+        sec
+        sbc z:DP_TEMP_00
+        sta WeaponD + WeaponStruct::X_Pos
+
+        lda WeaponE + WeaponStruct::X_Pos
+        sec
+        sbc z:DP_TEMP_00
+        sta WeaponE + WeaponStruct::X_Pos
+
+        ; 4. Puxa Projéteis e Partículas
+        lda Bullet + BulletStruct::X_Pos
+        sec
+        sbc z:DP_TEMP_00
+        sta Bullet + BulletStruct::X_Pos
+
+        lda Bullet2 + BulletStruct::X_Pos
+        sec
+        sbc z:DP_TEMP_00
+        sta Bullet2 + BulletStruct::X_Pos
+
+        plp
+        rts
+.endproc
+.export ScrollWorldLeft
+
 .proc DrawPow
 
 rts; ;Desativando pow, pq nao ficou legal
@@ -1556,21 +1637,49 @@ Finish:
         INX
         rts
 .endproc
+
+
+
+
 ;-------------------------------------------------------------------------------
 ;   EXECUcÃO AUTOMÁTICA EM V-BLANK (Hardware real manipula OAM aqui)
 ;-------------------------------------------------------------------------------
 .proc   NMIHandler
-        lda RDNMI               ; Lê e limpa o flag indicador de interrupcão de NMI
-.import Hero, InimigoGrande, InimigoGrande2
+        php
+        sep #$20
+        .a8
 
-       
-        tsx                     ; Preserva o ponteiro de pilha atual
-        pea OAMMIRROR           ; Injeta o endereco do espelho da RAM
-        jsr UpdateOAMRAM        ; Envia os dados para a OAM real via DMA
-        txs                     ; Restaura a pilha instantaneamente
+        lda RDNMI               ; Lê e limpa o flag indicador de interrupção de NMI
 
+        ; 1. Envia OAMMIRROR via DMA
+        tsx
+        pea OAMMIRROR
+        jsr UpdateOAMRAM
+        txs
+
+        ; 2. Atualiza o Scroll do BG1 (Chão - Velocidade 1x)
+        sep #$20
+        .a8
+        lda Camera_X            ; Byte baixo
+        sta BG1HOFS
+        lda Camera_X + 1        ; Byte alto
+        sta BG1HOFS
+
+        ; 3. Atualiza o Scroll do BG2 (Prédios - Velocidade 0.5x / Parallax)
+        rep #$20                ; A em 16-bit para dividir Camera_X por 2
+        .a16
+        lda Camera_X
+        lsr                     ; Divide por 2
+        sep #$20                ; Volta A para 8-bit
+        .a8
+        sta BG2HOFS             ; Byte baixo
+        xba                     ; Passa byte alto para a parte baixa de A
+        sta BG2HOFS             ; Byte alto
+
+        plp
         rti
 .endproc
+
 
 ;-------------------------------------------------------------------------------
 ;   VETOR DE PROSPECcÃO DE HARDWARE
@@ -1617,3 +1726,9 @@ Pow:             .tag PowStruct
 
 FrameCounter:    .res 1    ; Contador global de frames (0 a 255)
 .export FrameCounter
+
+Camera_X: .res 2        ; Posição horizontal da câmera (16-bit: 0 a 65535)
+.export Camera_X
+
+
+

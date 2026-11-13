@@ -29,6 +29,7 @@
 .import Bullet2
 .import InitRNG
 .import Pow
+.import Camera_X
 
 .segment "CODE"
 
@@ -77,6 +78,13 @@ Table_Init_MeleeCrabs_End:
         ; --- GARANTIA DE HARDWARE REAL ---
         sep #$20                        ; Garante Acumulador em 8-bit (.a8)
         rep #$10                        ; FORÇA índices X e Y em 16-bit (.i16) para o loop de 512 bytes
+
+
+
+        ; No InitDemo (Init.s):
+        stz Camera_X
+        stz Camera_X + 1
+
 
         ; --- 1. LIMPEZA ESTRITA DA OAMMIRROR EM HARDWARE REAL ---
         ; Joga todos os 128 sprites para fora da tela (Y = $E0) para evitar lixo visual
