@@ -308,7 +308,13 @@ Table_Init_MeleeCrabs_End:
         
         ; Ativa a camada de Sprites (Main Screen Objs)
         lda #$10
-        sta TM
+        STA TM
+        
+
+        JSR initBG
+        
+        sep #$20                ; Garante A em 8-bit!
+        .a8
 
         ; Libera o blackout, coloca o brilho no máximo
         lda #$0f
@@ -321,6 +327,74 @@ Table_Init_MeleeCrabs_End:
         rts                    
 .endproc
 
+.proc   initBG
+        php
+        sep #$20
+        rep #$10
+        .a8
+        .i16
+
+        ; --- 1. CARGA DIRETA DAS PALETAS DE BG (ÍNDICE $00 DA CGRAM) ---
+        stz CGADD                       ; Começa no índice 0 da CGRAM
+        ldx #0
+@LoadPalLoop:
+        lda f:Test_BG_Palettes, x
+        sta CGDATA
+        inx
+        cpx #64                         ; 64 bytes (Paleta 0 e Paleta 1)
+        bcc @LoadPalLoop
+
+        ; --- 2. CARGA DIRETA DOS TILES DE BG PARA VRAM ($2000) ---
+        lda #$80
+        sta VMAINC                      ; Incrementa endereço VRAM após escrita no byte alto
+        ldx #$2000
+        stx VMADDL                      ; Endereço de destino: $2000
+
+        ldx #0
+@LoadTilesLoop:
+        lda f:Test_BG_Tiles, x
+        sta VMDATAL
+        inx
+        lda f:Test_BG_Tiles, x
+        sta VMDATAH
+        inx
+        cpx #96                         ; 3 tiles x 32 bytes = 96 bytes
+        bcc @LoadTilesLoop
+
+        ; --- 3. GERA OS MAPAS DE TELA NA VRAM ---
+        jsr BuildTestBackgrounds
+
+        ; --- 4. CONFIGURAÇÃO DE MODO DE VÍDEO E CAMADAS ---
+        lda #$01                        ; BG Mode 1
+        sta BGMODE
+
+        lda #$41                        ; Tilemap BG1 em $4000 (64x32)
+        sta BG1SC
+
+        lda #$49                        ; Tilemap BG2 em $4800 (64x32)
+        sta BG2SC
+
+        lda #$22                        ; Tilesets de BG1 e BG2 apontam para VRAM $2000
+        sta BG12NBA
+
+        ; Zera o scroll inicial das duas camadas
+        stz BG1HOFS
+        stz BG1HOFS
+        stz BG1VOFS
+        stz BG1VOFS
+
+        stz BG2HOFS
+        stz BG2HOFS
+        stz BG2VOFS
+        stz BG2VOFS
+
+        ; --- 5. ATIVA SPRITES + BG1 + BG2 ---
+        lda #$13                        ; OBJ ($10) + BG2 ($02) + BG1 ($01)
+        sta TM
+
+        plp
+        rts
+.endproc
 ;-------------------------------------------------------------------------------
 ;   InitAllMeleeCrabs
 ;   Lê a Table_Init_MeleeCrabs e configura todos os inimigos automaticamente

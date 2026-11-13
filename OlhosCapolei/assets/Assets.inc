@@ -10,5 +10,8 @@ ASSETS_INC = 1
 .import     VaderData
 .import     ColorData
 .import     BackgroundData
+.import BuildTestBackgrounds
+.import Test_BG_Palettes
+.import Test_BG_Tiles
 ;-------------------------------------------------------------------------------
 .endif

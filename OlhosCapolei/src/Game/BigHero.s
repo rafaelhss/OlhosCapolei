@@ -36,73 +36,73 @@ WALK_ANIM_SPEED  = 8         ; Frequência de troca de pernas (a cada 8 frames d
 
 ; FRAME 0: Guarda Neutra (Pés Parados)
 BigHero_Layout_Idle:
-    .byte 0, 0,$00,$00, 16, 0,$02,$00
-    .byte 0,16,$20,$00, 16,16,$22,$00
-    .byte 0,32,$40,$00, 16,32,$42,$00
-    .byte 0,48,$60,$00, 16,48,$62,$00
+    .byte 0, 0,$00,$30, 16, 0,$02,$30
+    .byte 0,16,$20,$30, 16,16,$22,$30
+    .byte 0,32,$40,$30, 16,32,$42,$30
+    .byte 0,48,$60,$30, 16,48,$62,$30
 
 ; FRAME 1: Caminhada (Passo Aberto A)
 BigHero_Layout_Walk:
-    .byte 0, 0,$00,$00, 16, 0,$02,$00
-    .byte 0,16,$20,$00, 16,16,$22,$00
-    .byte 0,32,$A8,$00, 16,32,$AA,$00
-    .byte 0,48,$C8,$00, 16,48,$CA,$00
+    .byte 0, 0,$00,$30, 16, 0,$02,$30
+    .byte 0,16,$20,$30, 16,16,$22,$30
+    .byte 0,32,$A8,$30, 16,32,$AA,$30
+    .byte 0,48,$C8,$30, 16,48,$CA,$30
 
 ; FRAME 2: Caminhada (Passo Aberto B)
 BigHero_Layout_Walk2:
-    .byte 0, 0,$00,$00, 16, 0,$02,$00
-    .byte 0,16,$20,$00, 16,16,$22,$00
-    .byte 0,32,$2C,$00, 16,32,$2E,$00
-    .byte 0,48,$4C,$00, 16,48,$4E,$00
+    .byte 0, 0,$00,$30, 16, 0,$02,$30
+    .byte 0,16,$20,$30, 16,16,$22,$30
+    .byte 0,32,$2C,$30, 16,32,$2E,$30
+    .byte 0,48,$4C,$30, 16,48,$4E,$30
 
 ; FRAME 3: Estado de Dano / Hitstun
 BigHero_Layout_Hurt:
-    .byte 0, 0,$80,$00, 16, 0,$82,$00
-    .byte 0,16,$20,$00, 16,16,$22,$00
-    .byte 0,32,$40,$00, 16,32,$42,$00
-    .byte 0,48,$60,$00, 16,48,$62,$00
+    .byte 0, 0,$80,$30, 16, 0,$82,$30
+    .byte 0,16,$20,$30, 16,16,$22,$30
+    .byte 0,32,$40,$30, 16,32,$42,$30
+    .byte 0,48,$60,$30, 16,48,$62,$30
 
 BigHero_Layout_Weapon0:
-    .byte 0, 0,$00,$00, 16, 0,$02,$00
-    .byte 0,16,$20,$00, 16,16,$22,$00
-    .byte 0,32,$A4,$00, 16,32,$A6,$00
-    .byte 0,48,$60,$00, 16,48,$62,$00
+    .byte 0, 0,$00,$30, 16, 0,$02,$30
+    .byte 0,16,$20,$30, 16,16,$22,$30
+    .byte 0,32,$A4,$30, 16,32,$A6,$30
+    .byte 0,48,$60,$30, 16,48,$62,$30
 
 
 BigHero_Layout_Weapon1:
-    .byte 0, 0,$00,$00, 16, 0,$02,$00
-    .byte 0,16,$20,$00, 16,16,$22,$00
-    .byte 0,32,$A4,$00, 16,32,$A6,$00
-    .byte 0,48,$C8,$00, 16,48,$CA,$00
+    .byte 0, 0,$00,$30, 16, 0,$02,$30
+    .byte 0,16,$20,$30, 16,16,$22,$30
+    .byte 0,32,$A4,$30, 16,32,$A6,$30
+    .byte 0,48,$C8,$30, 16,48,$CA,$30
 
 BigHero_Layout_Weapon2:
-    .byte 0, 0,$00,$00, 16, 0,$02,$00
-    .byte 0,16,$20,$00, 16,16,$22,$00
-    .byte 0,32,$A4,$00, 16,32,$A6,$00
-    .byte 0,48,$4C,$00, 16,48,$4E,$00
+    .byte 0, 0,$00,$30, 16, 0,$02,$30
+    .byte 0,16,$20,$30, 16,16,$22,$30
+    .byte 0,32,$A4,$30, 16,32,$A6,$30
+    .byte 0,48,$4C,$30, 16,48,$4E,$30
 
 
 
 ; FRAME: Herói Atacando - Preparação (Weapon Melee_Frame = 0)
 BigHero_Layout_Attack_Frame0:
-    .byte <(-2), 0,$00,$00, 14, 0,$02,$00
-    .byte <(-2),16,$20,$00, 14,16,$22,$00
-    .byte 0,32,$8C,$00, 16,32,$8E,$00
-    .byte 0,48,$60,$00, 16,48,$62,$00
+    .byte <(-2), 0,$00,$30, 14, 0,$02,$30
+    .byte <(-2),16,$20,$30, 14,16,$22,$30
+    .byte 0,32,$8C,$30, 16,32,$8E,$30
+    .byte 0,48,$60,$30, 16,48,$62,$30
 
 ; FRAME: Herói Atacando - Janela de Impacto / Dano (Weapon Melee_Frame = 1)
 BigHero_Layout_Attack_Frame1:
     .byte 3, 0,$00,$30, 19, 0,$02,$30
     .byte 3,16,$20,$30, 19,16,$22,$30
     .byte 0,32,$AC,$30, 16,32,$AE,$30
-    .byte 0,48,$60,$00, 16,48,$62,$00
+    .byte 0,48,$60,$30, 16,48,$62,$30
 
 ; FRAME: Herói Atacando - Recuperação / Cooldown (Weapon Melee_Frame = 2)
 BigHero_Layout_Attack_Frame2:
     .byte <(-2), 0,$00,$30, 14, 0,$02,$30
     .byte <(-2),16,$20,$30, 14,16,$22,$30
     .byte 0,32,$8C,$30, 16,32,$8E,$30
-    .byte 0,48,$60,$00, 16,48,$62,$00
+    .byte 0,48,$60,$30, 16,48,$62,$30
 
 
 ;-------------------------------------------------------------------------------
@@ -248,17 +248,17 @@ DrawLoop:
 
         ; --- ATRIBUTOS ---
         lda (DP_HERO_LAYOUT_PTR),y
-        sta z:$00                       
+        sta z:DP_TEMP_00                       
         
         lda BigHero + BigHeroStruct::Facing
         beq @WriteAttributes            
         
-        lda z:$00
+        lda z:DP_TEMP_00
         eor #$40                        
         sta z:$00
 
 @WriteAttributes:
-        lda z:$00
+        lda z:DP_TEMP_00
         ora #$10
         sta OAMMIRROR, x
         inx

@@ -46,13 +46,13 @@
         bmi @SingleDefaultAttributes
 
 @SingleApplyFlip:
-        lda #$00                         
+        lda #$30                         
         sta OAMMIRROR, x
         inx
         rts
 
 @SingleDefaultAttributes:
-        lda #$00                         ; Atributo padrão, Página 1 da VRAM
+        lda #$30                         ; Atributo padrão, Página 1 da VRAM
         eor #$40                         ; Injeta H-Flip via Hardware (Bit 6)
         sta OAMMIRROR, x
         inx
@@ -124,13 +124,13 @@ Finish:
         bmi @SingleDefaultAttributes
 
 @SingleApplyFlip:
-        lda #$00                         
+        lda #$30                         
         sta OAMMIRROR, x
         inx
         rts
 
 @SingleDefaultAttributes:
-        lda #$00                         
+        lda #$30                         
         eor #$40                         
         sta OAMMIRROR, x
         inx
