@@ -574,6 +574,13 @@ Weapon_Chain_Anims_Table:
 ;   Saída:   X = Incrementado automaticamente na OAMMIRROR
 ;-------------------------------------------------------------------------------
 .proc DrawDroppedWeapon
+        
+        LDA a:WeaponStruct::Active, y
+        cmp #WEAPON_STATE_INACTIVE
+        BNE Draw
+        rts
+
+Draw:
         ; --- 1. SELEÇÃO RÁPIDA: SE FOR SINGLE-TILE (1), ENTRA NO FAST PATH ---
         lda a:WeaponStruct::Tile_Size, y
         cmp #1
