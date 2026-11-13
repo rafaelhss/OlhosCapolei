@@ -37,6 +37,7 @@ BULLET_SPEED = $07
 WEAPON_STATE_EQUIPPED = 0  ; Coletada, colada na mão do herói
 WEAPON_STATE_GROUND   = 1  ; Esperando no chão para ser coletada
 WEAPON_STATE_THROWN   = 2  ; Voando pelo ar em parábola
+WEAPON_STATE_INACTIVE = 3
 
 ; --- Configurações de Sprites e Velocidade ---
 SPRITE_SIZE     = $08   ; Sprites base são 8x8 pixels

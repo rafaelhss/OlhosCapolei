@@ -1245,77 +1245,117 @@ Finish:
 ; Entrada: A (.a8) = Quantidade de pixels que a câmera avançou para a direita
 ; Efeito:  Soma A em Camera_X (16-bit) e subtrai A do X_Pos de todas as entidades
 ; =============================================================================
+; =============================================================================
+; ScrollWorldLeft (Com Proteção Anti-Underflow para 8-bit X_Pos)
+; Entrada: A (.a8) = Quantidade de pixels que a câmera avançou para a direita
+; =============================================================================
 .proc ScrollWorldLeft
         php
         sep #$20
         .a8
-        sta z:DP_TEMP_00                ; Salva o deslocamento (speed) em DP_TEMP_00
+        sta z:DP_TEMP_00                ; Salva o deslocamento (speed)
 
         ; 1. Avança Camera_X (16-bit)
         rep #$20
         .a16
         lda z:DP_TEMP_00
-        and #$00FF                      ; Isola apenas o byte baixo
+        and #$00FF
         clc
         adc Camera_X
         sta Camera_X
         sep #$20
         .a8
 
-        ; 2. Puxa os Inimigos para a esquerda (X_Pos -= speed)
-        lda VaderCrab + MeleeCrabStruct::X_Pos
-        sec
-        sbc z:DP_TEMP_00
-        sta VaderCrab + MeleeCrabStruct::X_Pos
+        ; 2. Puxa os Inimigos (Satura em X = 0 se estiver vivo, desativa se morto)
+        ldy #.loword(VaderCrab)
+        jsr @ScrollEnemyX
+        ldy #.loword(DengueCrab)
+        jsr @ScrollEnemyX
+        ldy #.loword(RapaNuiCrab)
+        jsr @ScrollEnemyX
 
-        lda DengueCrab + MeleeCrabStruct::X_Pos
-        sec
-        sbc z:DP_TEMP_00
-        sta DengueCrab + MeleeCrabStruct::X_Pos
+        ; 3. Puxa as Armas (Desativa se sair pela borda esquerda)
+        ldy #.loword(WeaponA)
+        jsr @ScrollWeaponX
+        ldy #.loword(WeaponB)
+        jsr @ScrollWeaponX
+        ldy #.loword(WeaponC)
+        jsr @ScrollWeaponX
+        ldy #.loword(WeaponD)
+        jsr @ScrollWeaponX
+        ldy #.loword(WeaponE)
+        jsr @ScrollWeaponX
 
-        lda RapaNuiCrab + MeleeCrabStruct::X_Pos
-        sec
-        sbc z:DP_TEMP_00
-        sta RapaNuiCrab + MeleeCrabStruct::X_Pos
-
-        ; 3. Puxa as Armas no chão / arremessadas para a esquerda
-        lda WeaponA + WeaponStruct::X_Pos
-        sec
-        sbc z:DP_TEMP_00
-        sta WeaponA + WeaponStruct::X_Pos
-
-        lda WeaponB + WeaponStruct::X_Pos
-        sec
-        sbc z:DP_TEMP_00
-        sta WeaponB + WeaponStruct::X_Pos
-
-        lda WeaponC + WeaponStruct::X_Pos
-        sec
-        sbc z:DP_TEMP_00
-        sta WeaponC + WeaponStruct::X_Pos
-
-        lda WeaponD + WeaponStruct::X_Pos
-        sec
-        sbc z:DP_TEMP_00
-        sta WeaponD + WeaponStruct::X_Pos
-
-        lda WeaponE + WeaponStruct::X_Pos
-        sec
-        sbc z:DP_TEMP_00
-        sta WeaponE + WeaponStruct::X_Pos
-
-        ; 4. Puxa Projéteis e Partículas
+        ; 4. Puxa Projéteis (Desativa se sair pela borda esquerda)
+        lda Bullet + BulletStruct::Active
+        beq @CheckBullet2
         lda Bullet + BulletStruct::X_Pos
         sec
         sbc z:DP_TEMP_00
+        bcs @SaveBullet1
+        lda #BULLET_STATE_INACTIVE
+        sta Bullet + BulletStruct::Active
+        bra @CheckBullet2
+@SaveBullet1:
         sta Bullet + BulletStruct::X_Pos
 
+@CheckBullet2:
+        lda Bullet2 + BulletStruct::Active
+        beq @DoneScroll
         lda Bullet2 + BulletStruct::X_Pos
         sec
         sbc z:DP_TEMP_00
+        bcs @SaveBullet2
+        lda #BULLET_STATE_INACTIVE
+        sta Bullet2 + BulletStruct::Active
+        bra @DoneScroll
+@SaveBullet2:
         sta Bullet2 + BulletStruct::X_Pos
 
+@DoneScroll:
         plp
+        rts
+
+; --- Sub-rotina: Desloca Inimigo em Y e impede underflow na borda esquerda ---
+@ScrollEnemyX:
+        lda a:MeleeCrabStruct::State, y
+        cmp #STATE_DEAD
+        beq @EnemyExit                  ; Se já está morto, não precisa mover
+
+        lda a:MeleeCrabStruct::X_Pos, y
+        sec
+        sbc z:DP_TEMP_00
+        bcs @EnemySaveX                 ; Carry = 1 -> Ainda está dentro da tela (>= 0)
+
+        ; Carry = 0 -> Houve underflow! Trava na borda esquerda (X = 0)
+        lda #0
+@EnemySaveX:
+        sta a:MeleeCrabStruct::X_Pos, y
+@EnemyExit:
+        rts
+
+; --- Sub-rotina: Desloca Arma em Y e remove se sair da tela para trás ---
+@ScrollWeaponX:
+        lda a:WeaponStruct::Active, y
+        cmp #WEAPON_STATE_GROUND
+        beq @MoveWeapon
+        cmp #WEAPON_STATE_THROWN
+        bne @WeaponExit                 ; Se está equipada no herói ou inativa, ignora
+
+@MoveWeapon:
+        lda a:WeaponStruct::X_Pos, y
+        sec
+        sbc z:DP_TEMP_00
+        bcs @WeaponSaveX                ; Carry = 1 -> Continua na tela
+
+        ; Carry = 0 -> Saiu da tela pela esquerda! Desativa a arma
+        lda #WEAPON_STATE_INACTIVE
+        sta a:WeaponStruct::Active, y
+        rts
+
+@WeaponSaveX:
+        sta a:WeaponStruct::X_Pos, y
+@WeaponExit:
         rts
 .endproc
 .export ScrollWorldLeft
