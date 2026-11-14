@@ -40,17 +40,17 @@ Table_Init_Weapons:
     ; WeaponA (Pedra - ID 4)
     .byte WEAPON_STATE_GROUND, WEAPON_ID_ROCK,   $6D, $01
     .word $00AA
-    .byte (SCREEN_BOTTOM / 4)
+    .byte (SCREEN_BOTTOM - 50)
 
     ; WeaponB (Martelo - ID 7)
     .byte WEAPON_STATE_GROUND, WEAPON_ID_HAMMER, $0E, $01
     .word $0180                         ; Exemplo: já nasce lá na frente em X = 384!
-    .byte (SCREEN_BOTTOM / 4)
+    .byte (SCREEN_BOTTOM - 50)
 
     ; WeaponC (Madeira - ID 3)
     .byte WEAPON_STATE_GROUND, WEAPON_ID_WOOD,   $06, $04
     .word $0030
-    .byte (SCREEN_BOTTOM / 4)
+    .byte (SCREEN_BOTTOM - 50)
 
     ; WeaponD (Pistola - ID 5)
     .byte WEAPON_STATE_GROUND, WEAPON_ID_PISTOL, $06, $04
@@ -60,7 +60,7 @@ Table_Init_Weapons:
     ; WeaponE (Corrente - ID 6)
     .byte WEAPON_STATE_GROUND, WEAPON_ID_CHAIN,  $06, $04
     .word $0010
-    .byte (SCREEN_BOTTOM / 2)
+    .byte (SCREEN_BOTTOM - 50)
 
 ; =============================================================================
 ; TABELA DE BOOT DOS INIMIGOS MELEE (7 BYTES POR INIMIGO)

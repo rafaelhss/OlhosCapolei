@@ -29,6 +29,7 @@
 .import     Bullet
 .import     Bullet2
 .import     rand                ; Invocando o seu LFSR puro de src/common/Util.s
+.import Camera_X
 
 ;----- Includes ----------------------------------------------------------------
 .include "GameConstants.inc"
@@ -457,15 +458,19 @@ Weapon_Chain_Anims_Table:
         ; 1. Se estiver voando (THROWN), executa a física de parábola original
         lda a:WeaponStruct::Active, y
         cmp #WEAPON_STATE_THROWN
-        beq @StartFisica
-        
+        bne Continue
+        jmp StartFisica
+
+Continue:        
         ; 2. Se estiver equipada, verifica o timer de ataque corpo a corpo
         cmp #WEAPON_STATE_EQUIPPED
-        bne @Exit
-        
+        beq Continue2
+        jmp Exit
+Continue2:        
         lda a:WeaponStruct::Melee_Timer, y
-        beq @Exit                       ; Se for zero, não há porretada ativa
-
+        bne Continue3
+        jmp Exit                       ; Se for zero, não há porretada ativa
+Continue3:
         ; --- PIPELINE DO MOTOR MELEE ---
         lda a:WeaponStruct::Melee_Timer, y
         dec
@@ -492,8 +497,6 @@ Weapon_Chain_Anims_Table:
         sta a:WeaponStruct::Hitbox_Active, y    ; Desliga hitbox na preparação
         rts
 
-
-
 @SetFrame1:
         lda #1
         sta a:WeaponStruct::Melee_Frame, y  ; Frame 1 (Janela de Dano)
@@ -518,6 +521,8 @@ Weapon_Chain_Anims_Table:
 
 @HitboxDireita:
         ; Ataque para a direita: Projeta a caixa à frente do corpo do Herói (32px de largura)
+        rep #$20
+        .a16
         lda BigHero + BigHeroStruct::X_Pos
         clc
         adc #24                                 ; Começa perto do fim do corpo
@@ -525,50 +530,97 @@ Weapon_Chain_Anims_Table:
         clc
         adc #32                                 ; Alcance horizontal do ataque (32 pixels)
         sta a:WeaponStruct::Hitbox_X2, y
+        sep #$20
+        .a8
         rts
 
 @HitboxEsquerda:
         ; Ataque para a esquerda: Projeta a caixa recuada à esquerda do herói
+        rep #$20
+        .a16
         lda BigHero + BigHeroStruct::X_Pos
         sec
         sbc #24                                 ; Estica o alcance para trás do X_Pos
+        bcs @SalvaX1Esquerda
+        LDA #$0000                              ; Evita underflow abaixo de 0 no início do mundo
+        sep #$20
+        .a8
+@SalvaX1Esquerda:
+        rep #$20
+        .a16
         sta a:WeaponStruct::Hitbox_X1, y
         clc
         adc #32                                 ; Encerra colisão rente ao corpo
         sta a:WeaponStruct::Hitbox_X2, y
+        sep #$20
+        .a8
         rts
 
 @MeleeFinished:
         lda #$00
         sta a:WeaponStruct::Melee_Frame, y
         sta a:WeaponStruct::Hitbox_Active, y    ; Garante hitbox desligada no fim do golpe
-@Exit:
+Exit:
         rts
 
-@StartFisica:
-        ; 1. Deslocamento Horizontal
+StartFisica:
+        ; 1. Deslocamento Horizontal (estende o sinal de Speed_X para 16-bit)
+        lda a:WeaponStruct::Speed_X, y
+        sta z:DP_TEMP_00
+        bmi @SpeedXNegativa
+        stz z:DP_TEMP_00 + 1
+        bra @AplicarDeslocamentoX
+@SpeedXNegativa:
+        lda #$FF
+        sta z:DP_TEMP_00 + 1
+
+@AplicarDeslocamentoX:
+        rep #$20
+        .a16
         lda a:WeaponStruct::X_Pos, y
         clc
-        adc a:WeaponStruct::Speed_X, y
+        adc z:DP_TEMP_00
         sta a:WeaponStruct::X_Pos, y
 
-        ; --- CHECAGEM DE COLISÃO LATERAL ---
+        ; --- CHECAGEM DE COLISÃO LATERAL (Relativa a Camera_X) ---
 @CheckWallRight:
+        rep #$20
+        .a16
+        lda Camera_X
+        clc
+        adc #(SCREEN_RIGHT - 16)
+        sta z:DP_TEMP_00                        ; Limite direito visível na câmera
+
         lda a:WeaponStruct::X_Pos, y
-        cmp #(SCREEN_RIGHT - 16)        
+        cmp z:DP_TEMP_00
         bcc @CheckWallLeft               
 
-        lda #(SCREEN_RIGHT - 17)        
+        lda Camera_X
+        clc
+        adc #(SCREEN_RIGHT - 17)
         sta a:WeaponStruct::X_Pos, y
+        sep #$20
+        .a8
         bra @AplicarFisicaRicochete
 
 @CheckWallLeft:
-        lda a:WeaponStruct::X_Pos, y
-        cmp #(SCREEN_LEFT + 4)
-        bcs @ProcessVertical            
+        rep #$20
+        .a16
+        lda Camera_X
+        clc
+        adc #(SCREEN_LEFT + 4)
+        sta z:DP_TEMP_00                        ; Limite esquerdo visível na câmera
 
-        lda #(SCREEN_LEFT + 5)          
+        lda a:WeaponStruct::X_Pos, y
+        cmp z:DP_TEMP_00
+        bcs @SemRicochete            
+
+        lda Camera_X
+        clc
+        adc #(SCREEN_LEFT + 5)
         sta a:WeaponStruct::X_Pos, y
+        sep #$20
+        .a8
 
 @AplicarFisicaRicochete:
         lda a:WeaponStruct::Speed_X, y
@@ -577,8 +629,13 @@ Weapon_Chain_Anims_Table:
         adc #1
         sta a:WeaponStruct::Speed_X, y
 
-        lda #$FC                        ; Impulso para cima (-4)
+        lda #$FC                                ; Impulso para cima (-4)
         sta a:WeaponStruct::Speed_Y, y
+        bra @ProcessVertical
+
+@SemRicochete:
+        sep #$20
+        .a8
 
 @ProcessVertical:
         ; 2. Deslocamento Vertical + Gravidade
@@ -596,7 +653,7 @@ Weapon_Chain_Anims_Table:
         ; 3. Checagem de Solo
         lda a:WeaponStruct::Speed_Y, y
         StructuralBMI:
-        bmi @Exit                       ; Se for negativo (subindo), pula teste de chão
+        bmi @Exit                               ; Se for negativo (subindo), pula teste de chão
 
         lda a:WeaponStruct::Y_Pos, y
         cmp a:WeaponStruct::Target_Y, y                      
@@ -612,7 +669,6 @@ Weapon_Chain_Anims_Table:
 @Exit:
         rts
 .endproc
-
 
 
 
@@ -645,7 +701,24 @@ Draw:
         ; =====================================================================
         ; FAST PATH - RENDERIZAÇÃO DE ARMA SIMPLES (1 BLOCO 16x16)
         ; =====================================================================
+        rep #$20
+        .a16
         lda a:WeaponStruct::X_Pos, y
+        sec
+        sbc Camera_X
+        sta z:DP_TEMP_00                ; Salva Screen_X (16-bit)
+
+        ; Clipping: descarta se saiu da tela (< 0 ou >= 256)
+        and #$FF00
+        beq @SingleInScreen
+        sep #$20
+        .a8
+        rts
+
+@SingleInScreen:
+        sep #$20
+        .a8
+        lda z:DP_TEMP_00
         sta OAMMIRROR, x
         inx
         
@@ -810,13 +883,43 @@ Draw:
         lda (DP_HERO_LAYOUT_PTR), y     ; ◄ CORREÇÃO: Lê da tabela dinâmica apontada na DP
 
 @MultiApplyXPos:
+        rep #$20
+        .a16
+        and #$00FF
+        cmp #$0080
+        bcc @PosOffset
+        ora #$FF00                      ; Estende o sinal do offset negativo para 16 bits
+@PosOffset:
         ldx z:DP_WEAPON_POOL_PTR
         clc
-        adc a:WeaponStruct::X_Pos, x     
-        plx                             
-        sta OAMMIRROR, x                
+        adc a:WeaponStruct::X_Pos, x
+        sec
+        sbc Camera_X
+        sta z:DP_TEMP_00                ; Salva Screen_X (16-bit)
+
+        ; Clipping individual deste bloco: se saiu de 0..255, pula para o próximo bloco
+        and #$FF00
+        beq @MultiInScreen
+        sep #$20
+        .a8
+        plx                             ; Restaura ponteiro da OAM sem avançar
+        iny                             ; Pula X, Y, Tile e Attr deste bloco
+        iny
+        iny
+        iny
+        cpy #16
+        bne @MultiTileLoop
+        ldy z:DP_WEAPON_POOL_PTR
+        rts
+
+@MultiInScreen:
+        sep #$20
+        .a8
+        plx                             ; Restaura ponteiro da OAM
+        lda z:DP_TEMP_00
+        sta OAMMIRROR, x                ; Grava apenas 1 byte (Screen_X) na OAM
         inx
-        iny                              
+        iny
 
         ; --- CÁLCULO DO EIXO Y ---
         phx
@@ -876,8 +979,9 @@ Draw:
         iny                              
 
         cpy #16
-        bne @MultiTileLoop
-
+        beq Finish
+        jmp @MultiTileLoop
+Finish:
         ldy z:DP_WEAPON_POOL_PTR
         rts
 .endproc
@@ -966,8 +1070,12 @@ Draw:
         bra @Exit                       ; Ambas na tela? Aborta o disparo
 
 @AtirarNoSlot1:
+        rep #$20
+        .a16
         lda a:WeaponStruct::X_Pos, y
-        sta Bullet + BulletStruct::X_Pos
+        STA Bullet + BulletStruct::X_Pos
+        sep #$20
+        .a8
         lda a:WeaponStruct::Y_Pos, y
         sta Bullet + BulletStruct::Y_Pos
         lda #$EE
@@ -987,8 +1095,12 @@ Draw:
         bra @Exit
 
 @AtirarNoSlot2:
+        rep #$20
+        .a16
         lda a:WeaponStruct::X_Pos, y
-        sta Bullet2 + BulletStruct::X_Pos
+        STA Bullet2 + BulletStruct::X_Pos
+        sep #$20
+        .a8
         lda a:WeaponStruct::Y_Pos, y
         sta Bullet2 + BulletStruct::Y_Pos
         lda #$84
