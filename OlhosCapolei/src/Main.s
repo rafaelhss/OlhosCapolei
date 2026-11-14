@@ -283,16 +283,16 @@ NaoRespawn:
         ldx #$0000     
 
         
-         JSR drawHeroCenterDebug
-        ; JSR drawHeroHitBoxDebug
-        ; ;JSR DrawDengueHitboxDebug
-        ; jsr DrawHitboxDebug
-         JSR DrawtargetEnemyXYDebug
-        ; jsr drawDengueXYDebug
-        JSR drawVaderXYDebug
-        jsr drawDP_ENEMY_DRAW_XYDebug
-        ; ;jsr DrawDengueAttackSectorDebug
-        ;jsr logEnemyXYonMemory
+        ;  JSR drawHeroCenterDebug
+        ; ; JSR drawHeroHitBoxDebug
+        ; ; ;JSR DrawDengueHitboxDebug
+        ; ; jsr DrawHitboxDebug
+        ;  JSR DrawtargetEnemyXYDebug
+        ; ; jsr drawDengueXYDebug
+        ; JSR drawVaderXYDebug
+        ; jsr drawDP_ENEMY_DRAW_XYDebug
+        ; ; ;jsr DrawDengueAttackSectorDebug
+        ; ;jsr logEnemyXYonMemory
         
         
    

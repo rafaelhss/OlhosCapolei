@@ -13,6 +13,7 @@
 
 .import BigHero, Bullet
 .import Bullet2
+.import Camera_X
 
 
 .export DrawBullet, MoveBullet
@@ -30,9 +31,26 @@
         cmp #BULLET_STATE_INACTIVE
         beq Finish
 
+        rep #$20
+        .a16
         lda Bullet + BulletStruct::X_Pos
+        SEC
+        sbc Camera_X
+        STA z:DP_TEMP_00
+        ; Clipping: se Screen_X < 0 ($FFxx) ou >= 256 ($01xx), não desenha
+        and #$FF00
+        beq @InScreen
+        sep #$20
+        .a8
+        rts
+
+@InScreen:
+        sep #$20
+        .a8
+        lda z:DP_TEMP_00
         sta OAMMIRROR, x
         inx
+
         
         lda Bullet + BulletStruct::Y_Pos
         sta OAMMIRROR, x
@@ -62,55 +80,31 @@ Finish:
     
 .endproc
 
-;-------------------------------------------------------------------------------
-.proc MoveBullet
-
-
-       ; 1. Se estiver voando (THROWN), executa a física de parábola original
-        lda Bullet + BulletStruct::Active
-        cmp #BULLET_STATE_ACTIVE
-        bne @Exit
-        
-@StartFisica:
-        ; 1. Deslocamento Horizontal
-        lda Bullet + BulletStruct::X_Pos
-        clc
-        adc Bullet + BulletStruct::Speed_X
-        sta Bullet + BulletStruct::X_Pos
-
-        ; --- CHECAGEM DE COLISÃO LATERAL ---
-@CheckWallRight:
-        lda Bullet + BulletStruct::X_Pos
-        cmp #(SCREEN_RIGHT - 16)        
-        bcc @CheckWallLeft               
-
-        lda #(SCREEN_RIGHT - 17)        
-        sta Bullet + BulletStruct::X_Pos
-        bra @WallHit
-
-@CheckWallLeft:
-        lda Bullet + BulletStruct::X_Pos
-        cmp #(SCREEN_LEFT + 4)
-        bcs @Exit            
-
-@WallHit:
-        lda #BULLET_STATE_INACTIVE
-        sta Bullet + BulletStruct::Active
-@Exit:
-        rts
-.endproc
-
-;-------------------------------------------------------------------------------
-;   DrawBullet2 (Renderizador Dedicado para o Slot 2)
-;-------------------------------------------------------------------------------
 .proc DrawBullet2
         lda Bullet2 + BulletStruct::Active
         cmp #BULLET_STATE_INACTIVE
         beq Finish
 
+        rep #$20
+        .a16
         lda Bullet2 + BulletStruct::X_Pos
+        SEC
+        sbc Camera_X
+        STA z:DP_TEMP_00
+        ; Clipping: se Screen_X < 0 ($FFxx) ou >= 256 ($01xx), não desenha
+        and #$FF00
+        beq @InScreen
+        sep #$20
+        .a8
+        rts
+
+@InScreen:
+        sep #$20
+        .a8
+        lda z:DP_TEMP_00
         sta OAMMIRROR, x
         inx
+
         
         lda Bullet2 + BulletStruct::Y_Pos
         sta OAMMIRROR, x
@@ -120,7 +114,7 @@ Finish:
         sta OAMMIRROR, x
         inx
         
-        lda Bullet2 + BulletStruct::Speed_X  
+        lda Bullet2 + BulletStruct::Speed_X  ; Lê a velocidade horizontal da RAM
         bmi @SingleDefaultAttributes
 
 @SingleApplyFlip:
@@ -130,17 +124,61 @@ Finish:
         rts
 
 @SingleDefaultAttributes:
-        lda #$30                         
-        eor #$40                         
+        lda #$30                         ; Atributo padrão, Página 1 da VRAM
+        eor #$40                         ; Injeta H-Flip via Hardware (Bit 6)
         sta OAMMIRROR, x
         inx
         rts
 Finish:
         rts    
+    
 .endproc
 
 ;-------------------------------------------------------------------------------
-;   MoveBullet2 (Física Dedicada para o Slot 2)
+.proc MoveBullet
+        lda Bullet + BulletStruct::Active
+        cmp #BULLET_STATE_ACTIVE
+        bne @Exit
+        
+@StartFisica:
+        ; 1. Estende o sinal de Speed_X (8-bit com sinal) para 16-bit em DP_TEMP_00
+        lda Bullet + BulletStruct::Speed_X
+        sta z:DP_TEMP_00
+        bmi @SpeedXNegativa
+        stz z:DP_TEMP_00 + 1            ; Tiro para frente (+): byte alto = $00
+        bra @AplicarDeslocamentoX
+
+@SpeedXNegativa:
+        lda #$FF
+        sta z:DP_TEMP_00 + 1            ; Tiro para trás (-): byte alto = $FF
+
+@AplicarDeslocamentoX:
+        rep #$20
+        .a16
+        lda Bullet + BulletStruct::X_Pos
+        clc
+        adc z:DP_TEMP_00
+        sta Bullet + BulletStruct::X_Pos
+
+        ; 2. Desativa o tiro se sair da área visível da câmera (< 0 ou >= 256)
+        sec
+        sbc Camera_X
+        and #$FF00
+        beq @DentroDaTela
+
+        sep #$20
+        .a8
+        lda #BULLET_STATE_INACTIVE
+        sta Bullet + BulletStruct::Active
+        rts
+
+@DentroDaTela:
+        sep #$20
+        .a8
+@Exit:
+        rts
+.endproc
+
 ;-------------------------------------------------------------------------------
 .proc MoveBullet2
         lda Bullet2 + BulletStruct::Active
@@ -148,28 +186,40 @@ Finish:
         bne @Exit
         
 @StartFisica:
+        ; 1. Estende o sinal de Speed_X (8-bit com sinal) para 16-bit em DP_TEMP_00
+        lda Bullet2 + BulletStruct::Speed_X
+        sta z:DP_TEMP_00
+        bmi @SpeedXNegativa
+        stz z:DP_TEMP_00 + 1            ; Tiro para frente (+): byte alto = $00
+        bra @AplicarDeslocamentoX
+
+@SpeedXNegativa:
+        lda #$FF
+        sta z:DP_TEMP_00 + 1            ; Tiro para trás (-): byte alto = $FF
+
+@AplicarDeslocamentoX:
+        rep #$20
+        .a16
         lda Bullet2 + BulletStruct::X_Pos
         clc
-        adc Bullet2 + BulletStruct::Speed_X
+        adc z:DP_TEMP_00
         sta Bullet2 + BulletStruct::X_Pos
 
-@CheckWallRight:
-        lda Bullet2 + BulletStruct::X_Pos
-        cmp #(SCREEN_RIGHT - 16)        
-        bcc @CheckWallLeft               
+        ; 2. Desativa o tiro se sair da área visível da câmera (< 0 ou >= 256)
+        sec
+        sbc Camera_X
+        and #$FF00
+        beq @DentroDaTela
 
-        lda #(SCREEN_RIGHT - 17)        
-        sta Bullet2 + BulletStruct::X_Pos
-        bra @WallHit
-
-@CheckWallLeft:
-        lda Bullet2 + BulletStruct::X_Pos
-        cmp #(SCREEN_LEFT + 4)
-        bcs @Exit            
-
-@WallHit:
+        sep #$20
+        .a8
         lda #BULLET_STATE_INACTIVE
         sta Bullet2 + BulletStruct::Active
+        rts
+
+@DentroDaTela:
+        sep #$20
+        .a8
 @Exit:
         rts
 .endproc
