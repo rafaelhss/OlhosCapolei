@@ -71,9 +71,10 @@ DP_TEMP_02              = $02
 DP_TEMP_03              = $03
 DP_TEMP_CALC            = $05   ; ◄ ADICIONE ISSO: Rascunho isolado para matemática de ponteiros
 
-;DP_TARGET_ENEMY_X              = $06
+DP_TEMP_06_WORD              = $06
+DP_TEMP_07_BYTE              = $09
 ;DP_TARGET_ENEMY_Y              = $08
-
+;continua as DP_TEMP mais abaixo
 
 
 ; --- Zona Exclusiva do Subsistema do Herói (BigHero.s) ---
@@ -97,9 +98,17 @@ DP_MELEE_CRAB_X            = $28 ; Usa $28, $29
 DP_MELEE_CRAB_Y            = $2A ; Usa $2A, $2B
 DP_MELEE_CRAB_FACING       = $2C ; Usa $2C, $2D
 
-DP_HERO_CENTER_X         = $2E ; Usa $2E
-DP_HERO_CENTER_Y         = $2F ; Usa $2F
+DP_HERO_CENTER_X         = $2E ; Usa $2E e $2F
+DP_HERO_CENTER_Y         = $30 ; Usa $30
 
+
+
+DP_TEMP_07 = $32
+DP_TEMP_08 = $34
+DP_TEMP_09 = $36
+
+DP_ENEMY_DRAW_X = $38
+DP_ENEMY_DRAW_Y = $3A
 
 
 ;DP_TARGET_ENEMY_X_DEBUGDENGUE              = $30    
@@ -130,6 +139,16 @@ ENEMY_TYPE_DENGUE = 2 ; Dengue crab
 
 
 
+
+WORLD_LEFT       = 0
+WORLD_RIGHT      = 2048
+CAMERA_MAX_X     = (WORLD_RIGHT - 256)  ; 1792 ($0700) - limite máximo da borda esquerda da tela
+
+; Zonas mortas da tela para empurrar a câmera (em coordenadas de tela 0..255)
+CAMERA_SCROLL_RIGHT_EDGE = 140          ; Se o herói passar de X=140 na tela, câmera avança
+CAMERA_SCROLL_LEFT_EDGE  = 80           ; Se o herói recuar abaixo de X=80 na tela, câmera recua
+
+
 ; =============================================================================
 ; DEFINIÇÕES DE ESTRUTURAS DE DADOS (WRAM TABLES)
 ; =============================================================================
@@ -137,15 +156,15 @@ ENEMY_TYPE_DENGUE = 2 ; Dengue crab
 
 ; ======== BigHero (Estilo Beat 'em Up 32x64)
 .struct BigHeroStruct
-    X_Pos               .byte   ; Posição X âncora (0-255)
+    X_Pos               .word   ; Posição X âncora (0-2048)
     Y_Pos               .byte   ; Posição Y âncora (0-255)
     Tile_Count          .byte   ; Quantidade de sprites na OAM
     Anim_Timer          .byte   ; Contador de frames da caminhada
     Anim_Frame          .byte   ; Frame atual dos pés (0 ou 1)
     Facing              .byte   ; $00 = Olhando para a Direita, $01 = Olhando para a Esquerda
     Hurtbox_Active      .byte   ; Controle de invencibilidade/vulnerabilidade
-    Hurtbox_X1          .byte   ; Retângulo AABB - Esquerda
-    Hurtbox_X2          .byte   ; Retângulo AABB - Direita
+    Hurtbox_X1          .word   ; Retângulo AABB - Esquerda
+    Hurtbox_X2          .word   ; Retângulo AABB - Direita
     Hurtbox_Y1          .byte   ; Retângulo AABB - Topo
     Hurtbox_Y2          .byte   ; Retângulo AABB - Base
     HurtTimer           .byte   ; Contador de hitstun (cara amassada)
@@ -157,7 +176,7 @@ ENEMY_TYPE_DENGUE = 2 ; Dengue crab
 
 ; ======== MeleeCrab IA
 .struct MeleeCrabStruct
-    X_Pos                .byte   
+    X_Pos                .word   
     Y_Pos                .byte   
     Tile_Count           .byte   
     Walk_Anim_Speed      .byte 
@@ -178,33 +197,23 @@ ENEMY_TYPE_DENGUE = 2 ; Dengue crab
     Dying_Anim_Frame .byte    
     Resting_Timer        .byte 
     Hitbox_Active        .byte   
-    Hitbox_X1            .byte   
-    Hitbox_X2            .byte   
+    Hitbox_X1            .word   
+    Hitbox_X2            .word   
     Hitbox_Y1            .byte   
     Hitbox_Y2            .byte 
-    Hurtbox_X1            .byte   
-    Hurtbox_X2            .byte   
+    Hurtbox_X1            .word   
+    Hurtbox_X2            .word   
     Hurtbox_Y1            .byte   
     Hurtbox_Y2            .byte 
     HurtTimer            .byte
     Enemy_Type           .byte  
     Attack_Sector        .byte
-    Target_Attack_X        .byte
+    Target_Attack_X        .word
     Target_Attack_Y        .byte
     HP                    .byte ;   Pontos de vida do inimigo (0 a 255)
     Max_HP                .byte ;   Pontos de vida máximos do inimigo (0 a 255)    
 .endstruct
 
-; ======== Registro do Pool de Projéteis Dinâmicos
-.struct ProjectileEntity
-    Active      .byte   ; 0 = Inativo, 1 = Em movimento no ar        
-    X_Pos       .byte   ; Coordenada X na tela          
-    Y_Pos       .byte   ; Coordenada Y na tela          
-    Tile_ID     .byte   ; Grafismo correto indexado da ROM          
-    Attrs       .byte   ; Atributos de hardware da PPU (Paleta/Flip)          
-    Speed_X     .byte   ; Velocidade horizontal com sinal
-    Speed_Y     .byte   ; Força vertical/parábola com sinal        
-.endstruct
 
 ; ======== Registro de Itens Soltos no Cenário
 .struct WeaponStruct
@@ -212,7 +221,7 @@ ENEMY_TYPE_DENGUE = 2 ; Dengue crab
     Weapon_ID   .byte   ; ID associado à Weapon_Data_Table (1 a 6)
     Tile_ID     .byte   ; Tile base do gráfico
     Tile_Size   .byte   ; Quantidade de tiles que compõem o weapon
-    X_Pos       .byte   
+    X_Pos       .word   
     Y_Pos       .byte   
     Speed_X     .byte   ; Velocidade horizontal do arremesso
     Speed_Y     .byte   ; Força vertical/parábola
@@ -222,8 +231,8 @@ ENEMY_TYPE_DENGUE = 2 ; Dengue crab
     Anim_Variation .byte
     ; ◄ NOVOS CAMPOS EXCLUSIVOS DA SOLUÇÃO 2 (HITBOX DA ARMA BRANCA):
     Hitbox_Active       .byte   ; 1 = Janela de dano ativa, 0 = Inativa
-    Hitbox_X1           .byte   ; Limite Esquerdo
-    Hitbox_X2           .byte   ; Limite Direito
+    Hitbox_X1           .word   ; Limite Esquerdo
+    Hitbox_X2           .word   ; Limite Direito
     Hitbox_Y1           .byte   ; Limite Superior
     Hitbox_Y2           .byte   ; Limite Inferior
 .endstruct
@@ -232,18 +241,11 @@ ENEMY_TYPE_DENGUE = 2 ; Dengue crab
 .struct BulletStruct
     Active      .byte   ; 0 = Vazio, 1 = Visível no chão esperando coleta
     Tile_ID     .byte   ; Tile base do gráfico
-    X_Pos       .byte   
+    X_Pos       .word   
     Y_Pos       .byte   
     Speed_X     .byte   ; Velocidade horizontal do arremesso
 .endstruct
 
-
-.struct PowStruct
-    Active_timer      .byte   ; 0 = Vazio, 1 = Visível no chão esperando coleta
-    Tile_ID     .byte   ; Tile base do gráfico
-    X_Pos       .byte   
-    Y_Pos       .byte   
-.endstruct
 
 
 

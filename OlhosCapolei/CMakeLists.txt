@@ -7,6 +7,9 @@ project( OlhosCapolei
          LANGUAGES CA65816 )
 
 add_executable( ${PROJECT_NAME} "" )
+
+
+
 add_subdirectory( assets )
 add_subdirectory( src )
 set_target_properties( ${PROJECT_NAME}
@@ -16,3 +19,4 @@ set_target_properties( ${PROJECT_NAME}
 if( NOT DEFINED MEMORY_MAP_FILE )
   message( FATAL_ERROR "Path to memory map file not set!" )
 endif( NOT DEFINED MEMORY_MAP_FILE )
+

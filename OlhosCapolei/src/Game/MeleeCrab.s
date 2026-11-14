@@ -26,12 +26,19 @@ ENEMY_ATTACK_DISTANCE = $1   ; Distância de engajamento do ataque da IA. Com  i
 ENEMY_ATTACK_Y_RANGE  = $08   ; Tolerância no eixo Y para alinhamento tridimensional
 
 ENEMY_HURTBOX_WIDTH  = $10
-ENEMY_HURTBOX_HEIGHT = $20      
+ENEMY_HURTBOX_HEIGHT = $20     
+
+DYING_DURATION_FRAMES = 45
+DYING_ANIM_SPEED      = 15
+DYING_MAX_FRAMES      = 2
 
 .import BigHero
 .import FrameCounter
-.import MeleeCrab
+.import VaderCrab
+.import Camera_X
 
+
+.segment "CODE"
 ;-------------------------------------------------------------------------------
 ;   MoveMeleeCrab - ORQUESTRADOR PRINCIPAL
 ;-------------------------------------------------------------------------------
@@ -76,8 +83,12 @@ CheckHurt:
         cmp #STATE_PREPARING            
         bne @AvaliaEstados              
         
+        rep #$20
+        .a16
         lda a:MeleeCrabStruct::X_Pos, y
         cmp BigHero + BigHeroStruct::X_Pos
+        sep #$20
+        .a8
         bcc @OlhaDireitaPreparo
 
 @OlhaEsquerdaPreparo:
@@ -154,9 +165,7 @@ Done:
 
 
 
-DYING_DURATION_FRAMES = 45
-DYING_ANIM_SPEED      = 15
-DYING_MAX_FRAMES      = 2
+
 
 .proc UpdateDyingState
         ; 1. Timer total da morte
@@ -218,11 +227,16 @@ DYING_MAX_FRAMES      = 2
 
 ; Define a hurtbox do inimigo MeleeCrab com base na posição atual
 .proc UpdateMeleeCrabGeometry
+        rep #$20
+        .a16
         lda a:MeleeCrabStruct::X_Pos, y
         sta a:MeleeCrabStruct::Hurtbox_X1, y
         clc
         adc #48
         sta a:MeleeCrabStruct::Hurtbox_X2, y
+        sep #$20
+        .a8
+
         lda a:MeleeCrabStruct::Y_Pos, y
         sta a:MeleeCrabStruct::Hurtbox_Y1, y
         clc
@@ -338,15 +352,24 @@ DYING_MAX_FRAMES      = 2
         bne @HitboxDireitaAtaque                  
 
 @HitboxEsquerdaAtaque:
+        rep #$20
+        .a16
         lda a:MeleeCrabStruct::X_Pos, y
         sec
-        sbc #ENEMY_HURTBOX_WIDTH                            
+        sbc #ENEMY_HURTBOX_WIDTH
+        bcs @SaveHitLeft
+        lda #0
+@SaveHitLeft:
         sta a:MeleeCrabStruct::Hitbox_X1, y
         lda a:MeleeCrabStruct::X_Pos, y 
         sta a:MeleeCrabStruct::Hitbox_X2, y
+        sep #$20
+        .a8
         bra @Done
 
 @HitboxDireitaAtaque:
+        rep #$20
+        .a16
         lda a:MeleeCrabStruct::X_Pos, y
         clc
         adc #64                             
@@ -354,6 +377,8 @@ DYING_MAX_FRAMES      = 2
         clc
         adc #ENEMY_HURTBOX_WIDTH                             
         sta a:MeleeCrabStruct::Hitbox_X2, y
+        sep #$20
+        .a8
 @Done:
         rts
 .endproc
@@ -364,8 +389,6 @@ DYING_MAX_FRAMES      = 2
 .proc ApplyEnemyMovement
         sty z:DP_ENEMY_STRUCT_PTR
 
-        ; 1. Calcula o alvo com base no setor do inimigo
-        ;jsr UpdateTargetSector
 
         ; 2. Verifica se há colisão/necessidade de evasão de corpo do hero
         jsr HandleBodyEvasion
@@ -400,62 +423,65 @@ DYING_MAX_FRAMES      = 2
         beq @SetorInfDireito
 
 @SetorInfEsquerdo:
+        rep #$20
+        .a16
         lda z:DP_HERO_CENTER_X
         sec
-        sbc #20 + 64
-        STA a:MeleeCrabStruct::Target_Attack_X, y
-        ;sta z:DP_TARGET_ENEMY_X_DEBUGDENGUE               
+        sbc #(20 + 64)
+        bcs @SaveX_IE
+        lda #0
+@SaveX_IE:
+        sta a:MeleeCrabStruct::Target_Attack_X, y
+        sep #$20
+        .a8
         lda z:DP_HERO_CENTER_Y
-        ;clc
-        ;adc #SECTOR_OFFSET_Y
-        ; SEC
-        ; ;SBC #SECTOR_OFFSET_Y
-        ; SBC #16
-        STA a:MeleeCrabStruct::Target_Attack_Y, y
-        ;sta z:DP_TARGET_ENEMY_Y_DEBUGDENGUE               
+        sta a:MeleeCrabStruct::Target_Attack_Y, y
         rts
 
 @SetorSupDireito:
+        rep #$20
+        .a16
         lda z:DP_HERO_CENTER_X
         clc
         adc #20
-        STA a:MeleeCrabStruct::Target_Attack_X, y
-        ;sta z:DP_TARGET_ENEMY_X_DEBUGDENGUE
+        sta a:MeleeCrabStruct::Target_Attack_X, y
+        sep #$20
+        .a8
         lda z:DP_HERO_CENTER_Y
         sec
-        ;SBC #SECTOR_OFFSET_Y
-        SBC #64
-        STA a:MeleeCrabStruct::Target_Attack_Y, y
-        ;sta z:DP_TARGET_ENEMY_Y_DEBUGDENGUE
+        sbc #64
+        sta a:MeleeCrabStruct::Target_Attack_Y, y
         rts
 
 @SetorSupEsquerdo:
+        rep #$20
+        .a16
         lda z:DP_HERO_CENTER_X
         sec
-        sbc #20 + 64
-        STA a:MeleeCrabStruct::Target_Attack_X, y
-        ;sta z:DP_TARGET_ENEMY_X_DEBUGDENGUE
+        sbc #(20 + 64)
+        bcs @SaveX_SE
+        lda #0
+@SaveX_SE:
+        sta a:MeleeCrabStruct::Target_Attack_X, y
+        sep #$20
+        .a8
         lda z:DP_HERO_CENTER_Y
         sec
-        ;SBC #SECTOR_OFFSET_Y
-        SBC #64
-        STA a:MeleeCrabStruct::Target_Attack_Y, y
-        ;sta z:DP_TARGET_ENEMY_Y_DEBUGDENGUE
+        sbc #64
+        sta a:MeleeCrabStruct::Target_Attack_Y, y
         rts
 
 @SetorInfDireito:
+        rep #$20
+        .a16
         lda z:DP_HERO_CENTER_X
         clc
         adc #20
-        STA a:MeleeCrabStruct::Target_Attack_X, y
-        ;sta z:DP_TARGET_ENEMY_X_DEBUGDENGUE
+        sta a:MeleeCrabStruct::Target_Attack_X, y
+        sep #$20
+        .a8
         lda z:DP_HERO_CENTER_Y
-        ;clc
-        ;adc #SECTOR_OFFSET_Y
-        ; SEC
-        ; SBC #
-        STA a:MeleeCrabStruct::Target_Attack_Y, y
-        ;sta z:DP_TARGET_ENEMY_Y_DEBUGDENGUE
+        sta a:MeleeCrabStruct::Target_Attack_Y, y
         rts
 .endproc
 
@@ -464,15 +490,19 @@ DYING_MAX_FRAMES      = 2
 ;   Retorna: Carry SET se houve evasão (bloqueia física padrão), CLEAR se não.
 ;-------------------------------------------------------------------------------
 .proc HandleBodyEvasion
+        rep #$20
+        .a16
         lda a:MeleeCrabStruct::X_Pos, y
         sec
         sbc BigHero + BigHeroStruct::X_Pos
         bcs @AbsCorpoX
-        eor #$FF
+        eor #$FFFF
         clc
         adc #1
 @AbsCorpoX:
-        cmp #24
+        CMP #24
+        sep #$20
+        .a8
         bcs @SemEvasao
 
         lda a:MeleeCrabStruct::Y_Pos, y
@@ -504,6 +534,8 @@ DYING_MAX_FRAMES      = 2
         sta a:MeleeCrabStruct::Y_Pos, y
 
 @AplicaMovimentoX:
+        rep #$20
+        .a16
         lda a:MeleeCrabStruct::X_Pos, y
         cmp a:MeleeCrabStruct::Target_Attack_X, y
         bcc @EvasaoDireita
@@ -512,15 +544,22 @@ DYING_MAX_FRAMES      = 2
         lda a:MeleeCrabStruct::X_Pos, y
         sec
         sbc #WALK_SPEED
+        bcs @SaveEvLeft
+        lda #0
+@SaveEvLeft:
         sta a:MeleeCrabStruct::X_Pos, y
+        sep #$20
+        .a8
         lda #0
         sta a:MeleeCrabStruct::Facing, y
-        bra @FinalizaEvasao              
+        bra @FinalizaEvasao
 @EvasaoDireita:
         lda a:MeleeCrabStruct::X_Pos, y
         clc
         adc #WALK_SPEED
         sta a:MeleeCrabStruct::X_Pos, y
+        sep #$20
+        .a8
         lda #1
         sta a:MeleeCrabStruct::Facing, y
 
@@ -539,47 +578,68 @@ DYING_MAX_FRAMES      = 2
         rts
 .endproc
 
+
 ;-------------------------------------------------------------------------------
 ;   SUB-ROTINA: HandleNormalPhysics
 ;   Move o inimigo até o setor e engaja o estado de preparação de ataque
 ;-------------------------------------------------------------------------------
 .proc HandleNormalPhysics
         ; --- 1. ISOLAMENTO ABSOLUTO DO EIXO X ---
+        rep #$20
+        .a16
         lda a:MeleeCrabStruct::X_Pos, y
         sec
         sbc a:MeleeCrabStruct::Target_Attack_X, y
         bcs @CalcAbsX
-        eor #$FF
+        eor #$FFFF
         clc
-        adc #1
+        ADC #1
+        
 @CalcAbsX:
-        cmp #ENEMY_ATTACK_DISTANCE
-        bcc @PertoNoX                   
+        CMP #ENEMY_ATTACK_DISTANCE
+        sep #$20
+        .a8
+        bcs @ContinuaAndar
+        jmp @PertoNoX                  
 
         ; --- CASO A: LONGE NO X (Limitador de velocidade por FrameCounter) ---
-        lda FrameCounter
-        and #%00000001
-        beq @ContinuaAndar
-        rts
+        ; lda FrameCounter
+        ; and #%00000001
+        ; beq @ContinuaAndar
+        ; rts
 
 @ContinuaAndar:
+        rep #$20
+        .a16
         lda a:MeleeCrabStruct::X_Pos, y
         cmp a:MeleeCrabStruct::Target_Attack_X, y
         bcc @WalkRight
 
 @WalkLeft:
+
         lda a:MeleeCrabStruct::X_Pos, y
         sec
         sbc #WALK_SPEED
+        bcs @SaveWalkL
+        lda #0
+@SaveWalkL:
         sta a:MeleeCrabStruct::X_Pos, y
+        sep #$20
+        .a8
         lda #0
         sta a:MeleeCrabStruct::Facing, y
         bra @ForcaAndarX
+
 @WalkRight:
+        rep #$20
+        .a16
         lda a:MeleeCrabStruct::X_Pos, y
         clc
         adc #WALK_SPEED
         sta a:MeleeCrabStruct::X_Pos, y
+        sep #$20
+        .a8
+        
         lda #1
         sta a:MeleeCrabStruct::Facing, y
 
@@ -617,9 +677,43 @@ DYING_MAX_FRAMES      = 2
         adc #WALK_SPEED
         sta a:MeleeCrabStruct::Y_Pos, y
 @FimApenas:
+        rep #$20
+        .a16
+        LDA a:MeleeCrabStruct::X_Pos, y
+        STA a:$E1
+        LDA a:MeleeCrabStruct::Target_Attack_X, y
+        STA a:$E3
+        
+        LDA VaderCrab + MeleeCrabStruct::X_Pos
+        STA a:$E5
+        LDA VaderCrab + MeleeCrabStruct::Target_Attack_X
+        STA a:$E7 
+        sep #$20
+        .a8
         rts
 
 @PertoNoX:
+        rep #$20
+        .a16
+        LDA a:MeleeCrabStruct::X_Pos, y
+        STA a:$F1
+        LDA a:MeleeCrabStruct::Target_Attack_X, y
+        STA a:$F3
+        
+        LDA VaderCrab + MeleeCrabStruct::X_Pos
+        STA a:$F5
+        LDA VaderCrab + MeleeCrabStruct::Target_Attack_X
+        STA a:$F7 
+        
+        LDA BigHero + BigHeroStruct::X_Pos
+        STA a:$F9
+        LDA Camera_X 
+        STA a:$FA 
+        
+        sep #$20
+        .a8 
+
+
         ; --- CASO B: PERTO NO X ---
         lda a:MeleeCrabStruct::Y_Pos, y
         sec
@@ -667,7 +761,7 @@ DYING_MAX_FRAMES      = 2
 
 
 .proc DrawMeleeCrab
-        ;Recupera o índice do inimigo na pilha
+        ; Recupera o índice do inimigo na pilha
         rep #$20
         .a16
         lda 3,s
@@ -676,32 +770,44 @@ DYING_MAX_FRAMES      = 2
         .a8
         .i16
 
-
-        LDA a:MeleeCrabStruct::State, y
+        lda a:MeleeCrabStruct::State, y
         cmp #STATE_DEAD
         bne CheckHurtTimer
         rts
 
 CheckHurtTimer:
         ; --- LÓGICA DE PISCAR (FLICKER EM HIT STUN) ---
-        lda a:MeleeCrabStruct::HurtTimer, y  ; Carrega o timer de dano atual
-        beq @IniciaDesenho                   ; Se for 0, desenha normalmente
+        lda a:MeleeCrabStruct::HurtTimer, y
+        beq @IniciaDesenho
 
-        ; Se estiver em hit stun, testa o bit 0 (saber se o frame é par ou ímpar)
         and #%00000001
-        beq @AbortaDesenho                   ; Se o bit for 0 (frame par), pula o desenho e faz piscar!
+        beq @AbortaDesenho
 
 @IniciaDesenho:
-        ; Aloca posições físicas e direção temporariamente
+        ; 1. Calcula Screen_X = World_X - Camera_X em 16-bit
+        rep #$20
+        .a16
         lda a:MeleeCrabStruct::X_Pos, y
-        sta z:DP_TEMP_01
+        sec
+        sbc Camera_X
+        sta z:DP_ENEMY_DRAW_X                ; DP_TEMP_07 ($32-$33) = Screen_X assinado (-2048..+2048)
+
+        ; 2. Culling Horizontal: Só desenha se -64 <= Screen_X < 256
+        clc
+        adc #64                         ; Desloca [-64..255] para [0..319]
+        cmp #(256 + 64)                 ; Se >= 320, está totalmente fora da tela!
+        sep #$20
+        .a8
+        bcs @AbortaDesenho
+
+        ; 3. Guarda Y_Pos, Facing e índice do frame
         lda a:MeleeCrabStruct::Y_Pos, y
-        sta z:DP_TEMP_02
+        sta z:DP_ENEMY_DRAW_Y
         lda a:MeleeCrabStruct::Facing, y
         sta z:DP_TEMP_03
 
         jsr ResolveAnimationFrame
-        sta z:DP_TEMP_00
+        sta z:DP_TEMP_00                ; Índice do frame (agora seguro pois Screen_X está em DP_TEMP_07)
         jsr GetAnimationTablePointer
 
         lda #$00
@@ -730,6 +836,7 @@ CheckHurtTimer:
 @AbortaDesenho:
         rts
 .endproc
+
 
 .proc ResolveAnimationFrame
         lda a:MeleeCrabStruct::HurtTimer, y
@@ -815,32 +922,64 @@ CheckHurtTimer:
         sta z:DP_MELEE_CRAB_LAYOUT_PTR+2
         lda z:DP_TEMP_03
         bne @DrawXNormal
+
 @DrawXInverted:
         lda #48
         sec
         sbc [DP_MELEE_CRAB_LAYOUT_PTR], y
-        clc
-        adc z:DP_TEMP_01
-        sta OAMMIRROR, x
-        bra @ProcessY
+        bra @CalcTileScreenX
+
 @DrawXNormal:
         lda [DP_MELEE_CRAB_LAYOUT_PTR], y
+
+@CalcTileScreenX:
+        ; Soma offset assinado (ex: -3, -6 ou +48) ao Screen_X (16-bit em DP_TEMP_07)
+        rep #$20
+        .a16
+        and #$00FF
+        cmp #$0080
+        bcc @PosTileOff
+        ora #$FF00                      ; Extensão de sinal para offsets negativos (-3, -6)
+@PosTileOff:
         clc
-        adc z:DP_TEMP_01
-        sta OAMMIRROR, x
-@ProcessY:
+        adc z:DP_ENEMY_DRAW_X                ; A = Tile_Screen_X completo (16-bit)
+        cmp #256                        ; Fora da tela (< 0 ou >= 256)?
+        bcs @TileOffScreen
+
+        ; --- TILE VISÍVEL (0..255) ---
+        sep #$20
+        .a8
+        sta OAMMIRROR, x                ; Grava X na OAM
         inx
         iny
+
         lda [DP_MELEE_CRAB_LAYOUT_PTR], y
         clc
-        adc z:DP_TEMP_02
+        adc z:DP_ENEMY_DRAW_Y                ; Soma Y_Pos
+        sta OAMMIRROR, x                ; Grava Y na OAM
+        inx
+        iny
+        bra @DrawTileID
+
+@TileOffScreen:
+        ; --- TILE FORA DA TELA (< 0 ou >= 256) ---
+        sep #$20
+        .a8
         sta OAMMIRROR, x
         inx
         iny
+
+        lda #$F0                        ; Esconde o sprite abaixo da tela (Y = 240)
+        sta OAMMIRROR, x
+        inx
+        iny
+
+@DrawTileID:
         lda [DP_MELEE_CRAB_LAYOUT_PTR], y
         sta OAMMIRROR, x
         inx
         iny
+
         lda [DP_MELEE_CRAB_LAYOUT_PTR], y
         sta z:DP_TEMP_00
         lda z:DP_TEMP_03
@@ -859,6 +998,7 @@ CheckHurtTimer:
 .endproc
 
 
+.segment "RODATA"
 ; =============================================================================
 ; BANCO DE MATRIZES DE ANIMAÇÃO DO VADERCRAB
 ; =============================================================================

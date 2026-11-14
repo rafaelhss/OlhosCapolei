@@ -9,6 +9,7 @@ rng_seed: .res 2    ; Apenas reserva os 2 bytes na RAM, sem inicializar dados aq
 
 .code
 
+.segment "CODE"
 ; =========================================================================
 ; INICIALIZAR RNG
 ; Deve ser chamada uma única vez no boot do jogo (ex: no Init.s ou Main.s)

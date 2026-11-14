@@ -45,7 +45,7 @@
 ; TABELA DE DEFINIÇÃO DE ARMAS (Injetada diretamente no segmento CODE para segurança)
 ; Formato: Tile_ID, Atributos, Tipo_Arma ($00=Branca, $01=Projétil), Dano, Alcance/ID_Proj, Balas
 ; =============================================================================
-.segment "CODE"
+.segment "RODATA"
 
 ;Ainda nao eh usado, mas eh uma ideia boa
 Weapon_Data_Table:
@@ -262,94 +262,150 @@ Weapon_Chain_Anims_Table:
     .addr Weapon_Layout_Chain_Attack_Frame02
 
 
+.segment "CODE"
 ;-------------------------------------------------------------------------------
 ;   ClearProjectilePool (Garante RAM limpa e força Y=$E0 contra Sprites Fantasmas)
 ;-------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
+;   ClearProjectilePool (Garante RAM limpa nos 5 slots de WeaponStruct)
+;   Zera campos .word em 16-bit e campos .byte em 8-bit
+;-------------------------------------------------------------------------------
 .proc ClearProjectilePool
-        ; === ZERAMENTO INICIAL DE SEGURANÇA DOS SLOTS (WRAM SANITIZATION) ===
-        ; Garante que nenhuma arma inicie voando ou com lixo nas velocidades
         php                     ; Preserva o estado atual dos flags da CPU
-        sep #$20                ; Garante que o Acumulador está em 8-bit (.a8)
         rep #$10                ; Garante que os Índices X/Y estão em 16-bit (.i16)
 
-        lda #$00                ; Carrega zero em A para usar o modo de endereçamento válido sta ..., y
+        ; =====================================================================
+        ; 1. BLOCO 16-BIT (.word): X_Pos, Hitbox_X1 e Hitbox_X2
+        ; =====================================================================
+        rep #$20
+        .a16
+        lda #$0000
 
-        ; --- SANITIZAÇÃO DA WEAPON A ---
+        ; --- WeaponA (16-bit) ---
+        ldy #.loword(WeaponA)
+        sta a:WeaponStruct::X_Pos, y
+        sta a:WeaponStruct::Hitbox_X1, y
+        sta a:WeaponStruct::Hitbox_X2, y
+
+        ; --- WeaponB (16-bit) ---
+        ldy #.loword(WeaponB)
+        sta a:WeaponStruct::X_Pos, y
+        sta a:WeaponStruct::Hitbox_X1, y
+        sta a:WeaponStruct::Hitbox_X2, y
+
+        ; --- WeaponC (16-bit) ---
+        ldy #.loword(WeaponC)
+        sta a:WeaponStruct::X_Pos, y
+        sta a:WeaponStruct::Hitbox_X1, y
+        sta a:WeaponStruct::Hitbox_X2, y
+
+        ; --- WeaponD (16-bit) ---
+        ldy #.loword(WeaponD)
+        sta a:WeaponStruct::X_Pos, y
+        sta a:WeaponStruct::Hitbox_X1, y
+        sta a:WeaponStruct::Hitbox_X2, y
+
+        ; --- WeaponE (16-bit) ---
+        ldy #.loword(WeaponE)
+        sta a:WeaponStruct::X_Pos, y
+        sta a:WeaponStruct::Hitbox_X1, y
+        sta a:WeaponStruct::Hitbox_X2, y
+
+        ; =====================================================================
+        ; 2. BLOCO 8-BIT (.byte): Demais campos da WeaponStruct
+        ; =====================================================================
+        sep #$20
+        .a8
+        lda #$00
+
+        ; --- WeaponA (8-bit) ---
         ldy #.loword(WeaponA)
         sta a:WeaponStruct::Active, y
         sta a:WeaponStruct::Weapon_ID, y
         sta a:WeaponStruct::Tile_ID, y
-        sta a:WeaponStruct::X_Pos, y
+        sta a:WeaponStruct::Tile_Size, y
         sta a:WeaponStruct::Y_Pos, y
         sta a:WeaponStruct::Speed_X, y
         sta a:WeaponStruct::Speed_Y, y
         sta a:WeaponStruct::Target_Y, y
         sta a:WeaponStruct::Melee_Timer, y
         sta a:WeaponStruct::Melee_Frame, y
+        sta a:WeaponStruct::Anim_Variation, y
         sta a:WeaponStruct::Hitbox_Active, y
-        sta a:WeaponStruct::Hitbox_X1, y
-        sta a:WeaponStruct::Hitbox_X2, y
         sta a:WeaponStruct::Hitbox_Y1, y
         sta a:WeaponStruct::Hitbox_Y2, y
 
-        ; --- SANITIZAÇÃO DA WEAPON B ---
+        ; --- WeaponB (8-bit) ---
         ldy #.loword(WeaponB)
         sta a:WeaponStruct::Active, y
         sta a:WeaponStruct::Weapon_ID, y
         sta a:WeaponStruct::Tile_ID, y
-        sta a:WeaponStruct::X_Pos, y
+        sta a:WeaponStruct::Tile_Size, y
         sta a:WeaponStruct::Y_Pos, y
         sta a:WeaponStruct::Speed_X, y
         sta a:WeaponStruct::Speed_Y, y
         sta a:WeaponStruct::Target_Y, y
         sta a:WeaponStruct::Melee_Timer, y
         sta a:WeaponStruct::Melee_Frame, y
+        sta a:WeaponStruct::Anim_Variation, y
         sta a:WeaponStruct::Hitbox_Active, y
-        sta a:WeaponStruct::Hitbox_X1, y
-        sta a:WeaponStruct::Hitbox_X2, y
         sta a:WeaponStruct::Hitbox_Y1, y
         sta a:WeaponStruct::Hitbox_Y2, y
 
-        ; --- SANITIZAÇÃO DA WEAPON C ---
+        ; --- WeaponC (8-bit) ---
         ldy #.loword(WeaponC)
         sta a:WeaponStruct::Active, y
         sta a:WeaponStruct::Weapon_ID, y
         sta a:WeaponStruct::Tile_ID, y
-        sta a:WeaponStruct::X_Pos, y
+        sta a:WeaponStruct::Tile_Size, y
         sta a:WeaponStruct::Y_Pos, y
         sta a:WeaponStruct::Speed_X, y
         sta a:WeaponStruct::Speed_Y, y
         sta a:WeaponStruct::Target_Y, y
         sta a:WeaponStruct::Melee_Timer, y
         sta a:WeaponStruct::Melee_Frame, y
+        sta a:WeaponStruct::Anim_Variation, y
         sta a:WeaponStruct::Hitbox_Active, y
-        sta a:WeaponStruct::Hitbox_X1, y
-        sta a:WeaponStruct::Hitbox_X2, y
         sta a:WeaponStruct::Hitbox_Y1, y
         sta a:WeaponStruct::Hitbox_Y2, y
 
-
+        ; --- WeaponD (8-bit) ---
         ldy #.loword(WeaponD)
         sta a:WeaponStruct::Active, y
         sta a:WeaponStruct::Weapon_ID, y
         sta a:WeaponStruct::Tile_ID, y
-        sta a:WeaponStruct::X_Pos, y
+        sta a:WeaponStruct::Tile_Size, y
         sta a:WeaponStruct::Y_Pos, y
         sta a:WeaponStruct::Speed_X, y
         sta a:WeaponStruct::Speed_Y, y
         sta a:WeaponStruct::Target_Y, y
         sta a:WeaponStruct::Melee_Timer, y
         sta a:WeaponStruct::Melee_Frame, y
+        sta a:WeaponStruct::Anim_Variation, y
         sta a:WeaponStruct::Hitbox_Active, y
-        sta a:WeaponStruct::Hitbox_X1, y
-        sta a:WeaponStruct::Hitbox_X2, y
+        sta a:WeaponStruct::Hitbox_Y1, y
+        sta a:WeaponStruct::Hitbox_Y2, y
+
+        ; --- WeaponE (8-bit) ---
+        ldy #.loword(WeaponE)
+        sta a:WeaponStruct::Active, y
+        sta a:WeaponStruct::Weapon_ID, y
+        sta a:WeaponStruct::Tile_ID, y
+        sta a:WeaponStruct::Tile_Size, y
+        sta a:WeaponStruct::Y_Pos, y
+        sta a:WeaponStruct::Speed_X, y
+        sta a:WeaponStruct::Speed_Y, y
+        sta a:WeaponStruct::Target_Y, y
+        sta a:WeaponStruct::Melee_Timer, y
+        sta a:WeaponStruct::Melee_Frame, y
+        sta a:WeaponStruct::Anim_Variation, y
+        sta a:WeaponStruct::Hitbox_Active, y
         sta a:WeaponStruct::Hitbox_Y1, y
         sta a:WeaponStruct::Hitbox_Y2, y
 
         plp                     ; Restaura o estado anterior dos flags da CPU
         rts
 .endproc
-
 
 
 ;-------------------------------------------------------------------------------

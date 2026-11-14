@@ -28,48 +28,65 @@
 .import Bullet
 .import Bullet2
 .import InitRNG
-.import Pow
 .import Camera_X
 
-.segment "CODE"
+.segment "RODATA"
 
 ; =============================================================================
-; TABELA LINEAR DE BOOT DE ITENS (6 BYTES ÚTEIS POR ARMA)
-; Formato: Active, Weapon_ID, Tile_ID, Tile_Size, X_Pos, Y_Pos
+; TABELA LINEAR DE BOOT DE ITENS (7 BYTES ÚTEIS POR ARMA)
+; Formato: Active (1), Weapon_ID (1), Tile_ID (1), Tile_Size (1), X_Pos (2), Y_Pos (1)
 ; =============================================================================
 Table_Init_Weapons:
     ; WeaponA (Pedra - ID 4)
-    .byte WEAPON_STATE_GROUND, WEAPON_ID_ROCK,   $6D, $01, $AA, (SCREEN_BOTTOM / 4)
+    .byte WEAPON_STATE_GROUND, WEAPON_ID_ROCK,   $6D, $01
+    .word $00AA
+    .byte (SCREEN_BOTTOM / 4)
+
     ; WeaponB (Martelo - ID 7)
-    .byte WEAPON_STATE_GROUND, WEAPON_ID_HAMMER, $0E, $01, $80, (SCREEN_BOTTOM / 4)
+    .byte WEAPON_STATE_GROUND, WEAPON_ID_HAMMER, $0E, $01
+    .word $0180                         ; Exemplo: já nasce lá na frente em X = 384!
+    .byte (SCREEN_BOTTOM / 4)
+
     ; WeaponC (Madeira - ID 3)
-    .byte WEAPON_STATE_GROUND, WEAPON_ID_WOOD,   $06, $04, $30, (SCREEN_BOTTOM / 4)
+    .byte WEAPON_STATE_GROUND, WEAPON_ID_WOOD,   $06, $04
+    .word $0030
+    .byte (SCREEN_BOTTOM / 4)
+
     ; WeaponD (Pistola - ID 5)
-    .byte WEAPON_STATE_GROUND, WEAPON_ID_PISTOL, $06, $04, $90, (SCREEN_BOTTOM - 50)
+    .byte WEAPON_STATE_GROUND, WEAPON_ID_PISTOL, $06, $04
+    .word $0290                         ; Exemplo: nasce em X = 656
+    .byte (SCREEN_BOTTOM - 50)
+
     ; WeaponE (Corrente - ID 6)
-    .byte WEAPON_STATE_GROUND, WEAPON_ID_CHAIN,  $06, $04, $10, (SCREEN_BOTTOM / 2)
-
-
-
+    .byte WEAPON_STATE_GROUND, WEAPON_ID_CHAIN,  $06, $04
+    .word $0010
+    .byte (SCREEN_BOTTOM / 2)
 
 ; =============================================================================
-; TABELA DE BOOT DOS INIMIGOS MELEE (6 BYTES POR INIMIGO)
-; Formato: Endereço WRAM (2 bytes), X_Pos, Y_Pos, Enemy_Type, Attack_Sector
+; TABELA DE BOOT DOS INIMIGOS MELEE (7 BYTES POR INIMIGO)
+; Formato: Endereço WRAM (2), X_Pos (2), Y_Pos (1), Enemy_Type (1), Attack_Sector (1)
 ; =============================================================================
 Table_Init_MeleeCrabs:
     ; VaderCrab
     .word .loword(VaderCrab)
-    .byte $20, (SCREEN_BOTTOM), ENEMY_TYPE_VADER, $00
+    .word $00F0
+    .byte (SCREEN_BOTTOM - 40 ), ENEMY_TYPE_VADER, $00
 
     ; DengueCrab
     .word .loword(DengueCrab)
-    .byte $C8, (SCREEN_BOTTOM / 2), ENEMY_TYPE_DENGUE, $01
+    .word $01C8                         ; Exemplo: nasce em X = 456
+    .byte (SCREEN_BOTTOM / 2), ENEMY_TYPE_DENGUE, $01
 
     ; RapaNuiCrab
     .word .loword(RapaNuiCrab)
-    .byte $08, (SCREEN_BOTTOM - 20), ENEMY_TYPE_RAPA, $02
+    .word $0008
+    .byte (SCREEN_BOTTOM - 20), ENEMY_TYPE_RAPA, $02
 
 Table_Init_MeleeCrabs_End:
+
+
+.segment "CODE"
+
 
 ;-------------------------------------------------------------------------------
 ;   This initializes the demo
@@ -142,16 +159,17 @@ Table_Init_MeleeCrabs_End:
         sta CGDATA                      ; Envia para a PPU (Escrita dupla finalizada)
        
 
-        ; Agora carrega normalmente a paleta dos sprites no índice $80
-        tsx                            
-        lda #$80                        ; Paleta dos Sprites inicia em $80
-        pha
-        pea ColorData                  
-        lda #$20                        ; 32 bytes (16 cores de 2 bytes)
-        pha
-        
-        jsr LoadCGRAM                  
-        txs                             ; Restaura o Stack perfeitamente
+         ; --- CARGA DIRETA DA PALETA DOS SPRITES NO ÍNDICE $80 DA CGRAM ---
+        lda #$80                        ; Paleta dos Sprites inicia no índice $80
+        sta CGADD
+        ldx #0
+@LoadSpritePalLoop:
+        lda f:ColorData, x              ; Lê com endereço completo de 24-bit (f:)
+        sta CGDATA
+        inx
+        cpx #32                         ; 32 bytes (16 cores de 2 bytes)
+        bcc @LoadSpritePalLoop
+
 
         ; --- 4. INICIALIZAÇÃO DAS STRUCTS (8-BIT PURO E SEGURO) ---
 ; =============================================================================
@@ -183,13 +201,22 @@ Table_Init_MeleeCrabs_End:
         lda a:Table_Init_Weapons + 2, y  ; Lê Tile_ID (Byte) e Tile_Size (Byte)
         sta a:WeaponStruct::Tile_ID, x
 
-        lda a:Table_Init_Weapons + 4, y  ; Lê X_Pos (Byte) e Y_Pos (Byte)
+        ; Lê X_Pos (Word completo de 16-bit!)
+        lda a:Table_Init_Weapons + 4, y
         sta a:WeaponStruct::X_Pos, x
 
-        ; Avança Y em 6 bytes (tamanho exato dos dados úteis de cada arma na tabela da ROM)
+        ; Lê Y_Pos (Byte único - voltamos A para 8-bit rapidinho)
+        sep #$20
+        .a8
+        lda a:Table_Init_Weapons + 6, y
+        sta a:WeaponStruct::Y_Pos, x
+        rep #$20
+        .a16
+
+        ; Avança Y em 7 bytes (tamanho exato dos dados úteis de cada arma na tabela da ROM)
         tya
         clc
-        adc #6
+        adc #7
         tay
 
         ; Avança X para a próxima estrutura WeaponStruct inteira na WRAM
@@ -219,9 +246,17 @@ Table_Init_MeleeCrabs_End:
 ; -----------------------------------------------------------------------------
 ; ----------- NOVO: INICIALIZAÇÃO DO BIGHERO (32x64)
 ; -----------------------------------------------------------------------------
-        lda #20                        ; Nasce perto do meio horizontal da tela
-        sta BigHero + BigHeroStruct::X_Pos
-        
+ 
+        ; BigHero X_Pos = 20 (16-bit)
+        rep #$20
+        .a16
+        lda #20
+        STA BigHero + BigHeroStruct::X_Pos
+        sep #$20
+        .a8
+
+
+
         lda #100                        ; Nasce em uma altura boa de chão (eixo Z)
         sta BigHero + BigHeroStruct::Y_Pos
 
@@ -247,8 +282,13 @@ Table_Init_MeleeCrabs_End:
 
 ;------------- cria Bullet
 
-        lda #64                        ; Nasce perto do meio horizontal da tela
+        ; BigHero X_Pos = 20 (16-bit)
+        rep #$20
+        .a16
+        lda #64
         sta Bullet + BulletStruct::X_Pos
+        sep #$20
+        .a8
         
         lda #100                        ; Nasce em uma altura boa de chão (eixo Z)
         sta Bullet + BulletStruct::Y_Pos
@@ -267,8 +307,12 @@ Table_Init_MeleeCrabs_End:
 
 ;------------- cria Bullet2
 
-        lda #64                        ; Nasce perto do meio horizontal da tela
+        rep #$20
+        .a16
+        lda #64
         sta Bullet2 + BulletStruct::X_Pos
+        sep #$20
+        .a8
         
         lda #100                        ; Nasce em uma altura boa de chão (eixo Z)
         sta Bullet2 + BulletStruct::Y_Pos
@@ -284,22 +328,6 @@ Table_Init_MeleeCrabs_End:
                  
 
 ; =========== FIM bullet2
-
-
-;--- cria Pow
-
-    stz Pow + PowStruct::Active_timer
-    stz Pow + PowStruct::X_Pos
-    stz Pow + PowStruct::Y_Pos
-
-    lda #$84
-    sta Pow + PowStruct::Tile_ID
-    
-    
-
-
-;===  fim Pow
-
          JSR InitRNG    ; Define a semente inicial do gerador de números aleatórios
 
 
@@ -414,7 +442,7 @@ Table_Init_MeleeCrabs_End:
         .a8
         .i16
 
-        ldy #0                          ; Y = Offset de leitura na tabela da ROM
+        ldy #0                          ; Y = Offset de leitura na tabeInitAllMeleeCrabsla da ROM
 
 @Loop:
         ; 1. Carrega o endereço WRAM do inimigo para o registrador X (16-bit)
@@ -422,32 +450,30 @@ Table_Init_MeleeCrabs_End:
         .a16
         lda a:Table_Init_MeleeCrabs + 0, y
         tax                             ; X agora aponta para a struct (ex: VaderCrab)
-        sep #$20                        ; Volta A para 8-bit
+        LDA a:Table_Init_MeleeCrabs + 2, y
+        sta a:MeleeCrabStruct::X_Pos, x ; Grava X_Pos de 16-bit!
+        sep #$20
         .a8
 
         ; 2. Lê os dados exclusivos da tabela
-        lda a:Table_Init_MeleeCrabs + 2, y
-        sta a:MeleeCrabStruct::X_Pos, x
-
-        lda a:Table_Init_MeleeCrabs + 3, y
+        lda a:Table_Init_MeleeCrabs + 4, y
         sta a:MeleeCrabStruct::Y_Pos, x
 
-        lda a:Table_Init_MeleeCrabs + 4, y
+        lda a:Table_Init_MeleeCrabs + 5, y
         sta a:MeleeCrabStruct::Enemy_Type, x
 
-        lda a:Table_Init_MeleeCrabs + 5, y
+        lda a:Table_Init_MeleeCrabs + 6, y
         sta a:MeleeCrabStruct::Attack_Sector, x
 
         ; 3. Preenche os valores padrão compartilhados por todos os MeleeCrabs
         jsr SetupDefaultMeleeStats
 
-        ; 4. Avança Y em 6 bytes e verifica se chegou ao fim da tabela
-        tya
+        ; 4. Avança Y em 7 bytes e verifica se chegou ao fim da tabela
         rep #$20
         .a16
         tya
         clc
-        adc #6
+        adc #7
         tay
         sep #$20
         .a8

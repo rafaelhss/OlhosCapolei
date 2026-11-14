@@ -30,11 +30,11 @@
 
 ;-------------------------------------------------------------------------------
 
-.segment "CODE"
 
 VADER_KNOCKBACK = 12
 
 
+.segment "CODE"
 ;-------------------------------------------------------------------------------
 ;   PONTO DE ENTRADA DO SISTEMA (Boot seguro em Hardware Real)
 ;-------------------------------------------------------------------------------
@@ -113,15 +113,25 @@ NaoRespawn:
         ; 2. SESSÃO DE FÍSICA E MOVIMENTAcÃO
 
         JSR MoveBigHero
-        ;Atualiza a posicao central do heroi para o sistema de colisões
-        LDA BigHero + BigHeroStruct::X_Pos
+        ; Atualiza a posição central do herói (X em 16-bit, Y em 8-bit)
+
+        rep #$20
+        .a16
+        lda BigHero + BigHeroStruct::X_Pos
+        ; sec
+        ; sbc Camera_X
         CLC
-        ADC #16
-        STA z:DP_HERO_CENTER_X
+        adc #16
+        sta z:DP_HERO_CENTER_X                ; DP_TEMP_06_WORD (2 bytes) = Screen_X do herói!
+        sep #$20
+        .a8
+
         LDA BigHero + BigHeroStruct::Y_Pos
-        CLC
-        ADC #32
+        clc
+        adc #32
         STA z:DP_HERO_CENTER_Y
+        
+
         
         pea .loword(VaderCrab)
         jsr UpdateTargetSector
@@ -273,15 +283,16 @@ NaoRespawn:
         ldx #$0000     
 
         
-        ; ; JSR drawHeroCenterDebug
-        ; ; JSR drawHeroHitBoxDebug
-        ; ; ;JSR DrawDengueHitboxDebug
-        ; ; jsr DrawHitboxDebug
-        ;  JSR DrawtargetEnemyXYDebug
-        ;  jsr drawDengueXYDebug
-        ; ; jsr drawVaderXYDebug
-        ; ; ;jsr DrawDengueAttackSectorDebug
-        ; ; ;JSR DrawPow ; tem que estar em cima de td
+         JSR drawHeroCenterDebug
+        ; JSR drawHeroHitBoxDebug
+        ; ;JSR DrawDengueHitboxDebug
+        ; jsr DrawHitboxDebug
+         JSR DrawtargetEnemyXYDebug
+        ; jsr drawDengueXYDebug
+        JSR drawVaderXYDebug
+        jsr drawDP_ENEMY_DRAW_XYDebug
+        ; ;jsr DrawDengueAttackSectorDebug
+        ;jsr logEnemyXYonMemory
         
         
    
@@ -815,7 +826,6 @@ CheckHeroHurtbox:
         .a8
 
 
-        ;jsr createHeroPow
         
         ; Liga o Hitstun imediatamente no Herói (30 frames)
         lda #30
@@ -845,11 +855,13 @@ AbortDamage:
 ;   TriggerHeroDamageEffect
 ;   Aplica Knockback no BigHero baseado no Facing do Inimigo e trata as bordas
 ;-------------------------------------------------------------------------------
-; -----------------------------------------------------------------------------
-;   File: Main.s (PARTE 2 DE 2 - KNOCKBACK DINÂMICO) - Substitua a antiga
-; -----------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
+;   TriggerHeroDamageEffect
+;   Aplica Knockback 16-bit no BigHero baseado no Facing do Inimigo
+;   e respeita os limites visíveis da Câmera (Camera_X)
+;-------------------------------------------------------------------------------
 .proc TriggerHeroDamageEffect
-        ; 1. Recupera o endereco do caranguejo enviado da pilha para o registrador Y
+        ; 1. Recupera o endereço do caranguejo enviado da pilha para Y
         rep #$20
         .a16
         lda 3,s                         
@@ -857,49 +869,68 @@ AbortDamage:
         sep #$20
         .a8
 
-        HURT_TIME = 30 
+        HURT_TIME       = 30 
+        KNOCKBACK_FORCE = 8
+
         lda #HURT_TIME
         sta BigHero + BigHeroStruct::HurtTimer
 
-       ; LDA z:$00
-        ;eor #$40                        
-        ;sta z:$00
-        
-        KNOCKBACK_FORCE = 8
-
-
-        ; 2. Verifica a direcão do caranguejo atual parametrizado em Y
+        ; 2. Verifica a direção do caranguejo atual parametrizado em Y
         lda MeleeCrabStruct::Facing, y
         bne @PushToRight        
 
 @PushToLeft:
-       lda BigHero + BigHeroStruct::X_Pos
+        rep #$20
+        .a16
+
+        ; Calcula limite esquerdo da câmera: Camera_X + SCREEN_LEFT
+        lda Camera_X
+        clc
+        adc #SCREEN_LEFT
+        sta z:DP_TEMP_00                ; Guarda borda esquerda visível (16-bit)
+
+        ; Subtrai o knockback da posição global do herói
+        lda BigHero + BigHeroStruct::X_Pos
         sec
         sbc #KNOCKBACK_FORCE
-        sta BigHero + BigHeroStruct::X_Pos
+        bcc @ClampLeft                  ; Se deu underflow (< 0), trava na borda
 
-        lda BigHero + BigHeroStruct::X_Pos
-        cmp #SCREEN_LEFT
-        bcs @DoneKnockback      
-        
-        lda #SCREEN_LEFT        
+        cmp z:DP_TEMP_00                ; Compara nova posição com borda esquerda da câmera
+        bcs @SaveAndFinish              ; Se X_Pos >= borda esquerda, posição válida
+
+@ClampLeft:
+        lda z:DP_TEMP_00                ; Trava na borda esquerda visível da câmera
+
+@SaveAndFinish:
         sta BigHero + BigHeroStruct::X_Pos
-        bra @DoneKnockback
+        sep #$20
+        .a8
+        rts
 
 @PushToRight:
+        rep #$20
+        .a16
+
+        ; Calcula limite direito da câmera: Camera_X + (SCREEN_RIGHT - 32)
+        lda Camera_X
+        clc
+        adc #(SCREEN_RIGHT - 32)
+        sta z:DP_TEMP_00                ; Guarda borda direita visível (16-bit)
+
+        ; Soma o knockback à posição global do herói
         lda BigHero + BigHeroStruct::X_Pos
         clc
         adc #KNOCKBACK_FORCE
-        sta BigHero + BigHeroStruct::X_Pos
 
-        lda BigHero + BigHeroStruct::X_Pos
-        cmp #(SCREEN_RIGHT - 32)
-        bcc @DoneKnockback      
-        
-        lda #(SCREEN_RIGHT - 32) 
-        sta BigHero + BigHeroStruct::X_Pos
+        cmp z:DP_TEMP_00                ; Compara nova posição com borda direita da câmera
+        bcc @SaveRight                  ; Se X_Pos < borda direita, posição válida
 
-@DoneKnockback:
+        lda z:DP_TEMP_00                ; Trava na borda direita visível da câmera
+
+@SaveRight:
+        sta BigHero + BigHeroStruct::X_Pos
+        sep #$20
+        .a8
         rts
 .endproc
 
@@ -914,25 +945,26 @@ AbortDamage:
 .proc ApplyEdgeCollisions
         ; === BLINDAGEM DO EIXO X (ESQUERDA / DIREITA) ===
 CheckHeroLeft:
+        rep #$20
+        .a16
         lda BigHero + BigHeroStruct::X_Pos
-        ; Se o herói passou da esquerda (underflow), o valor capotou para perto de $FF (ex: $FD, $FE, $FF)
-        ; Se o valor for maior que 240 e ele estava perto do zero, ele cruzou a borda esquerda.
-        cmp #240
-        bcc CheckHeroRight          ; Se X < 240, está em uma posicão normal da tela. Checa a direita.
-        
-        ; Se caiu aqui, houve underflow (X >= 240 vindo do zero). Forca na borda esquerda!
-        lda #SCREEN_LEFT            
+        cmp #$F000                      ; Se houve underflow negativo ($FFFx)
+        bcc CheckHeroRight
+        lda #0
         sta BigHero + BigHeroStruct::X_Pos
-        bra CheckHeroTop            
+        bra CheckHeroRightDone
 
 CheckHeroRight:
-        ; Limite físico da direita: SCREEN_RIGHT (255) - largura do sprite (32px) = 223
         lda BigHero + BigHeroStruct::X_Pos
-        cmp #223
-        bcc CheckHeroTop            ; Se X < 223, está seguro dentro da tela. Vai pro teto.
-        
-        lda #223                    ; Se X >= 223, satura na borda direita
+        cmp #(WORLD_RIGHT - 32)         ; 2048 - 32 = 2016
+        bcc CheckHeroRightDone
+        lda #(WORLD_RIGHT - 32)
         sta BigHero + BigHeroStruct::X_Pos
+
+CheckHeroRightDone:
+        sep #$20
+        .a8
+
 
         ; === BLINDAGEM DO EIXO Y (TETO / BASE) ===
         ; === BLINDAGEM DO EIXO Y (TETO / BASE DA RUA) ===
@@ -979,9 +1011,7 @@ CollisionDone:
         lda z:DP_TEMP_00
         sta a:MeleeCrabStruct::HurtTimer, y
 
-        ; 2. Dispara partícula POW (preserva Y)
-        jsr createEnemyPow
-
+       
         ; 3. Aplica Dano com Subtração Saturada (Anti-Underflow)
         lda a:MeleeCrabStruct::HP, y
         sec
@@ -1042,150 +1072,96 @@ Finish:
 
 
 
+;
 ;-------------------------------------------------------------------------------
-;   createHeroPow (Versão Blindada com Isolamento de Registradores)
+;   DrawMeleeCrabHP
+;   Desenha o indicador de HP acima do inimigo respeitando o clipping da câmera
 ;-------------------------------------------------------------------------------
-.proc createHeroPow
-
-
-        ; Salva os registradores de índice atuais para proteger a OAM e o loop global
-        phx
-        phy
-
-        lda #08
-        sta Pow + PowStruct::Active_timer
-
-        ; --- CÁLCULO DO CENTRO X DO HERÓI ---
-        lda BigHero + BigHeroStruct::Hurtbox_X1
-        clc
-        adc BigHero + BigHeroStruct::Hurtbox_X2
-        ror a 
-        sta Pow + PowStruct::X_Pos
-        
-        ; --- CÁLCULO DO CENTRO Y DO HERÓI (Com blindagem ROR contra estouros) ---
-        lda BigHero + BigHeroStruct::Hurtbox_Y1
-        clc
-        adc BigHero + BigHeroStruct::Hurtbox_Y2
-        ror a 
-        sta Pow + PowStruct::Y_Pos
-
-        ; Restaura os contextos intactos antes de voltar para o fluxo de dano
-        ply
-        plx
-        rts
-.endproc
-
-.proc createEnemyPow
-        lda #08
-        sta Pow + PowStruct::Active_timer
-        
-        lda a:MeleeCrabStruct::Hurtbox_X1, y
-        clc
-        adc a:MeleeCrabStruct::Hurtbox_X2, y
-        ror a 
-        sta Pow + PowStruct::X_Pos
-        lda a:MeleeCrabStruct::Hurtbox_Y2, y
-        clc
-        adc a:MeleeCrabStruct::Hurtbox_Y1, y
-        ror a 
-        STA Pow + PowStruct::Y_Pos
-        rts
-.endproc
-
-
 .proc DrawMeleeCrabHP
-        ; 1. Recupera o endereco do caranguejo enviado da pilha para o registrador Y
+        ; 1. Recupera o endereço do caranguejo enviado da pilha para Y
         rep #$20
         .a16
         lda 3,s                         
         tay
         sep #$20
         .a8
-        
 
-        LDA a:MeleeCrabStruct::State, y
+        ; 2. Ignora inimigos já mortos
+        lda a:MeleeCrabStruct::State, y
         cmp #STATE_DEAD
-        bne Draw
+        bne @CheckClip
         rts
 
-Draw:
+@CheckClip:
+        ; 3. Calcula Screen_X (16-bit) = X_Pos - Camera_X
+        rep #$20
+        .a16
+        lda a:MeleeCrabStruct::X_Pos, y
+        sec
+        sbc Camera_X
+        sta z:DP_TEMP_02                ; Guarda Screen_X (16-bit)
 
+        ; Se Screen_X < 0 ($FFxx) ou Screen_X >= 256 ($01xx), está fora da tela!
+        and #$FF00
+        beq @InScreen
+        sep #$20
+        .a8
+        rts
 
-        
+@InScreen:
+        sep #$20
+        .a8
 
+        ; 4. Seleciona o Tile ID conforme o HP atual
         lda a:MeleeCrabStruct::HP, y
-        CMP #0
-        BEQ @ZeroHp
-        CMP #1
-        BEQ @OneHp
-        CMP #2
-        BEQ @TwoHp
-        CMP #3
-        BEQ @ThreeHp
-        CMP #4
-        BEQ @FourHp
+        beq @ZeroHp
+        cmp #1
+        beq @OneHp
+        cmp #2
+        beq @TwoHp
+        cmp #3
+        beq @ThreeHp
+        cmp #4
+        beq @FourHp
 
 @ZeroHp:
         rts
-        lda #$E0                         ; Tile ID do HP
-        sta OAMMIRROR, x
-        inx
-        JMP Finish
-@OneHp:
-         LDA a:MeleeCrabStruct::X_Pos, y
-        sta OAMMIRROR, x
-        inx
-        
-        lda a:MeleeCrabStruct::Y_Pos, y
-        sta OAMMIRROR, x
-        inx
-        lda #$8A                         ; Tile ID do HP
-        sta OAMMIRROR, x
-        inx
-        JMP Finish
-@TwoHp:
-         LDA a:MeleeCrabStruct::X_Pos, y
-        sta OAMMIRROR, x
-        inx
-        
-        lda a:MeleeCrabStruct::Y_Pos, y
-        sta OAMMIRROR, x
-        inx
-        LDA #$20                         ; Tile ID do HP
-        STA OAMMIRROR, x
-        inx
-        JMP Finish
-@ThreeHp:
-         LDA a:MeleeCrabStruct::X_Pos, y
-        sta OAMMIRROR, x
-        inx
-        
-        lda a:MeleeCrabStruct::Y_Pos, y
-        sta OAMMIRROR, x
-        inx
-        LDA #$2E                         ; Tile ID do HP
-        sta OAMMIRROR, x
-        inx
-        JMP Finish
-@FourHp:
-         LDA a:MeleeCrabStruct::X_Pos, y
-        sta OAMMIRROR, x
-        inx
-        
-        lda a:MeleeCrabStruct::Y_Pos, y
-        sta OAMMIRROR, x
-        inx
-        LDA #$0E                         ; Tile ID do HP
-        sta OAMMIRROR, x
-        inx
-        JMP Finish
 
-Finish:
-        lda #$31                         
+@OneHp:
+        lda #$8A                        ; Tile ID para 1 HP
+        bra @WriteOAM
+
+@TwoHp:
+        lda #$20                        ; Tile ID para 2 HP
+        bra @WriteOAM
+
+@ThreeHp:
+        lda #$2E                        ; Tile ID para 3 HP
+        bra @WriteOAM
+
+@FourHp:
+        lda #$0E                        ; Tile ID para 4 HP
+
+@WriteOAM:
+        sta z:DP_TEMP_00                ; Salva o Tile ID escolhido
+
+        lda z:DP_TEMP_02                ; Byte 0: Screen_X (já validado entre 0 e 255)
         sta OAMMIRROR, x
-        INX
-        
-        RTS
+        inx
+
+        lda a:MeleeCrabStruct::Y_Pos, y ; Byte 1: Screen_Y
+        sta OAMMIRROR, x
+        inx
+
+        lda z:DP_TEMP_00                ; Byte 2: Tile ID
+        sta OAMMIRROR, x
+        inx
+
+        lda #$31                        ; Byte 3: Atributos (Prioridade / Paleta)
+        sta OAMMIRROR, x
+        inx
+
+        rts
 .endproc
 
 
@@ -1241,155 +1217,68 @@ Finish:
         rts
 .endproc
 
+.proc logEnemyXYonMemory
 
-; =============================================================================
-; ScrollWorldLeft
-; Entrada: A (.a8) = Quantidade de pixels que a câmera avançou para a direita
-; Efeito:  Soma A em Camera_X (16-bit) e subtrai A do X_Pos de todas as entidades
-; =============================================================================
-; =============================================================================
-; ScrollWorldLeft (Com Proteção Anti-Underflow para 8-bit X_Pos)
-; Entrada: A (.a8) = Quantidade de pixels que a câmera avançou para a direita
-; =============================================================================
-.proc ScrollWorldLeft
-        php
-        sep #$20
-        .a8
-        sta z:DP_TEMP_00                ; Salva o deslocamento (speed)
 
-        ; 1. Avança Camera_X (16-bit)
-        rep #$20
-        .a16
-        lda z:DP_TEMP_00
-        and #$00FF
-        clc
-        adc Camera_X
-        sta Camera_X
-        sep #$20
-        .a8
+        LDA VaderCrab + MeleeCrabStruct::X_Pos
+        STA a:$81
+        LDA VaderCrab + MeleeCrabStruct::Y_Pos
+        STA a:$83
+        
+        LDA VaderCrab + MeleeCrabStruct::Target_Attack_X
+        STA a:$85
+        LDA VaderCrab + MeleeCrabStruct::Target_Attack_Y
+        STA a:$87
+        
+        LDA RapaNuiCrab + MeleeCrabStruct::X_Pos
+        STA a:$91
+        LDA RapaNuiCrab + MeleeCrabStruct::Y_Pos
+        STA a:$93
+        
+        LDA RapaNuiCrab + MeleeCrabStruct::Target_Attack_X
+        STA a:$95
+        LDA RapaNuiCrab + MeleeCrabStruct::Target_Attack_Y
+        STA a:$97
+        
+        LDA DengueCrab + MeleeCrabStruct::X_Pos
+        STA a:$A1
+        LDA DengueCrab + MeleeCrabStruct::Y_Pos
+        STA a:$A3
+        
+        LDA DengueCrab + MeleeCrabStruct::Target_Attack_X
+        STA a:$A5
+        LDA DengueCrab + MeleeCrabStruct::Target_Attack_Y
+        STA a:$A7
+        
+        
+        
 
-        ; 2. Puxa os Inimigos (Satura em X = 0 se estiver vivo, desativa se morto)
-        ldy #.loword(VaderCrab)
-        jsr @ScrollEnemyX
-        ldy #.loword(DengueCrab)
-        jsr @ScrollEnemyX
-        ldy #.loword(RapaNuiCrab)
-        jsr @ScrollEnemyX
-
-        ; 3. Puxa as Armas (Desativa se sair pela borda esquerda)
-        ldy #.loword(WeaponA)
-        jsr @ScrollWeaponX
-        ldy #.loword(WeaponB)
-        jsr @ScrollWeaponX
-        ldy #.loword(WeaponC)
-        jsr @ScrollWeaponX
-        ldy #.loword(WeaponD)
-        jsr @ScrollWeaponX
-        ldy #.loword(WeaponE)
-        jsr @ScrollWeaponX
-
-        ; 4. Puxa Projéteis (Desativa se sair pela borda esquerda)
-        lda Bullet + BulletStruct::Active
-        beq @CheckBullet2
-        lda Bullet + BulletStruct::X_Pos
-        sec
-        sbc z:DP_TEMP_00
-        bcs @SaveBullet1
-        lda #BULLET_STATE_INACTIVE
-        sta Bullet + BulletStruct::Active
-        bra @CheckBullet2
-@SaveBullet1:
-        sta Bullet + BulletStruct::X_Pos
-
-@CheckBullet2:
-        lda Bullet2 + BulletStruct::Active
-        beq @DoneScroll
-        lda Bullet2 + BulletStruct::X_Pos
-        sec
-        sbc z:DP_TEMP_00
-        bcs @SaveBullet2
-        lda #BULLET_STATE_INACTIVE
-        sta Bullet2 + BulletStruct::Active
-        bra @DoneScroll
-@SaveBullet2:
-        sta Bullet2 + BulletStruct::X_Pos
-
-@DoneScroll:
-        plp
-        rts
-
-; --- Sub-rotina: Desloca Inimigo em Y e impede underflow na borda esquerda ---
-@ScrollEnemyX:
-        lda a:MeleeCrabStruct::State, y
-        cmp #STATE_DEAD
-        beq @EnemyExit                  ; Se já está morto, não precisa mover
-
-        lda a:MeleeCrabStruct::X_Pos, y
-        sec
-        sbc z:DP_TEMP_00
-        bcs @EnemySaveX                 ; Carry = 1 -> Ainda está dentro da tela (>= 0)
-
-        ; Carry = 0 -> Houve underflow! Trava na borda esquerda (X = 0)
-        lda #0
-@EnemySaveX:
-        sta a:MeleeCrabStruct::X_Pos, y
-@EnemyExit:
-        rts
-
-; --- Sub-rotina: Desloca Arma em Y e remove se sair da tela para trás ---
-@ScrollWeaponX:
-        lda a:WeaponStruct::Active, y
-        cmp #WEAPON_STATE_GROUND
-        beq @MoveWeapon
-        cmp #WEAPON_STATE_THROWN
-        bne @WeaponExit                 ; Se está equipada no herói ou inativa, ignora
-
-@MoveWeapon:
-        lda a:WeaponStruct::X_Pos, y
-        sec
-        sbc z:DP_TEMP_00
-        bcs @WeaponSaveX                ; Carry = 1 -> Continua na tela
-
-        ; Carry = 0 -> Saiu da tela pela esquerda! Desativa a arma
-        lda #WEAPON_STATE_INACTIVE
-        sta a:WeaponStruct::Active, y
-        rts
-
-@WeaponSaveX:
-        sta a:WeaponStruct::X_Pos, y
-@WeaponExit:
-        rts
+rts
 .endproc
-.export ScrollWorldLeft
 
-.proc DrawPow
 
-rts; ;Desativando pow, pq nao ficou legal
 
-        lda Pow + PowStruct::Active_timer
-        beq Finish
-        dec Pow + PowStruct::Active_timer
-
-        lda Pow + PowStruct::X_Pos
+.proc drawDP_ENEMY_DRAW_XYDebug
+        LDA DP_ENEMY_DRAW_X
         sta OAMMIRROR, x
         inx
         
-        lda Pow + PowStruct::Y_Pos
+        lda DP_ENEMY_DRAW_Y
         sta OAMMIRROR, x
         inx
         
-        lda Pow + PowStruct::Tile_ID
+        lda #$8A
         sta OAMMIRROR, x
         inx
 
-        lda #$00                         
+        lda #$30                         
         sta OAMMIRROR, x
-        inx
+        INX
+        RTS
 
-Finish:
-        rts    
-    
 .endproc
+
+
 
 .proc drawVaderXYDebug
         
@@ -1434,8 +1323,15 @@ Finish:
 
 .proc drawHeroCenterDebug
         
+
+        rep #$20
+        .a16
         lda DP_HERO_CENTER_X
-        sta OAMMIRROR, x
+        sec
+        sbc Camera_X
+        STA OAMMIRROR, x
+        sep #$20
+        .a8
         inx
         
         lda DP_HERO_CENTER_Y
@@ -1564,8 +1460,16 @@ Finish:
 
 
 .proc DrawtargetEnemyXYDebug
-        LDA VaderCrab + MeleeCrabStruct::Target_Attack_X
+
+        rep #$20
+        .a16
+        lda VaderCrab + MeleeCrabStruct::Target_Attack_X
+        sec
+        sbc Camera_X
         sta a:OAMMIRROR, X
+        sep #$20
+        .a8
+
         inx
         lda VaderCrab + MeleeCrabStruct::Target_Attack_Y
         sta a:OAMMIRROR, X
@@ -1577,8 +1481,14 @@ Finish:
         sta a:OAMMIRROR, X
         INX
         
-        LDA RapaNuiCrab + MeleeCrabStruct::Target_Attack_X
+        rep #$20
+        .a16
+        lda RapaNuiCrab + MeleeCrabStruct::Target_Attack_X
+        sec
+        sbc Camera_X
         sta a:OAMMIRROR, X
+        sep #$20
+        .a8
         inx
         lda RapaNuiCrab + MeleeCrabStruct::Target_Attack_Y
         sta a:OAMMIRROR, X
@@ -1590,8 +1500,14 @@ Finish:
         sta a:OAMMIRROR, X
         INX
         
-        LDA DengueCrab + MeleeCrabStruct::Target_Attack_X
+        rep #$20
+        .a16
+        lda DengueCrab + MeleeCrabStruct::Target_Attack_X
+        sec
+        sbc Camera_X
         sta a:OAMMIRROR, X
+        sep #$20
+        .a8
         inx
         lda DengueCrab + MeleeCrabStruct::Target_Attack_Y
         sta a:OAMMIRROR, X
@@ -1745,7 +1661,6 @@ Finish:
 .export WeaponD
 .export WeaponE
 .export Bullet
-.export Pow
 .export Bullet2
 
 
@@ -1764,7 +1679,6 @@ WeaponE:         .tag WeaponStruct
 Bullet:          .tag BulletStruct
 Bullet2:          .tag BulletStruct
 
-Pow:             .tag PowStruct
 
 FrameCounter:    .res 1    ; Contador global de frames (0 a 255)
 .export FrameCounter

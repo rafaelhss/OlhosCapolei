@@ -10,8 +10,11 @@ set( CMAKE_CA65816_COMPILE_OBJECT
 # How to build executables
 set( CMAKE_CA65816_LINK_EXECUTABLE
     "ld65 -C ${MEMORY_MAP_FILE} \
+          -m ${CMAKE_BINARY_DIR}/mapa.txt \
           <OBJECTS> \
           -o <TARGET>"
 )
 
 set( CMAKE_CA65816_INFORMATION_LOADED 1 )
+
+

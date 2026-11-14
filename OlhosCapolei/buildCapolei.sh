@@ -15,6 +15,17 @@ cmake --build build -t clean
 cmake --build build
 
 echo "========================================"
+echo "✅ Compilação concluída com sucesso!!!!"
+
+# --- NOVO: RELATÓRIO DE OCUPAÇÃO DE MEMÓRIA ---
+if [ -f "build/mapa.txt" ]; then
+    echo "📊 Resumo de Ocupação de Memória:"
+    grep -A 12 "Segment list:" build/mapa.txt
+fi
+# ----------------------------------------------
+
+
+echo "========================================"
 echo "✅ Compilação concluída com sucesso!"
 
 # =============================================================================

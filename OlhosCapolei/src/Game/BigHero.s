@@ -20,7 +20,7 @@
 .import ProcessMeleeAttack
 .import ProcessFireAttack
 .import rand
-.import ScrollWorldLeft
+.import Camera_X
 
 .export DrawBigHero, MoveBigHero
 .export DrawBigHeroHurtboxDebug
@@ -28,7 +28,7 @@
 PICKUP_DISTANCE  = 32        ; Tolerância em pixels para conseguir pegar a arma
 WALK_ANIM_SPEED  = 8         ; Frequência de troca de pernas (a cada 8 frames da PPU)
 
-.segment "CODE"
+.segment "RODATA"
 
 ; =============================================================================
 ; BANCO DE MATRIZES DE ANIMAÇÃO (Layouts de 8 blocos x 4 bytes = 32 bytes)
@@ -105,6 +105,7 @@ BigHero_Layout_Attack_Frame2:
     .byte 0,32,$8C,$30, 16,32,$8E,$30
     .byte 0,48,$60,$30, 16,48,$62,$30
 
+.segment "CODE"
 
 ;-------------------------------------------------------------------------------
 ;   DrawBigHero
@@ -211,6 +212,17 @@ BigHero_Layout_Attack_Frame2:
 
 @StartDraw:
 @DrawHeroBody:
+
+        ; Calcula Screen_X base do herói em 16-bit: World_X - Camera_X
+        rep #$20
+        .a16
+        lda BigHero + BigHeroStruct::X_Pos
+        sec
+        sbc Camera_X
+        sta z:DP_TEMP_06_WORD                ; DP_TEMP_06_WORD (2 bytes) = Screen_X do herói!
+        sep #$20
+        .a8
+
         ldy #$0000              
 
 DrawLoop:
@@ -227,11 +239,21 @@ DrawLoop:
         lda (DP_HERO_LAYOUT_PTR),y
 
 @ApplyXPos:
+        ; Soma offset (com extensão de sinal para offsets negativos como -2!)
+        rep #$20
+        .a16
+        and #$00FF
+        cmp #$0080
+        bcc @PositiveOffset
+        ora #$FF00                      ; Estende sinal se offset >= 128 (-2 -> $FFFE)
+@PositiveOffset:
         clc
-        adc BigHero + BigHeroStruct::X_Pos
-        sta OAMMIRROR, x
+        adc z:DP_TEMP_06_WORD                ; Soma com Screen_X do herói
+        sep #$20
+        .a8
+        sta OAMMIRROR, x                ; Grava byte baixo na OAM (0..255)
         inx
-        iny                     
+        iny
 
         ; --- EIXO Y ---
         clc
@@ -277,7 +299,7 @@ DrawLoop:
 ;   MoveBigHero (Versão Arcade Premium - Filtro Atômico de Trava de Ataque)
 ;-------------------------------------------------------------------------------
 .proc MoveBigHero
-        stz z:$02               ; Rascunho na DP ($02): 0 = Parado, 1 = Em movimento
+        stz z:DP_TEMP_02               ; Rascunho na DP ($02): 0 = Parado, 1 = Em movimento
 
         ; =====================================================================
         ; ⚔️ FILTRO DE SEGURANÇA: SE ESTIVER BATENDO, BLOQUEIA ENTRADA DO D-PAD
@@ -336,25 +358,41 @@ CheckRight:
         .a8
 MoveRight:
         LDA #1
-        sta z:$02               ; Ativa flag de movimento
+        sta z:DP_TEMP_02               ; Ativa flag de movimento
         stz BigHero + BigHeroStruct::Facing     
-        lda BigHero + BigHeroStruct::X_Pos
+
+        rep #$20
+        .a16
+        lda HOR_SPEED
+        and #$00FF
         clc
-        adc HOR_SPEED               
-        CMP #140                        ; Passou do meio da tela (X >= 120)?
-        bcc @MoveHeroNormal             ; Se X < 120, apenas move o herói na tela
+        adc BigHero + BigHeroStruct::X_Pos
+        cmp #(WORLD_RIGHT - 32)         ; Limite direito da fase (2048 - 32 = 2016)
+        bcc @SaveRightX
+        LDA #(WORLD_RIGHT - 32)
 
-        ; Se chegou no meio da tela (X >= 120):
-        lda #140                        ; Trava o herói no meio da tela
-        sta BigHero + BigHeroStruct::X_Pos
+@SaveRightX:
+        STA BigHero + BigHeroStruct::X_Pos
 
-        lda HOR_SPEED                   ; Passa a velocidade para A
-        jsr ScrollWorldLeft             ; Empurra a câmera e puxa os inimigos/itens!
-        bra CheckUp
+        ; Verifica se o herói passou do ponto de empurrar a câmera para a direita (Screen_X > 140)
+        sec
+        sbc Camera_X
+        cmp #140
+        bcc @DoneRightCam
 
-@MoveHeroNormal:
-        sta BigHero + BigHeroStruct::X_Pos
-        
+        ; Atualiza Camera_X = BigHero.X_Pos - 140 (limitado a CAMERA_MAX_X = 1792)
+        lda BigHero + BigHeroStruct::X_Pos
+        sec
+        sbc #140
+        cmp #(WORLD_RIGHT - 256)
+        bcc @SaveCamRight
+        lda #(WORLD_RIGHT - 256)
+@SaveCamRight:
+        sta Camera_X
+@DoneRightCam:
+        sep #$20
+        .a8
+        bra CheckUp      
 
 CheckLeft:
         rep #$20                
@@ -367,14 +405,39 @@ CheckLeft:
         .a8
 MoveLeft:
         lda #$01
-        sta BigHero + BigHeroStruct::Facing     
+        sta BigHero + BigHeroStruct::Facing
+        sta z:DP_TEMP_02                       ; Flag de movimento
+
+        rep #$20
+        .a16
+        lda HOR_SPEED
+        and #$00FF
+        sta z:DP_TEMP_00                ; Guarda velocidade em 16-bit
         lda BigHero + BigHeroStruct::X_Pos
         sec
-        sbc HOR_SPEED               
+        sbc z:DP_TEMP_00
+        bcs @SaveLeftX                  ; Se Carry = 1, >= 0
+        lda #0                          ; Satura na parede esquerda da fase (X = 0)
+@SaveLeftX:
         sta BigHero + BigHeroStruct::X_Pos
-        lda #1
-        sta z:$02               ; Ativa flag de movimento
 
+        ; Verifica se o herói recuou abaixo de Screen_X = 80
+        sec
+        sbc Camera_X
+        cmp #80
+        bcs @DoneLeftCam                ; Se Screen_X >= 80, não precisa recuar câmera
+
+        ; Atualiza Camera_X = BigHero.X_Pos - 80 (limitado a 0 na esquerda)
+        lda BigHero + BigHeroStruct::X_Pos
+        sec
+        sbc #80
+        bcs @SaveCamLeft
+        lda #0
+@SaveCamLeft:
+        sta Camera_X
+@DoneLeftCam:
+        sep #$20
+        .a8
 CheckUp:
         rep #$20                
         .a16
@@ -390,7 +453,7 @@ MoveUp:
         sbc VER_SPEED               
         sta BigHero + BigHeroStruct::Y_Pos
         lda #1
-        sta z:$02               ; Ativa flag de movimento
+        sta z:DP_TEMP_02               ; Ativa flag de movimento
 
 CheckDown:
         rep #$20                
@@ -407,7 +470,7 @@ MoveDown:
         adc VER_SPEED                       
         sta BigHero + BigHeroStruct::Y_Pos
         lda #1
-        sta z:$02               ; Ativa flag de movimento
+        sta z:DP_TEMP_02               ; Ativa flag de movimento
 
 CheckPickupButton:
         rep #$20                    
@@ -523,7 +586,7 @@ CheckAttackButton:
         .a8
 
         ; === ENGINE DE ATUALIZAÇÃO DO ANIM_FRAME DO PROTAGONISTA ===
-        lda z:$02               ; Carrega o estado de movimento lido do D-Pad
+        lda z:DP_TEMP_02              ; Carrega o estado de movimento lido do D-Pad
         bne @UpdateWalkAnimation
 
         ; Se não está se movendo, força o frame de Idle (0) imediatamente
@@ -563,17 +626,25 @@ ProcessarArrastePipeline:
         bne @ArrasteEsquerda
 
 @ArrasteDireita:
+        rep #$20
+        .a16
         lda BigHero + BigHeroStruct::X_Pos
         clc
-        adc #16                      
-        sta a:WeaponStruct::X_Pos, y 
+        adc #16
+        sta a:WeaponStruct::X_Pos, y
+        sep #$20
+        .a8
         bra @AjustarY
 
 @ArrasteEsquerda:
+        rep #$20
+        .a16
         lda BigHero + BigHeroStruct::X_Pos
         clc
-        adc #01                      
-        sta a:WeaponStruct::X_Pos, y 
+        adc #1
+        sta a:WeaponStruct::X_Pos, y
+        sep #$20
+        .a8
 
 @AjustarY:
         lda BigHero + BigHeroStruct::Y_Pos
@@ -583,11 +654,15 @@ ProcessarArrastePipeline:
 
 MoveDone:
         ; --- SISTEMA DE MANUTENÇÃO DE GEOMETRIA & INVENCIBILIDADE ---
+        rep #$20
+        .a16
         lda BigHero + BigHeroStruct::X_Pos
         sta BigHero + BigHeroStruct::Hurtbox_X1
         clc
-        adc #32                             
+        adc #32
         sta BigHero + BigHeroStruct::Hurtbox_X2
+        sep #$20
+        .a8
 
         lda BigHero + BigHeroStruct::Y_Pos
         sta BigHero + BigHeroStruct::Hurtbox_Y1
@@ -628,15 +703,19 @@ MoveDone:
 
 ; --- TESTE DE DISTÂNCIA HIERÁRQUICO (AABB) ---
 @TestDist:
+        rep #$20
+        .a16
         lda BigHero + BigHeroStruct::X_Pos
         sec
         sbc a:WeaponStruct::X_Pos, y
         bcs @DiffXPositive
-        eor #$FF
+        eor #$FFFF
         clc
         adc #1
 @DiffXPositive:
-        cmp #PICKUP_DISTANCE
+        CMP #PICKUP_DISTANCE
+        sep #$20
+        .a8
         bcs @Exit
 
         lda BigHero + BigHeroStruct::Y_Pos
@@ -679,10 +758,14 @@ MoveDone:
         sta a:WeaponStruct::Target_Y, y
         sta a:WeaponStruct::Y_Pos, y
         
+        rep #$20
+        .a16
         lda BigHero + BigHeroStruct::X_Pos
         clc
-        adc #8                          
+        adc #8
         sta a:WeaponStruct::X_Pos, y
+        sep #$20
+        .a8
 
 @PopAndPickup:
         ply                             ; Recupera o Y da nova arma que o herói está em cima
@@ -714,10 +797,14 @@ MoveDone:
         sta a:WeaponStruct::Target_Y, y
         sta a:WeaponStruct::Y_Pos, y
         
+        rep #$20
+        .a16
         lda BigHero + BigHeroStruct::X_Pos
         clc
-        adc #8                          
+        adc #8
         sta a:WeaponStruct::X_Pos, y
+        sep #$20
+        .a8
         
 @Exit:
         rts

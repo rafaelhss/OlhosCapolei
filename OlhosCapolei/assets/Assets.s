@@ -23,6 +23,8 @@ VaderData: .incbin "VaderSprites7.vra"
 ColorData:  .incbin "SpritesBig8c.pal"
 BackgroundData: .incbin "Background.pal"
 
+
+.segment "RODATA"
 ;-------------------------------------------------------------------------------
 ; =============================================================================
 ; DADOS DE TESTE PARA BACKGROUND (4BPP = 32 BYTES POR TILE)
@@ -31,7 +33,7 @@ Test_BG_Palettes:
     ; Paleta 0 (BG1 - Rua)
     .word $6739     ; Cor 0: Céu (#CCCCCC)
     .word $19B3     ; Cor 1: Rua (#9E6831)
-    .word $19B3     ; Cor 2: Entre tijolos da rua (#9E6831)
+    .word $19B0     ; Cor 2: Entre tijolos da rua (#9E6831)
     .word $112D     ; Cor 3: Faixa da rua (#6E471F)
     .res 24, $00    ; Completa os 32 bytes da Paleta 0
 
@@ -58,6 +60,10 @@ Test_BG_Tiles:
     .byte $00, $00, $00, $00, $00, $00, $FF, $FF
     .byte $FF, $FF, $00, $00, $00, $00, $00, $00
     .res 16, $00
+
+
+
+.segment "CODE"
 
 .proc BuildTestBackgrounds
         php
