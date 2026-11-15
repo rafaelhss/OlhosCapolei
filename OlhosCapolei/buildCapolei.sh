@@ -207,7 +207,7 @@ for row in rows:
         <!-- commit:{commit_hash} -->
         <tr>
             <td>
-                <img src="{img_src}" width="100px" height="100px" >
+                <img src="{img_src}" width="200px" height="200px" >
             </td>
             <td>
                 {escaped_comment}
@@ -240,7 +240,7 @@ else:
         <!-- commit:{commit_hash} -->
         <tr>
             <td>
-                <img src="img/{target_thumb_filename}" width="100px" height="100px" >
+                <img src="img/{target_thumb_filename}" width="200px" height="200px" >
             </td>
             <td>
                 {escaped_comment}
