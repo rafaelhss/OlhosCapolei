@@ -39,28 +39,34 @@ fi
 TARGET_SITE_DIR="Site/roms"
 HTML_FILE="Site/index.html"
 
-# Captura a mensagem do último commit local
+# Captura o hash curto e a mensagem do último commit local
+LAST_COMMIT_HASH=$(git rev-parse --short HEAD 2>/dev/null || echo "")
 LAST_COMMIT_MSG=$(git log -1 --pretty=%B 2>/dev/null || echo "")
 
 if echo "$LAST_COMMIT_MSG" | grep -q "@SITE@"; then
-    echo "🌐 Tag @SITE@ detectada no último commit! Atualizando site..."
-    
-    # 1. Copia a ROM com o nome capoleiDDMMYYhhmm.smc para Site/roms
-    mkdir -p "$TARGET_SITE_DIR"
-    echo "📦 Enviando $ROM_NAME para $TARGET_SITE_DIR..."
-    cp build/OlhosCapolei.smc "$TARGET_SITE_DIR/$ROM_NAME"
-
-    # 2. Atualiza o Site/index.html se ele existir
-    if [ -f "$HTML_FILE" ]; then
-        DATA_ATUAL=$(date +"%d-%m-%Y %H:%M")
+    # Verifica se o hash deste commit já está registrado no index.html
+    if [ -f "$HTML_FILE" ] && [ -n "$LAST_COMMIT_HASH" ] && grep -q "<!-- commit:${LAST_COMMIT_HASH} -->" "$HTML_FILE"; then
+        echo "⏭️  O commit [$LAST_COMMIT_HASH] já foi publicado na tabela do site. Pulando duplicação..."
+    else
+        echo "🌐 Tag @SITE@ detectada no novo commit [$LAST_COMMIT_HASH]! Atualizando site..."
         
-        # Passa as variáveis para o Python manipular o HTML com precisão
-        COMMIT_MSG="$LAST_COMMIT_MSG" ROM_FILE="$ROM_NAME" DATA_STR="$DATA_ATUAL" HTML_PATH="$HTML_FILE" python3 - << 'EOF'
+        # 1. Copia a ROM com o nome capoleiDDMMYYhhmm.smc para Site/roms
+        mkdir -p "$TARGET_SITE_DIR"
+        echo "📦 Enviando $ROM_NAME para $TARGET_SITE_DIR..."
+        cp build/OlhosCapolei.smc "$TARGET_SITE_DIR/$ROM_NAME"
+
+        # 2. Atualiza o Site/index.html se ele existir
+        if [ -f "$HTML_FILE" ]; then
+            DATA_ATUAL=$(date +"%d-%m-%Y %H:%M")
+            
+            # Passa as variáveis para o Python manipular o HTML com precisão
+            COMMIT_HASH="$LAST_COMMIT_HASH" COMMIT_MSG="$LAST_COMMIT_MSG" ROM_FILE="$ROM_NAME" DATA_STR="$DATA_ATUAL" HTML_PATH="$HTML_FILE" python3 - << 'EOF'
 import os
 import re
 import html
 
 html_path = os.environ["HTML_PATH"]
+commit_hash = os.environ["COMMIT_HASH"]
 commit_msg = os.environ["COMMIT_MSG"]
 rom_file = os.environ["ROM_FILE"]
 data_str = os.environ["DATA_STR"]
@@ -88,6 +94,7 @@ if tbody_match:
     next_thumb_num = current_rows + 1
     
     new_row = f"""
+        <!-- commit:{commit_hash} -->
         <tr>
             <td>
                 <img src="img/thumb{next_thumb_num}.jpeg" width="100px" height="100px" >
@@ -112,11 +119,13 @@ if tbody_match:
         f.write(new_content)
         
     print(f"✅ HTML atualizado! Nova linha adicionada (img/thumb{next_thumb_num}.jpeg | {rom_file}).")
+    print(f"📸 Lembrete: Salve a imagem deste build em Site/img/thumb{next_thumb_num}.jpeg")
 else:
     print("⚠️  Aviso: Tag <tbody> não encontrada no index.html. O HTML não foi alterado.")
 EOF
-    else
-        echo "⚠️  Arquivo $HTML_FILE não encontrado para atualização."
+        else
+            echo "⚠️  Arquivo $HTML_FILE não encontrado para atualização."
+        fi
     fi
 else
     echo "ℹ️  Tag @SITE@ não encontrada no último commit. Pulando atualização do site."
