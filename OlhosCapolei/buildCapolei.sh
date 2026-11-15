@@ -114,24 +114,24 @@ if tbody_match:
     for row in rows:
         tds = re.findall(r'<td[^>]*>(.*?)</td>', row, flags=re.DOTALL | re.IGNORECASE)
         if len(tds) >= 4:
-            # Extrai o texto puro da coluna de comentário (2ª coluna)
-            row_comment = html.unescape(re.sub(r'<[^>]+>', '', tds)).strip()
+            # Extrai o texto puro da coluna de comentário (2ª coluna: índice 1)
+            row_comment = html.unescape(re.sub(r'<[^>]+>', '', tds[1])).strip()
             row_comment = re.sub(r'\s+', ' ', row_comment)
             
             # Se o comentário for idêntico (ignorando maiúsculas/minúsculas), substitui o registro
             if not replaced and row_comment.lower() == clean_comment.lower():
-                img_match = re.search(r'src=["\']([^"\']+)["\']', tds, flags=re.IGNORECASE)
+                img_match = re.search(r'src=["\']([^"\']+)["\']', tds[0], flags=re.IGNORECASE)
                 if img_match:
                     # Extrai apenas o nome base (ex: thumb2) e força extensão .png
-                    base_name = os.path.splitext(os.path.basename(img_match.group(1)))[0]
+                    base_name, _ = os.path.splitext(os.path.basename(img_match.group(1)))
                     target_thumb_filename = f"{base_name}.png"
                 else:
                     target_thumb_filename = f"thumb{len(rows)}.png"
                 
                 img_src = f"img/{target_thumb_filename}"
                 
-                # Apaga a ROM antiga da pasta Site/roms para não sobrar lixo
-                old_rom_match = re.search(r'\?rom=([^"\'>\s]+)', tds, flags=re.IGNORECASE)
+                # Apaga a ROM antiga da pasta Site/roms para não sobrar lixo (4ª coluna: índice 3)
+                old_rom_match = re.search(r'\?rom=([^"\'>\s]+)', tds[3], flags=re.IGNORECASE)
                 if old_rom_match:
                     old_rom_path = os.path.join(roms_dir, old_rom_match.group(1))
                     if os.path.exists(old_rom_path) and old_rom_match.group(1) != rom_file:
@@ -215,7 +215,7 @@ if tbody_match:
                     
         if recent_pngs:
             # Ordena pela data de modificação mais recente e pega o primeiro
-            recent_pngs.sort(key=lambda x: x[0], reverse=True)
+            recent_pngs.sort(key=lambda item: item[0], reverse=True)
             newest_screenshot = recent_pngs[0][1]
             
             os.makedirs(site_img_dir, exist_ok=True)
@@ -237,24 +237,46 @@ else
 fi
 
 # =============================================================================
-# 💾 PIPELINE: DETECÇÃO AVANÇADA DE SD CARD (EVERDRIVE)
+# 💾 PIPELINE: DETECÇÃO AVANÇADA DE SD CARD (EVERDRIVE) E EJECT SEGURO
 # =============================================================================
 SD_PATH=$(findmnt -ln -o TARGET | grep -E '^/(media|run/media|mnt)/' | head -n 1 || true)
 
 if [ -n "$SD_PATH" ]; then
-    echo "💾 Dispositivo detectado em: $SD_PATH"
+    # Descobre o dispositivo de bloco exato (ex: /dev/sdb1) antes de desmontar
+    SD_DEV=$(findmnt -n -o SOURCE "$SD_PATH" || true)
+    echo "💾 Dispositivo detectado em: $SD_PATH ($SD_DEV)"
     
     echo "🔓 Remontando o cartão como Read-Write..."
     sudo mount -o remount,rw "$SD_PATH"
     
-	echo "🧹 Limpando builds antigos do cartão..."
-	rm -f "$SD_PATH"/OlhosCapolei* "$SD_PATH"/capolei*
-	echo "🚀 Enviando $ROM_NAME para a raiz do cartão..."
-	cp build/OlhosCapolei.smc "$SD_PATH/$ROM_NAME"
-	# Força o Linux a descarregar o buffer de escrita no hardware físico
-	sync
-	echo "🎉 ROM $ROM_NAME atualizada com sucesso no seu Everdrive!"
-	else
-	echo "⚠️  Não foi possível detectar o SD Card automaticamente."
+    echo "🧹 Limpando builds antigos do cartão..."
+    rm -f "$SD_PATH"/OlhosCapolei* "$SD_PATH"/capolei*
+    
+    echo "🚀 Enviando $ROM_NAME para a raiz do cartão..."
+    cp build/OlhosCapolei.smc "$SD_PATH/$ROM_NAME"
+    
+    # Força o Linux a descarregar todo o buffer de escrita no hardware físico
+    sync
+    echo "🎉 ROM $ROM_NAME atualizada com sucesso no seu Everdrive!"
+
+    # Eject seguro via udisksctl (sem precisar de sudo)
+    if [ -n "$SD_DEV" ] && command -v udisksctl >/dev/null 2>&1; then
+        echo "⏏️  Ejetando o SD Card com segurança..."
+        udisksctl unmount -b "$SD_DEV" --no-user-interaction
+        
+        # Desliga o dispositivo pai (ex: /dev/sdb) se for leitor USB
+        PARENT_DEV=$(lsblk -no PKNAME "$SD_DEV" 2>/dev/null | head -n 1 || true)
+        if [ -n "$PARENT_DEV" ]; then
+            udisksctl power-off -b "/dev/$PARENT_DEV" --no-user-interaction 2>/dev/null || true
+        fi
+        echo "✅ Pode puxar o cartão SD com segurança!"
+    else
+        sudo umount "$SD_PATH"
+        echo "✅ Cartão desmontado com segurança!"
+    fi
+else
+    echo "⚠️  Não foi possível detectar o SD Card automaticamente."
 fi
+
 echo "========================================"
+
