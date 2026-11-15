@@ -177,7 +177,7 @@ if tbody_match:
             </td>
         </tr>"""
         updated_tbody = tbody_open + new_row + tbody_inner + tbody_close
-        print(f"✅ HTML atualizado! Nova linha adicionada (img/thumb{next_thumb_num}.jpeg | {rom_file}).")
+        print(f"✅ HTML atualizado!! Nova linha adicionada (img/thumb{next_thumb_num}.jpeg | {rom_file}).")
         print(f"📸 Lembrete: Salve a imagem deste build em Site/img/thumb{next_thumb_num}.jpeg")
         
     new_content = content[:tbody_match.start()] + updated_tbody + content[tbody_match.end():]
