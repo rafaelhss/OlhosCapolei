@@ -62,20 +62,30 @@
     </div>
 
     <!-- Configuração do EmulatorJS -->
+    <!-- Configuração do EmulatorJS -->
     <script>
+        // Lê o parâmetro ?rom= da URL (ex: play.html?rom=capolei1511260153.smc)
+        const urlParams = new URLSearchParams(window.location.search);
+        const romParam = urlParams.get("rom");
+
+        // Sanitiza o nome para evitar caminhos inválidos (mantém apenas o nome do arquivo)
+        const romFile = romParam ? romParam.split("/").pop().split("\\").pop() : "OlhosCapolei.smc";
+
         window.EJS_player = "#game";
 
         window.EJS_core = "snes";
 
-        window.EJS_gameUrl = "./roms/OlhosCapolei.smc";
+        window.EJS_gameUrl = "./roms/" + romFile;
 
         window.EJS_pathtodata =
             "https://cdn.emulatorjs.org/stable/data/";
 
-        window.EJS_gameName = "Super Mario World";
+        // Usa o nome da ROM (sem .smc) para separar os saves no navegador por versão
+        window.EJS_gameName = romFile.replace(/\.smc$/i, "");
 
         window.EJS_language = "pt-BR";
     </script>
+
 
     <!-- Loader oficial do EmulatorJS -->
     <script
