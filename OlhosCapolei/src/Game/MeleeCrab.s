@@ -333,7 +333,7 @@ Done:
         sta a:MeleeCrabStruct::Anim_Timer, y
         bne @Done 
         
-        lda #WALK_ANIM_SPEED 
+        lda #08 
         sta a:MeleeCrabStruct::Anim_Timer, y
         
         ;TODO perguntar pra IA o que ta acontecendo aqui.

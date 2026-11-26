@@ -502,10 +502,6 @@ Table_Init_MeleeCrabs_End:
 
 
 
-;-------------------------------------------------------------------------------
-;   SetupDefaultMeleeStats (Rotina Reutilizável de Spawn!)
-;   Entrada: X = Ponteiro 16-bit para a MeleeCrabStruct na WRAM
-;-------------------------------------------------------------------------------
 .proc   SetupDefaultMeleeStats
         .a8
         .i16
@@ -516,13 +512,10 @@ Table_Init_MeleeCrabs_End:
         lda #$09
         sta a:MeleeCrabStruct::Walk_Anim_Speed, x
 
-
-
         lda #$04
         sta a:MeleeCrabStruct::Anim_Timer, x
         stz a:MeleeCrabStruct::Anim_Frame, x
 
-        ; Prevenção do bug dos 5 segundos
         lda #$08
         sta a:MeleeCrabStruct::Preparing_Anim_Timer, x
         stz a:MeleeCrabStruct::Preparing_Anim_Frame, x
@@ -530,10 +523,13 @@ Table_Init_MeleeCrabs_End:
         sta a:MeleeCrabStruct::Attacking_Timer, x
         stz a:MeleeCrabStruct::Attacking_Anim_Frame, x
 
+        stz a:MeleeCrabStruct::HurtTimer, x
+        stz a:MeleeCrabStruct::Resting_Timer, x
+        stz a:MeleeCrabStruct::Dying_Timer, x
+        stz a:MeleeCrabStruct::Hitbox_Active, x
+
         lda #STATE_DEAD
         sta a:MeleeCrabStruct::State, x
-
-        stz a:MeleeCrabStruct::Hitbox_Active, x
 
         lda #04
         sta a:MeleeCrabStruct::HP, x
@@ -552,11 +548,10 @@ Table_Init_MeleeCrabs_End:
         lda #$09
         sta a:MeleeCrabStruct::Walk_Anim_Speed, x
 
-        LDA #$00
-        stz a:MeleeCrabStruct::Anim_Timer, x
+        lda #08
+        sta a:MeleeCrabStruct::Anim_Timer, x
         stz a:MeleeCrabStruct::Anim_Frame, x
 
-        ; Prevenção do bug dos 5 segundos
         lda #$08
         sta a:MeleeCrabStruct::Preparing_Anim_Timer, x
         stz a:MeleeCrabStruct::Preparing_Anim_Frame, x
@@ -564,10 +559,15 @@ Table_Init_MeleeCrabs_End:
         sta a:MeleeCrabStruct::Attacking_Timer, x
         stz a:MeleeCrabStruct::Attacking_Anim_Frame, x
 
+        stz a:MeleeCrabStruct::HurtTimer, x
+        stz a:MeleeCrabStruct::Resting_Timer, x
+        stz a:MeleeCrabStruct::Dying_Timer, x
+        stz a:MeleeCrabStruct::Spawn_Vel_Y, x
+        stz a:MeleeCrabStruct::Spawn_Anim_Timer, x
+        stz a:MeleeCrabStruct::Hitbox_Active, x
+
         lda #STATE_PRE_SPAWN
         sta a:MeleeCrabStruct::State, x
-
-        stz a:MeleeCrabStruct::Hitbox_Active, x
 
         lda #04
         sta a:MeleeCrabStruct::HP, x
