@@ -8,6 +8,7 @@ INIT_INC = 1
 ;----- Import ------------------------------------------------------------------
 .import     InitDemo
 .import     SetupDefaultMeleeStats
+.import     SetupPreSpawnMeleeStats
 ;-------------------------------------------------------------------------------
 
 .endif

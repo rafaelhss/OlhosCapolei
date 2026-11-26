@@ -6,6 +6,7 @@
 ;----- Export ------------------------------------------------------------------
 .export     InitDemo
 .export SetupDefaultMeleeStats
+.export SetupPreSpawnMeleeStats
 ;-------------------------------------------------------------------------------
 
 ;----- Assembler Directives ----------------------------------------------------
@@ -19,7 +20,8 @@
 .include "GameConstants.inc"
 .include "MemoryMapWRAM.inc"
 .include "PPU.inc"
-.include "Registers.inc"
+.INCLUDE "Registers.inc"
+.include "Stage.inc"
 ;-------------------------------------------------------------------------------
 
 
@@ -29,6 +31,9 @@
 .import Bullet2
 .import InitRNG
 .import Camera_X
+.import Stage_Script_Ptr
+.import Stage1_Script
+
 
 .segment "RODATA"
 
@@ -234,6 +239,15 @@ Table_Init_MeleeCrabs_End:
         .a8
         ; Índices X/Y continuam em 16-bit (.i16) de forma segura.
 
+
+
+        ; No InitDemo, aponte Stage_Script_Ptr para o início da fase
+        rep #$20
+        .a16
+        lda #.loword(Stage1_Script)
+        sta Stage_Script_Ptr
+        sep #$20
+        .a8
 
 
         ; --- INICIALIZAÇÃO DOS INIMIGOS MELEE ---
@@ -485,6 +499,9 @@ Table_Init_MeleeCrabs_End:
         rts
 .endproc
 
+
+
+
 ;-------------------------------------------------------------------------------
 ;   SetupDefaultMeleeStats (Rotina Reutilizável de Spawn!)
 ;   Entrada: X = Ponteiro 16-bit para a MeleeCrabStruct na WRAM
@@ -499,6 +516,8 @@ Table_Init_MeleeCrabs_End:
         lda #$09
         sta a:MeleeCrabStruct::Walk_Anim_Speed, x
 
+
+
         lda #$04
         sta a:MeleeCrabStruct::Anim_Timer, x
         stz a:MeleeCrabStruct::Anim_Frame, x
@@ -511,7 +530,41 @@ Table_Init_MeleeCrabs_End:
         sta a:MeleeCrabStruct::Attacking_Timer, x
         stz a:MeleeCrabStruct::Attacking_Anim_Frame, x
 
-        lda #STATE_WALKING
+        lda #STATE_DEAD
+        sta a:MeleeCrabStruct::State, x
+
+        stz a:MeleeCrabStruct::Hitbox_Active, x
+
+        lda #04
+        sta a:MeleeCrabStruct::HP, x
+
+        rts
+.endproc
+
+
+.proc   SetupPreSpawnMeleeStats
+        .a8
+        .i16
+
+        lda #12
+        sta a:MeleeCrabStruct::Tile_Count, x
+
+        lda #$09
+        sta a:MeleeCrabStruct::Walk_Anim_Speed, x
+
+        LDA #$00
+        stz a:MeleeCrabStruct::Anim_Timer, x
+        stz a:MeleeCrabStruct::Anim_Frame, x
+
+        ; Prevenção do bug dos 5 segundos
+        lda #$08
+        sta a:MeleeCrabStruct::Preparing_Anim_Timer, x
+        stz a:MeleeCrabStruct::Preparing_Anim_Frame, x
+        sta a:MeleeCrabStruct::Attacking_Anim_Timer, x
+        sta a:MeleeCrabStruct::Attacking_Timer, x
+        stz a:MeleeCrabStruct::Attacking_Anim_Frame, x
+
+        lda #STATE_PRE_SPAWN
         sta a:MeleeCrabStruct::State, x
 
         stz a:MeleeCrabStruct::Hitbox_Active, x

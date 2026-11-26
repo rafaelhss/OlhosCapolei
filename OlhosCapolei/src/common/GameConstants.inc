@@ -24,6 +24,9 @@ STATE_HURT      = 5
 STATE_DYING     = 6
 STATE_DEAD      = 7
 
+STATE_SPAWNING = 8
+STATE_PRE_SPAWN = 9
+
 
 
 
@@ -211,7 +214,15 @@ CAMERA_SCROLL_LEFT_EDGE  = 80           ; Se o herói recuar abaixo de X=80 na t
     Target_Attack_X        .word
     Target_Attack_Y        .byte
     HP                    .byte ;   Pontos de vida do inimigo (0 a 255)
-    Max_HP                .byte ;   Pontos de vida máximos do inimigo (0 a 255)    
+    Max_HP                .byte ;   Pontos de vida máximos do inimigo (0 a 255)   
+
+    Trigger_Cam_X   .word   ; Posição X da Camera que dispara o pulo
+    Spawn_Delay     .byte   ; Frames de atraso após Camera_X atingir Trigger_Cam_X
+    Base_Ground_Y   .byte   ; Guarda o Y original do chão durante o arco do pulo
+    Spawn_Vel_Y     .byte   ; Velocidade vertical do pulo (com sinal)
+    Spawn_Anim_Timer .byte  ; Timer para alternar frames de Pre-Spawn/Spawn
+
+ 
 .endstruct
 
 

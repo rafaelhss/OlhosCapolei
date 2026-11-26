@@ -5,6 +5,7 @@ file(REMOVE_RECURSE
   "CMakeFiles/OlhosCapolei.dir/src/Game/Init.s.o"
   "CMakeFiles/OlhosCapolei.dir/src/Game/Input.s.o"
   "CMakeFiles/OlhosCapolei.dir/src/Game/MeleeCrab.s.o"
+  "CMakeFiles/OlhosCapolei.dir/src/Game/Stage.s.o"
   "CMakeFiles/OlhosCapolei.dir/src/Game/Weapon2.s.o"
   "CMakeFiles/OlhosCapolei.dir/src/Main.s.o"
   "CMakeFiles/OlhosCapolei.dir/src/PPU/PPU.s.o"

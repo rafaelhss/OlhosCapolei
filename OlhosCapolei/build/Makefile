@@ -177,6 +177,14 @@ src/Game/MeleeCrab.s.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/OlhosCapolei.dir/build.make CMakeFiles/OlhosCapolei.dir/src/Game/MeleeCrab.s.o
 .PHONY : src/Game/MeleeCrab.s.o
 
+src/Game/Stage.o: src/Game/Stage.s.o
+.PHONY : src/Game/Stage.o
+
+# target to build an object file
+src/Game/Stage.s.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/OlhosCapolei.dir/build.make CMakeFiles/OlhosCapolei.dir/src/Game/Stage.s.o
+.PHONY : src/Game/Stage.s.o
+
 src/Game/Weapon2.o: src/Game/Weapon2.s.o
 .PHONY : src/Game/Weapon2.o
 
@@ -248,6 +256,7 @@ help:
 	@echo "... src/Game/Init.o"
 	@echo "... src/Game/Input.o"
 	@echo "... src/Game/MeleeCrab.o"
+	@echo "... src/Game/Stage.o"
 	@echo "... src/Game/Weapon2.o"
 	@echo "... src/Main.o"
 	@echo "... src/PPU/PPU.o"

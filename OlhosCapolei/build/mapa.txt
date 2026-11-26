@@ -16,36 +16,39 @@ Vector.s.o:
     HEADER            Offs=000000  Size=000020  Align=00001  Fill=0000
     VECTOR            Offs=000000  Size=00001C  Align=00001  Fill=0000
 Init.s.o:
-    CODE              Offs=0001D6  Size=00022C  Align=00001  Fill=0000
+    CODE              Offs=0001D6  Size=000267  Align=00001  Fill=0000
     RODATA            Offs=0000A0  Size=000038  Align=00001  Fill=0000
 Input.s.o:
-    CODE              Offs=000402  Size=000123  Align=00001  Fill=0000
+    CODE              Offs=00043D  Size=000123  Align=00001  Fill=0000
 BigHero.s.o:
-    CODE              Offs=000525  Size=0003F4  Align=00001  Fill=0000
+    CODE              Offs=000560  Size=0003F4  Align=00001  Fill=0000
     RODATA            Offs=0000D8  Size=000140  Align=00001  Fill=0000
 Weapon2.s.o:
-    CODE              Offs=000919  Size=0004B4  Align=00001  Fill=0000
+    CODE              Offs=000954  Size=0004B4  Align=00001  Fill=0000
     RODATA            Offs=000218  Size=0001DA  Align=00001  Fill=0000
 Bullet.s.o:
-    CODE              Offs=000DCD  Size=0000F6  Align=00001  Fill=0000
+    CODE              Offs=000E08  Size=0000F6  Align=00001  Fill=0000
 MeleeCrab.s.o:
-    CODE              Offs=000EC3  Size=00053A  Align=00001  Fill=0000
-    RODATA            Offs=0003F2  Size=0007C2  Align=00001  Fill=0000
+    CODE              Offs=000EFE  Size=000616  Align=00001  Fill=0000
+    RODATA            Offs=0003F2  Size=0008DA  Align=00001  Fill=0000
+Stage.s.o:
+    CODE              Offs=001514  Size=00006B  Align=00001  Fill=0000
+    RODATA            Offs=000CCC  Size=000022  Align=00001  Fill=0000
 PPU.s.o:
-    CODE              Offs=0013FD  Size=000067  Align=00001  Fill=0000
+    CODE              Offs=00157F  Size=000067  Align=00001  Fill=0000
 Main.s.o:
-    CODE              Offs=001464  Size=000886  Align=00001  Fill=0000
-    BSS               Offs=000002  Size=000131  Align=00001  Fill=0000
+    CODE              Offs=0015E6  Size=00087A  Align=00001  Fill=0000
+    BSS               Offs=000002  Size=00014B  Align=00001  Fill=0000
 
 
 Segment list:
 -------------
 Name                   Start     End    Size  Align
 ----------------------------------------------------
-BSS                   001000  001132  000133  00001
-CODE                  008000  009CE9  001CEA  00001
-RODATA                009CEA  00A89D  000BB4  00001
-SPRITEDATA            00A89E  00E8BF  004022  00001
+BSS                   001000  00114C  00014D  00001
+CODE                  008000  009E5F  001E60  00001
+RODATA                009E60  00AB4D  000CEE  00001
+SPRITEDATA            00AB4E  00EB6F  004022  00001
 HEADER                00FFC0  00FFDF  000020  00001
 VECTOR                00FFE4  00FFFF  00001C  00001
 
@@ -53,84 +56,89 @@ VECTOR                00FFE4  00FFFF  00001C  00001
 Exports list by name:
 ---------------------
 BigHero                   001002 RLA    BuildTestBackgrounds      008000 RLA    
-Bullet                    001124 RLA    Bullet2                   00112A RLA    
-Camera_X                  001131 RLA    ClearCGRAM                00813E RLA    
-ClearOAMRAM               008167 RLA    ClearProjectilePool       008919 RLA    
+Bullet                    00113C RLA    Bullet2                   001142 RLA    
+Camera_X                  001149 RLA    ClearCGRAM                00813E RLA    
+ClearOAMRAM               008167 RLA    ClearProjectilePool       008954 RLA    
 ClearRegisters            0080A1 RLA    ClearVRAM                 00810F RLA    
-ColorData                 00E89E RLA    DengueCrab                00106A RLA    
-DrawBigHero               008525 RLA    DrawBullet                008DCD RLA    
-DrawBullet2               008E13 RLA    DrawDroppedWeapon         008BA5 RLA    
-DrawMeleeCrab             0092B6 RLA    FrameCounter              001130 RLA    
+ColorData                 00EB4E RLA    DengueCrab                001076 RLA    
+DrawBigHero               008560 RLA    DrawBullet                008E08 RLA    
+DrawBullet2               008E4E RLA    DrawDroppedWeapon         008BE0 RLA    
+DrawMeleeCrab             0093AC RLA    FrameCounter              001148 RLA    
 InitDemo                  0081D6 RLA    InitRNG                   0081B9 RLA    
-LoadActiveWeaponToY       008D02 RLA    LoadVRAM                  0093FD RLA    
-MoveBigHero               008617 RLA    MoveBullet                008E59 RLA    
-MoveBullet2               008E8E RLA    MoveMeleeCrab             008EC3 RLA    
-NMIHandler                009CBC RLA    ProcessFireAttack         008D49 RLA    
-ProcessMeleeAttack        008DBD RLA    ProcessWeaponAttack       008A44 RLA    
-RapaNuiCrab               001095 RLA    ReadJoypad1               008195 RLA    
-ResetHandler              009464 RLA    SetupDefaultMeleeStats    0083D1 RLA    
-SpriteData                00A89E RLA    Test_BG_Palettes          009CEA RLA    
-Test_BG_Tiles             009D2A RLA    UpdateOAMRAM              009440 RLA    
-UpdateProjectiles         008A70 RLA    UpdateTargetSector        0090AB RLA    
-VaderCrab                 00103F RLA    VaderData                 00C89E RLA    
-WeaponA                   0010C0 RLA    WeaponB                   0010D4 RLA    
-WeaponC                   0010E8 RLA    WeaponD                   0010FC RLA    
-WeaponE                   001110 RLA    rand                      0081C4 RLA    
+LoadActiveWeaponToY       008D3D RLA    LoadVRAM                  00957F RLA    
+MoveBigHero               008652 RLA    MoveBullet                008E94 RLA    
+MoveBullet2               008EC9 RLA    MoveMeleeCrab             008EFE RLA    
+NMIHandler                009E32 RLA    ProcessFireAttack         008D84 RLA    
+ProcessMeleeAttack        008DF8 RLA    ProcessWeaponAttack       008A7F RLA    
+RapaNuiCrab               0010A7 RLA    ReadJoypad1               008195 RLA    
+ResetHandler              0095E6 RLA    SetupDefaultMeleeStats    0083DB RLA    
+SetupPreSpawnMeleeStats   00840C RLA    SpriteData                00AB4E RLA    
+Stage1_Script             00AB2C RLA    Stage_Script_Ptr          00114B RLA    
+Test_BG_Palettes          009E60 RLA    Test_BG_Tiles             009EA0 RLA    
+UpdateOAMRAM              0095C2 RLA    UpdateProjectiles         008AAB RLA    
+UpdateStageDirector       009514 RLA    UpdateTargetSector        0091A1 RLA    
+VaderCrab                 001045 RLA    VaderData                 00CB4E RLA    
+WeaponA                   0010D8 RLA    WeaponB                   0010EC RLA    
+WeaponC                   001100 RLA    WeaponD                   001114 RLA    
+WeaponE                   001128 RLA    rand                      0081C4 RLA    
 
 
 
 Exports list by value:
 ----------------------
-BigHero                   001002 RLA    VaderCrab                 00103F RLA    
-DengueCrab                00106A RLA    RapaNuiCrab               001095 RLA    
-WeaponA                   0010C0 RLA    WeaponB                   0010D4 RLA    
-WeaponC                   0010E8 RLA    WeaponD                   0010FC RLA    
-WeaponE                   001110 RLA    Bullet                    001124 RLA    
-Bullet2                   00112A RLA    FrameCounter              001130 RLA    
-Camera_X                  001131 RLA    BuildTestBackgrounds      008000 RLA    
-ClearRegisters            0080A1 RLA    ClearVRAM                 00810F RLA    
-ClearCGRAM                00813E RLA    ClearOAMRAM               008167 RLA    
-ReadJoypad1               008195 RLA    InitRNG                   0081B9 RLA    
-rand                      0081C4 RLA    InitDemo                  0081D6 RLA    
-SetupDefaultMeleeStats    0083D1 RLA    DrawBigHero               008525 RLA    
-MoveBigHero               008617 RLA    ClearProjectilePool       008919 RLA    
-ProcessWeaponAttack       008A44 RLA    UpdateProjectiles         008A70 RLA    
-DrawDroppedWeapon         008BA5 RLA    LoadActiveWeaponToY       008D02 RLA    
-ProcessFireAttack         008D49 RLA    ProcessMeleeAttack        008DBD RLA    
-DrawBullet                008DCD RLA    DrawBullet2               008E13 RLA    
-MoveBullet                008E59 RLA    MoveBullet2               008E8E RLA    
-MoveMeleeCrab             008EC3 RLA    UpdateTargetSector        0090AB RLA    
-DrawMeleeCrab             0092B6 RLA    LoadVRAM                  0093FD RLA    
-UpdateOAMRAM              009440 RLA    ResetHandler              009464 RLA    
-NMIHandler                009CBC RLA    Test_BG_Palettes          009CEA RLA    
-Test_BG_Tiles             009D2A RLA    SpriteData                00A89E RLA    
-VaderData                 00C89E RLA    ColorData                 00E89E RLA    
+BigHero                   001002 RLA    VaderCrab                 001045 RLA    
+DengueCrab                001076 RLA    RapaNuiCrab               0010A7 RLA    
+WeaponA                   0010D8 RLA    WeaponB                   0010EC RLA    
+WeaponC                   001100 RLA    WeaponD                   001114 RLA    
+WeaponE                   001128 RLA    Bullet                    00113C RLA    
+Bullet2                   001142 RLA    FrameCounter              001148 RLA    
+Camera_X                  001149 RLA    Stage_Script_Ptr          00114B RLA    
+BuildTestBackgrounds      008000 RLA    ClearRegisters            0080A1 RLA    
+ClearVRAM                 00810F RLA    ClearCGRAM                00813E RLA    
+ClearOAMRAM               008167 RLA    ReadJoypad1               008195 RLA    
+InitRNG                   0081B9 RLA    rand                      0081C4 RLA    
+InitDemo                  0081D6 RLA    SetupDefaultMeleeStats    0083DB RLA    
+SetupPreSpawnMeleeStats   00840C RLA    DrawBigHero               008560 RLA    
+MoveBigHero               008652 RLA    ClearProjectilePool       008954 RLA    
+ProcessWeaponAttack       008A7F RLA    UpdateProjectiles         008AAB RLA    
+DrawDroppedWeapon         008BE0 RLA    LoadActiveWeaponToY       008D3D RLA    
+ProcessFireAttack         008D84 RLA    ProcessMeleeAttack        008DF8 RLA    
+DrawBullet                008E08 RLA    DrawBullet2               008E4E RLA    
+MoveBullet                008E94 RLA    MoveBullet2               008EC9 RLA    
+MoveMeleeCrab             008EFE RLA    UpdateTargetSector        0091A1 RLA    
+DrawMeleeCrab             0093AC RLA    UpdateStageDirector       009514 RLA    
+LoadVRAM                  00957F RLA    UpdateOAMRAM              0095C2 RLA    
+ResetHandler              0095E6 RLA    NMIHandler                009E32 RLA    
+Test_BG_Palettes          009E60 RLA    Test_BG_Tiles             009EA0 RLA    
+Stage1_Script             00AB2C RLA    SpriteData                00AB4E RLA    
+VaderData                 00CB4E RLA    ColorData                 00EB4E RLA    
 
 
 
 Imports list:
 -------------
 BigHero (Main.s.o):
-    MeleeCrab.s.o             /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/MeleeCrab.s(35)
+    MeleeCrab.s.o             /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/MeleeCrab.s(40)
     Weapon2.s.o               /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Weapon2.s(23)
     BigHero.s.o               /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/BigHero.s(15)
-    Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.s(26)
+    Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.s(28)
 BuildTestBackgrounds (Assets.s.o):
     Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/assets/Assets.inc(13)
 Bullet (Main.s.o):
     Bullet.s.o                /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Bullet.s(14)
     Weapon2.s.o               /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Weapon2.s(29)
-    Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.s(28)
+    Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.s(30)
 Bullet2 (Main.s.o):
     Bullet.s.o                /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Bullet.s(15)
     Weapon2.s.o               /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Weapon2.s(30)
-    Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.s(29)
+    Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.s(31)
 Camera_X (Main.s.o):
-    MeleeCrab.s.o             /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/MeleeCrab.s(38)
+    Stage.s.o                 /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Stage.s(12)
+    MeleeCrab.s.o             /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/MeleeCrab.s(43)
     Bullet.s.o                /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Bullet.s(16)
     Weapon2.s.o               /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Weapon2.s(32)
     BigHero.s.o               /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/BigHero.s(23)
-    Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.s(31)
+    Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.s(33)
 ClearCGRAM (InitSNES.s.o):
     Main.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/common/InitSNES.inc(11)
 ClearOAMRAM (InitSNES.s.o):
@@ -144,7 +152,8 @@ ClearVRAM (InitSNES.s.o):
 ColorData (Assets.s.o):
     Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/assets/Assets.inc(11)
 DengueCrab (Main.s.o):
-    Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.s(27)
+    Stage.s.o                 /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Stage.s(11)
+    Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.s(29)
 DrawBigHero (BigHero.s.o):
     Main.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/BigHero.inc(10)
 DrawBullet (Bullet.s.o):
@@ -156,11 +165,12 @@ DrawDroppedWeapon (Weapon2.s.o):
 DrawMeleeCrab (MeleeCrab.s.o):
     Main.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/MeleeCrab.inc(10)
 FrameCounter (Main.s.o):
+    MeleeCrab.s.o             /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/MeleeCrab.s(41)
     BigHero.s.o               /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/BigHero.s(17)
 InitDemo (Init.s.o):
     Main.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.inc(9)
 InitRNG (Util.s.o):
-    Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.s(30)
+    Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.s(32)
 LoadActiveWeaponToY (Weapon2.s.o):
     BigHero.s.o               /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Weapon2.inc(15)
 LoadVRAM (PPU.s.o):
@@ -182,15 +192,23 @@ ProcessMeleeAttack (Weapon2.s.o):
 ProcessWeaponAttack (Weapon2.s.o):
     BigHero.s.o               /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Weapon2.inc(13)
 RapaNuiCrab (Main.s.o):
-    Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.s(27)
+    Stage.s.o                 /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Stage.s(11)
+    Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.s(29)
 ReadJoypad1 (Joypad.s.o):
     Main.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/common/Joypad.inc(9)
 ResetHandler (Main.s.o):
     Vector.s.o                /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/common/Vector.s(9)
 SetupDefaultMeleeStats (Init.s.o):
     Main.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.inc(10)
+SetupPreSpawnMeleeStats (Init.s.o):
+    Stage.s.o                 /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.inc(11)
 SpriteData (Assets.s.o):
     Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/assets/Assets.inc(9)
+Stage1_Script (Stage.s.o):
+    Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.s(35)
+Stage_Script_Ptr (Main.s.o):
+    Stage.s.o                 /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Stage.s(13)
+    Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.s(34)
 Test_BG_Palettes (Assets.s.o):
     Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/assets/Assets.inc(14)
 Test_BG_Tiles (Assets.s.o):
@@ -199,17 +217,20 @@ UpdateOAMRAM (PPU.s.o):
     Main.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/PPU/PPU.inc(11)
 UpdateProjectiles (Weapon2.s.o):
     Main.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Weapon2.inc(9)
+UpdateStageDirector (Stage.s.o):
+    Main.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Stage.inc(8)
 UpdateTargetSector (MeleeCrab.s.o):
     Main.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/MeleeCrab.inc(12)
 VaderCrab (Main.s.o):
-    MeleeCrab.s.o             /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/MeleeCrab.s(37)
-    Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.s(26)
+    Stage.s.o                 /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Stage.s(10)
+    MeleeCrab.s.o             /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/MeleeCrab.s(42)
+    Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.s(28)
 VaderData (Assets.s.o):
     Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/assets/Assets.inc(10)
 WeaponA (Main.s.o):
     Weapon2.s.o               /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Weapon2.s(24)
     BigHero.s.o               /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/BigHero.s(16)
-    Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.s(26)
+    Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.s(28)
 WeaponB (Main.s.o):
     Weapon2.s.o               /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Weapon2.s(25)
     BigHero.s.o               /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/BigHero.s(16)
@@ -222,7 +243,7 @@ WeaponD (Main.s.o):
 WeaponE (Main.s.o):
     Weapon2.s.o               /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Weapon2.s(28)
     BigHero.s.o               /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/BigHero.s(16)
-    Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.s(26)
+    Init.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/Init.s(28)
 rand (Util.s.o):
     Main.s.o                  /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/common/Util.inc(6)
     BigHero.s.o               /home/rafa/Documents/Projetos/Snes/OlhosCapolei/OlhosCapolei/OlhosCapolei/src/Game/BigHero.s(22)

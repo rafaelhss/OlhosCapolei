@@ -26,7 +26,8 @@
 .include "MeleeCrab.inc"
 .INCLUDE "Weapon2.inc"
 .INCLUDE "Bullet.inc"
-.include "Util.inc"
+.INCLUDE "Util.inc"
+.include "Stage.inc"
 
 ;-------------------------------------------------------------------------------
 
@@ -92,21 +93,24 @@ _ResetAlign:
         ; 1. INPUT PIPELINE
         JSR ReadJoypad1
         
+        ; 1.5 DIRETOR DE FASE (Spawna rachaduras conforme Camera_X avança)
+        JSR UpdateStageDirector
+        
 
 ;TODO melhorar a inteligencia de respawn
-        LDA #00
-        CMP FrameCounter
-        bne NaoRespawn
-        ;so teste 
-        pea .loword(VaderCrab)
-        jsr RespawnEnemy
-        ply 
-        pea .loword(DengueCrab)
-        jsr RespawnEnemy
-        ply 
-        pea .loword(RapaNuiCrab)
-        jsr RespawnEnemy
-        ply 
+        ; LDA #00
+        ; CMP FrameCounter
+        ; bne NaoRespawn
+        ; ;so teste 
+        ; pea .loword(VaderCrab)
+        ; jsr RespawnEnemy
+        ; ply 
+        ; pea .loword(DengueCrab)
+        ; jsr RespawnEnemy
+        ; ply 
+        ; pea .loword(RapaNuiCrab)
+        ; jsr RespawnEnemy
+        ; ply 
 
 
 NaoRespawn:
@@ -406,7 +410,13 @@ Finish:
         rts
 
 @CheckVaderVulnerable:
-        ldy z:DP_ENEMY_STRUCT_PTR       ; Y = Inimigo ativo (Vader ou Dengue)
+        ldy z:DP_ENEMY_STRUCT_PTR       ; Y = Inimigo ativo
+        
+        ; --- FILTRO: Ignora se State >= STATE_DYING (6, 7, 8 ou 9) ---
+        lda MeleeCrabStruct::State, y
+        cmp #STATE_DYING
+        bcs @NoCollision                ; Se estiver morrendo, morto, pulando ou na rachadura, sai!
+
         lda MeleeCrabStruct::HurtTimer, y
         beq @StartAABB
         rts
@@ -436,9 +446,6 @@ Finish:
         bcs @NoCollision
 
         ; =====================================================================
-        ; IMPACTO CONFIRMADO
-        ; =====================================================================
-        ; =====================================================================
         ; IMPACTO CONFIRMADO (Bullet)
         ; =====================================================================
         lda #BULLET_STATE_INACTIVE
@@ -460,8 +467,6 @@ Finish:
         rts
 .endproc
 
-
-
 ;-------------------------------------------------------------------------------
 ;   ApplyBullet2Collisions (Física de Impacto para o Segundo Slot de Tiro)
 ;-------------------------------------------------------------------------------
@@ -472,14 +477,12 @@ Finish:
         rts
 
 @CheckVaderVulnerable:
-
         ldy z:DP_ENEMY_STRUCT_PTR       ; Y = Inimigo ativo
         
-        ; --- FILTRO: Ignora se State >= STATE_DYING (6 ou 7) ---
+        ; --- FILTRO: Ignora se State >= STATE_DYING (6, 7, 8 ou 9) ---
         lda MeleeCrabStruct::State, y
         cmp #STATE_DYING
-        bcs @NoCollision                ; Se estiver morrendo ou morto, sai!
-
+        bcs @NoCollision                ; Se estiver morrendo, morto, pulando ou na rachadura, sai!
 
         ldy z:DP_ENEMY_STRUCT_PTR       
         lda MeleeCrabStruct::HurtTimer, y
@@ -513,9 +516,6 @@ Finish:
         ; =====================================================================
         ; IMPACTO CONFIRMADO (Bullet 2)
         ; =====================================================================
-        ; =====================================================================
-        ; IMPACTO CONFIRMADO (Bullet)
-        ; =====================================================================
         lda #BULLET_STATE_INACTIVE
         sta Bullet2 + BulletStruct::Active
 
@@ -530,12 +530,10 @@ Finish:
         lda Bullet2 + BulletStruct::Speed_X
         sta z:DP_TEMP_03                ; Direção direta pelo sinal do Speed_X
 
-          JSR ApplyEnemyHit
+        JSR ApplyEnemyHit
 @NoCollision:
         rts
 .endproc
-
-
 
 
 ;-------------------------------------------------------------------------------
@@ -1087,10 +1085,15 @@ Finish:
         .a8
 
         ; 2. Ignora inimigos já mortos
-        lda a:MeleeCrabStruct::State, y
+        LDA a:MeleeCrabStruct::State, y
         cmp #STATE_DEAD
-        bne @CheckClip
+        beq @HideHP
+        cmp #STATE_PRE_SPAWN
+        beq @HideHP
+        bra @CheckClip
+@HideHP:
         rts
+
 
 @CheckClip:
         ; 3. Calcula Screen_X (16-bit) = X_Pos - Camera_X
@@ -1217,6 +1220,8 @@ Finish:
         rts
 .endproc
 
+
+; O temporal ja passou. podemos deletar isso
 .proc logEnemyXYonMemory
 
 
@@ -1686,5 +1691,7 @@ FrameCounter:    .res 1    ; Contador global de frames (0 a 255)
 Camera_X: .res 2        ; Posição horizontal da câmera (16-bit: 0 a 65535)
 .export Camera_X
 
+Stage_Script_Ptr: .res 2  ;1. onde estamos no roteiro da fase
+.export Stage_Script_Ptr
 
 

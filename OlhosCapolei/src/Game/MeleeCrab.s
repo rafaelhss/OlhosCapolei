@@ -22,6 +22,11 @@ ATTACKING_DURATION_FRAMES = 45
 ATTACK_MAX_FRAMES = 2  
 
 
+SPAWNING_ANIM_SPEED = 15   
+SPAWNING_DURATION_FRAMES = 45
+SPAWNING_MAX_FRAMES = 2  
+
+
 ENEMY_ATTACK_DISTANCE = $1   ; Distância de engajamento do ataque da IA. Com  introduçao do Setor de Ataque, esse valor perdeu sentido.  
 ENEMY_ATTACK_Y_RANGE  = $08   ; Tolerância no eixo Y para alinhamento tridimensional
 
@@ -60,10 +65,23 @@ DYING_MAX_FRAMES      = 2
 @CheckDying:
         lda a:MeleeCrabStruct::State, y
         cmp #STATE_DYING
-        bne CheckHurt
+        bne @CheckPreSpawn
         jsr UpdateDyingState
         rts                 ; Enquanto morre, não executa IA nem atualiza hurtbox
        
+@CheckPreSpawn:
+        lda a:MeleeCrabStruct::State, y
+        cmp #STATE_PRE_SPAWN
+        bne @CheckSpawningState
+        jsr UpdatePreSpawnState
+        rts                             ; Sai sem atualizar Hurtbox!
+
+@CheckSpawningState:
+        cmp #STATE_SPAWNING
+        bne CheckHurt
+        jsr UpdateSpawningState
+        rts                             ; Sai sem atualizar Hurtbox durante o salto!
+
 
 CheckHurt:
         ; Verifica se o inimigo está em animação de dano (Hurt)
@@ -163,9 +181,111 @@ Done:
         rts
 .endproc
 
+.proc UpdatePreSpawnState
+        ; 1. Pisca o olho na rachadura a cada 12 frames
+        lda FrameCounter
+        and #$0B
+        bne @CheckTrigger
+        lda a:MeleeCrabStruct::Anim_Frame, y
+        eor #$01
+        sta a:MeleeCrabStruct::Anim_Frame, y
 
+@CheckTrigger:
+        ; 2. Espera o Spawn_Delay acabar (ou se for 0, pula quando o herói chegar perto!)
+        lda a:MeleeCrabStruct::Spawn_Delay, y
+        beq @CheckProximity
+        sec
+        sbc #1
+        sta a:MeleeCrabStruct::Spawn_Delay, y
+        rts
 
+@CheckProximity:
+        rep #$20
+        .a16
+        lda a:MeleeCrabStruct::X_Pos, y
+        sec
+        sbc BigHero + BigHeroStruct::X_Pos
+        bcs @AbsDist
+        eor #$FFFF
+        clc
+        adc #1
+@AbsDist:
+        cmp #96                         ; Pula quando o herói estiver a 96 pixels!
+        sep #$20
+        .a8
+        bcs @Wait
 
+        ; --- INICIA O PULO MICHAEL JACKSON! ---
+        lda #STATE_SPAWNING
+        sta a:MeleeCrabStruct::State, y
+        lda a:MeleeCrabStruct::Y_Pos, y
+        sta a:MeleeCrabStruct::Base_Ground_Y, y ; Salva o chão exato
+        lda #<(-6)                      ; Impulso inicial para cima (-6 px/frame)
+        sta a:MeleeCrabStruct::Spawn_Vel_Y, y
+        lda #0
+        sta a:MeleeCrabStruct::Anim_Frame, y
+
+        ; Olha na direção do herói antes de saltar
+        rep #$20
+        .a16
+        lda a:MeleeCrabStruct::X_Pos, y
+        cmp BigHero + BigHeroStruct::X_Pos
+        sep #$20
+        .a8
+        bcc @FaceRight
+        lda #0
+        sta a:MeleeCrabStruct::Facing, y
+        rts
+@FaceRight:
+        lda #1
+        sta a:MeleeCrabStruct::Facing, y
+@Wait:
+        rts
+.endproc
+
+.proc UpdateSpawningState
+        ; 1. Aplica velocidade vertical ao Y_Pos
+        lda a:MeleeCrabStruct::Y_Pos, y
+        clc
+        adc a:MeleeCrabStruct::Spawn_Vel_Y, y
+        sta a:MeleeCrabStruct::Y_Pos, y
+
+        ; 2. Gravidade suave (a cada 2 frames aumenta +1 na velocidade)
+        lda FrameCounter
+        and #$01
+        bne @CheckLanding
+        lda a:MeleeCrabStruct::Spawn_Vel_Y, y
+        clc
+        adc #1
+        sta a:MeleeCrabStruct::Spawn_Vel_Y, y
+
+        ; Troca frame de animação no ápice do pulo (quando começa a cair)
+        lda a:MeleeCrabStruct::Spawn_Vel_Y, y
+        bmi @CheckLanding
+        lda #1
+        sta a:MeleeCrabStruct::Anim_Frame, y
+
+@CheckLanding:
+        ; 3. Verifica se voltou para o chão original (Base_Ground_Y)
+        lda a:MeleeCrabStruct::Spawn_Vel_Y, y
+        bmi @StillInAir                 ; Se ainda está subindo (< 0), não pousou
+
+        lda a:MeleeCrabStruct::Y_Pos, y
+        cmp a:MeleeCrabStruct::Base_Ground_Y, y
+        bcc @StillInAir
+
+        ; --- POUSOU NO CHÃO! ---
+        lda a:MeleeCrabStruct::Base_Ground_Y, y
+        sta a:MeleeCrabStruct::Y_Pos, y
+        lda #STATE_WALKING
+        sta a:MeleeCrabStruct::State, y
+        lda #0
+        STA a:MeleeCrabStruct::Anim_Frame, y
+        LDA #WALK_ANIM_SPEED                    
+        sta a:MeleeCrabStruct::Anim_Timer, y
+@StillInAir:
+        rts
+.endproc
 
 .proc UpdateDyingState
         ; 1. Timer total da morte
@@ -844,6 +964,29 @@ CheckHurtTimer:
         lda #4                          ; Se tiver HurtTimer ativo, força o frame de Hurt
         rts
 @CheckStates:
+        LDA a:MeleeCrabStruct::State, y
+        cmp #STATE_PRE_SPAWN
+        bne @CheckSpawning
+        lda a:MeleeCrabStruct::Anim_Frame, y
+        bne @PreSpawn1
+        lda #20                         ; RapaNuiCrab_Layout_PreSpawning0
+        rts
+@PreSpawn1:
+        lda #22                         ; RapaNuiCrab_Layout_PreSpawning1
+        rts
+
+@CheckSpawning:
+        cmp #STATE_SPAWNING
+        bne @CheckDyingFrame            ; (renomeie o check atual do STATE_DYING para cá)
+        lda a:MeleeCrabStruct::Anim_Frame, y
+        bne @Spawn1
+        lda #24                         ; RapaNuiCrab_Layout_Spawning0
+        rts
+@Spawn1:
+        lda #26                         ; RapaNuiCrab_Layout_Spawning1
+        RTS
+        
+@CheckDyingFrame:
         lda a:MeleeCrabStruct::State, y
         cmp #STATE_DYING
         bne @CheckResting
@@ -1160,6 +1303,27 @@ RapaNuiCrab_Layout_Dying1:
 .byte 1, 14,$00,$31, 18, 14,$EE,$31, 34, 18,$EE,$31, 50, 16,$00,$31
 .byte 2, 30,$EE,$31, 17, 30,$EE,$31, 31, 30,$EE,$31, 49, 32,$EE,$31
 .byte 3, 46,$EE,$31, 15, 47,$EE,$31, 33, 50,$EE,$31, 47, 48,$EE,$31
+RapaNuiCrab_Layout_Spawning0:
+.byte 0,  0,$00,$31, 16,  0,$E0,$31, 32,  0,$E0,$31, 48,  0,$00,$31
+.byte 0, 16,$00,$31, 16, 16,$E0,$31, 32, 16,$E0,$31, 48, 16,$00,$31
+.byte 0, 32,$EE,$31, 16, 32,$E0,$31, 32, 32,$E0,$31, 48, 32,$EE,$31
+.byte 0, 48,$EE,$31, 16, 48,$E0,$31, 32, 48,$E0,$31, 48, 48,$EE,$31
+RapaNuiCrab_Layout_Spawning1:
+.byte 3,  2,$E0,$31, 14,  2,$E0,$31, 30,  1,$EE,$31, 47,  0,$E0,$31
+.byte 1, 14,$00,$31, 18, 14,$EE,$31, 34, 18,$EE,$31, 50, 16,$00,$31
+.byte 2, 30,$EE,$31, 17, 30,$EE,$31, 31, 30,$EE,$31, 49, 32,$EE,$31
+.byte 3, 46,$E0,$31, 15, 47,$E0,$31, 33, 50,$EE,$31, 47, 48,$E0,$31
+RapaNuiCrab_Layout_PreSpawning0:
+.byte 3,  2,$EE,$31, 14,  2,$EE,$31, 30,  1,$EE,$31, 47,  0,$EE,$31
+.byte 1, 14,$E0,$31, 18, 14,$E0,$31, 34, 18,$E0,$31, 50, 16,$E0,$31
+.byte 2, 30,$E0,$31, 17, 30,$E0,$31, 31, 30,$E0,$31, 49, 32,$E0,$31
+.byte 3, 46,$EE,$31, 15, 47,$EE,$31, 33, 50,$EE,$31, 47, 48,$EE,$31
+RapaNuiCrab_Layout_PreSpawning1:
+.byte 3,  2,$E0,$31, 14,  2,$EE,$31, 30,  1,$EE,$31, 47,  0,$E0,$31
+.byte 1, 14,$E0,$31, 18, 14,$E0,$31, 34, 18,$E0,$31, 50, 16,$E0,$31
+.byte 2, 30,$E0,$31, 17, 30,$E0,$31, 31, 30,$E0,$31, 49, 32,$E0,$31
+.byte 3, 46,$E0,$31, 15, 47,$EE,$31, 33, 50,$EE,$31, 47, 48,$E0,$31
+
 
 
 
@@ -1175,6 +1339,10 @@ Vader_Animation_Table:
 .word .loword(VaderCrab_Layout_FrameAttacking1)
 .word .loword(VaderCrab_Layout_Dying0)    ; Índice 16 (Dying 0)
 .word .loword(VaderCrab_Layout_Dying1)    ; Índice 18 (Dying 1)
+.word .loword(VaderCrab_Layout) ; Índice 20 (PreSpawning0 temporário)
+.word .loword(VaderCrab_Layout) ; Índice 22 (PreSpawning1 temporário)
+.word .loword(VaderCrab_Layout) ; Índice 24 (Spawning0 temporário)
+.word .loword(VaderCrab_Layout) ; Índice 26 (Spawning1 temporário)
 Dengue_Animation_Table:
 .word .loword(DengueCrab_Layout)
 .word .loword(DengueCrab_Layout_Frame1)
@@ -1186,6 +1354,10 @@ Dengue_Animation_Table:
 .word .loword(DengueCrab_Layout_FrameAttacking1)
 .word .loword(DengueCrab_Layout_Dying0)    ; Índice 16 (Dying 0)
 .word .loword(DengueCrab_Layout_Dying1)    ; Índice 18 (Dying 1)
+.word .loword(DengueCrab_Layout) ; Índice 20 (PreSpawning0 temporário)
+.word .loword(DengueCrab_Layout) ; Índice 22 (PreSpawning1 temporário)
+.word .loword(DengueCrab_Layout) ; Índice 24 (Spawning0 temporário)
+.word .loword(DengueCrab_Layout) ; Índice 26 (Spawning1 temporário)
 Rapa_Animation_Table:
 .word .loword(RapaNuiCrab_Layout)
 .word .loword(RapaNuiCrab_Layout_Frame1)
@@ -1197,6 +1369,11 @@ Rapa_Animation_Table:
 .word .loword(RapaNuiCrab_Layout_FrameAttacking1)
 .word .loword(RapaNuiCrab_Layout_Dying0)    ; Índice 16 (Dying 0)
 .word .loword(RapaNuiCrab_Layout_Dying1)    ; Índice 18 (Dying 1)
+.word .loword(RapaNuiCrab_Layout_PreSpawning0)    
+.word .loword(RapaNuiCrab_Layout_PreSpawning1)    
+.word .loword(RapaNuiCrab_Layout_Spawning0)    
+.word .loword(RapaNuiCrab_Layout_Spawning1)    
+
 Enemy_Master_Animation_Table:
 .word .loword(Vader_Animation_Table)
 .word .loword(Dengue_Animation_Table)
