@@ -27,14 +27,14 @@ Stage1_Script:
     .byte 130, ENEMY_TYPE_DENGUE, $00, 0
 
     ; Quando o jogador andar até Cam_X = 120, outra rachadura aparece lá na frente em X = 350
-    .word 120, 350
+    .word 120, 140
     .byte 110, ENEMY_TYPE_VADER, $01, 0
 
     ; Emboscada dupla em Cam_X = 300
-    .word 300, 520
+    .word 300, 320
     .byte 140, ENEMY_TYPE_RAPA, $02, 0
 
-    .word 300, 540
+    .word 300, 360
     .byte 105, ENEMY_TYPE_RAPA, $03, 90
 
     ; Fim da fase

@@ -29,15 +29,15 @@ Weapon2.s.o:
 Bullet.s.o:
     CODE              Offs=000E08  Size=0000F6  Align=00001  Fill=0000
 MeleeCrab.s.o:
-    CODE              Offs=000EFE  Size=000616  Align=00001  Fill=0000
-    RODATA            Offs=0003F2  Size=0008DA  Align=00001  Fill=0000
+    CODE              Offs=000EFE  Size=000628  Align=00001  Fill=0000
+    RODATA            Offs=0003F2  Size=000ADA  Align=00001  Fill=0000
 Stage.s.o:
-    CODE              Offs=001514  Size=00006B  Align=00001  Fill=0000
-    RODATA            Offs=000CCC  Size=000022  Align=00001  Fill=0000
+    CODE              Offs=001526  Size=00006B  Align=00001  Fill=0000
+    RODATA            Offs=000ECC  Size=000022  Align=00001  Fill=0000
 PPU.s.o:
-    CODE              Offs=00157F  Size=000067  Align=00001  Fill=0000
+    CODE              Offs=001591  Size=000067  Align=00001  Fill=0000
 Main.s.o:
-    CODE              Offs=0015E6  Size=00087A  Align=00001  Fill=0000
+    CODE              Offs=0015F8  Size=00087A  Align=00001  Fill=0000
     BSS               Offs=000002  Size=00014B  Align=00001  Fill=0000
 
 
@@ -46,9 +46,9 @@ Segment list:
 Name                   Start     End    Size  Align
 ----------------------------------------------------
 BSS                   001000  00114C  00014D  00001
-CODE                  008000  009E5F  001E60  00001
-RODATA                009E60  00AB4D  000CEE  00001
-SPRITEDATA            00AB4E  00EB6F  004022  00001
+CODE                  008000  009E71  001E72  00001
+RODATA                009E72  00AD5F  000EEE  00001
+SPRITEDATA            00AD60  00ED81  004022  00001
 HEADER                00FFC0  00FFDF  000020  00001
 VECTOR                00FFE4  00FFFF  00001C  00001
 
@@ -60,24 +60,24 @@ Bullet                    00113C RLA    Bullet2                   001142 RLA
 Camera_X                  001149 RLA    ClearCGRAM                00813E RLA    
 ClearOAMRAM               008167 RLA    ClearProjectilePool       008954 RLA    
 ClearRegisters            0080A1 RLA    ClearVRAM                 00810F RLA    
-ColorData                 00EB4E RLA    DengueCrab                001076 RLA    
+ColorData                 00ED60 RLA    DengueCrab                001076 RLA    
 DrawBigHero               008560 RLA    DrawBullet                008E08 RLA    
 DrawBullet2               008E4E RLA    DrawDroppedWeapon         008BE0 RLA    
 DrawMeleeCrab             0093AC RLA    FrameCounter              001148 RLA    
 InitDemo                  0081D6 RLA    InitRNG                   0081B9 RLA    
-LoadActiveWeaponToY       008D3D RLA    LoadVRAM                  00957F RLA    
+LoadActiveWeaponToY       008D3D RLA    LoadVRAM                  009591 RLA    
 MoveBigHero               008652 RLA    MoveBullet                008E94 RLA    
 MoveBullet2               008EC9 RLA    MoveMeleeCrab             008EFE RLA    
-NMIHandler                009E32 RLA    ProcessFireAttack         008D84 RLA    
+NMIHandler                009E44 RLA    ProcessFireAttack         008D84 RLA    
 ProcessMeleeAttack        008DF8 RLA    ProcessWeaponAttack       008A7F RLA    
 RapaNuiCrab               0010A7 RLA    ReadJoypad1               008195 RLA    
-ResetHandler              0095E6 RLA    SetupDefaultMeleeStats    0083DB RLA    
-SetupPreSpawnMeleeStats   00840C RLA    SpriteData                00AB4E RLA    
-Stage1_Script             00AB2C RLA    Stage_Script_Ptr          00114B RLA    
-Test_BG_Palettes          009E60 RLA    Test_BG_Tiles             009EA0 RLA    
-UpdateOAMRAM              0095C2 RLA    UpdateProjectiles         008AAB RLA    
-UpdateStageDirector       009514 RLA    UpdateTargetSector        0091A1 RLA    
-VaderCrab                 001045 RLA    VaderData                 00CB4E RLA    
+ResetHandler              0095F8 RLA    SetupDefaultMeleeStats    0083DB RLA    
+SetupPreSpawnMeleeStats   00840C RLA    SpriteData                00AD60 RLA    
+Stage1_Script             00AD3E RLA    Stage_Script_Ptr          00114B RLA    
+Test_BG_Palettes          009E72 RLA    Test_BG_Tiles             009EB2 RLA    
+UpdateOAMRAM              0095D4 RLA    UpdateProjectiles         008AAB RLA    
+UpdateStageDirector       009526 RLA    UpdateTargetSector        0091A1 RLA    
+VaderCrab                 001045 RLA    VaderData                 00CD60 RLA    
 WeaponA                   0010D8 RLA    WeaponB                   0010EC RLA    
 WeaponC                   001100 RLA    WeaponD                   001114 RLA    
 WeaponE                   001128 RLA    rand                      0081C4 RLA    
@@ -106,12 +106,12 @@ ProcessFireAttack         008D84 RLA    ProcessMeleeAttack        008DF8 RLA
 DrawBullet                008E08 RLA    DrawBullet2               008E4E RLA    
 MoveBullet                008E94 RLA    MoveBullet2               008EC9 RLA    
 MoveMeleeCrab             008EFE RLA    UpdateTargetSector        0091A1 RLA    
-DrawMeleeCrab             0093AC RLA    UpdateStageDirector       009514 RLA    
-LoadVRAM                  00957F RLA    UpdateOAMRAM              0095C2 RLA    
-ResetHandler              0095E6 RLA    NMIHandler                009E32 RLA    
-Test_BG_Palettes          009E60 RLA    Test_BG_Tiles             009EA0 RLA    
-Stage1_Script             00AB2C RLA    SpriteData                00AB4E RLA    
-VaderData                 00CB4E RLA    ColorData                 00EB4E RLA    
+DrawMeleeCrab             0093AC RLA    UpdateStageDirector       009526 RLA    
+LoadVRAM                  009591 RLA    UpdateOAMRAM              0095D4 RLA    
+ResetHandler              0095F8 RLA    NMIHandler                009E44 RLA    
+Test_BG_Palettes          009E72 RLA    Test_BG_Tiles             009EB2 RLA    
+Stage1_Script             00AD3E RLA    SpriteData                00AD60 RLA    
+VaderData                 00CD60 RLA    ColorData                 00ED60 RLA    
 
 
 
