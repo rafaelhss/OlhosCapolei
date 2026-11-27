@@ -71,6 +71,12 @@ _ResetAlign:
         sta NMITIMEN
         cli                     ; Corta a trava global de interrupcões da CPU
 
+
+        stz Game_State                  ; Começa no Menu (GAME_STATE_MENU)
+        stz Current_Stage               ; Fase 1 selecionada por padrão
+        jsr InitMenuScreen              ; Prepara a tela do menu
+
+
         jmp GameLoop            
 .endproc
 ;-------------------------------------------------------------------------------
@@ -88,11 +94,17 @@ _ResetAlign:
 
  ; === INCREMENTA O CONTADOR GLOBAL DE FRAMES ===
         inc FrameCounter
+   ; 1. INPUT PIPELINE
+        JSR ReadJoypad1 
 
+        lda Game_State
+        cmp #GAME_STATE_MENU
+        bne @RunGameplay
+        jsr UpdateMenu
+        jmp GameLoop
 
-        ; 1. INPUT PIPELINE
-        JSR ReadJoypad1
-        
+@RunGameplay:
+
         ; 1.5 DIRETOR DE FASE (Spawna rachaduras conforme Camera_X avança)
         JSR UpdateStageDirector
         
@@ -1168,57 +1180,240 @@ Finish:
 .endproc
 
 
+; =============================================================================
+; InitMenuScreen: Liga a tela e exibe um fundo simples para seleção de fase
+; =============================================================================
+.proc InitMenuScreen
+        sep #$20
+        .a8
+        lda #$8F
+        sta INIDISP                     ; Desliga tela (Force Blank)
 
-;-------------------------------------------------------------------------------
-;   RespawnEnemy
-;   Entrada via Pilha (3,s): Endereço 16-bit da struct do inimigo
-;   Comportamento:
-;     - Verifica se o inimigo morreu (HP == 0)
-;     - Usa a sua rotina 'rand' para sortear o lado (esquerda/direita) e altura Y
-;     - Reseta todos os status via SetupDefaultMeleeStats
-;-------------------------------------------------------------------------------
-.proc   RespawnEnemy
-        ; 1. Pega o endereço do inimigo seguindo o seu padrão exato (3,s)
+        jsr ClearOAMRAM
+        ; Pinta o fundo (Cor $00) de azul-petróleo escuro para diferenciar do jogo
+        stz CGADD
+        lda #$20
+        sta CGDATA
+        lda #$14
+        sta CGDATA
+
+        ; Carrega a paleta dos sprites ($80) para desenhar o cursor de seleção
+        lda #$80
+        sta CGADD
+        ldx #0
+@PalLoop:
+        lda f:ColorData, x
+        sta CGDATA
+        inx
+        cpx #32
+        bcc @PalLoop
+
+        ; Carrega os sprites básicos na VRAM ($0000) para ter ícones no menu
+        tsx
+        pea $0000
+        pea SpriteData
         rep #$20
         .a16
-        lda 3, s                        ; Lê ponteiro da struct do inimigo
-        tay                             ; Guarda em Y
+        lda #$2000
+        pha
+        sep #$20
+        .a8
+        jsr LoadVRAM
+        txs
+
+        lda #%01100000                  ; Sprites 16x16 e 32x32
+        sta OBJSEL
+        lda #$10                        ; Ativa apenas camada de Sprites (OBJ)
+        sta TM
+
+        lda #$0F                        ; Liga a tela!
+        sta INIDISP
+        rts
+.endproc
+
+; =============================================================================
+; UpdateMenu: Alterna entre Fase 1 (Up) e Fase 2 (Down) e inicia com Start
+; =============================================================================
+.proc UpdateMenu
+        ; --- Checa UP / DOWN no JOYTRIGGER1 (16-bit) ---
+        rep #$20
+        .a16
+        lda JOYTRIGGER1
+        bit #UP_BUTTON
+        beq @CheckDown
+        sep #$20
+        .a8
+        stz Current_Stage               ; Seleciona Fase 1 (0)
+        bra @CheckStart
+
+@CheckDown:
+        rep #$20
+        .a16
+        bit #DOWN_BUTTON
+        beq @CheckStart16
+        sep #$20
+        .a8
+        lda #1
+        sta Current_Stage               ; Seleciona Fase 2 (1)
+        bra @CheckStart
+
+@CheckStart16:
         sep #$20
         .a8
 
-        ; 2. Só faz respawn se o inimigo estiver morto (HP == 0)
-        lda a:MeleeCrabStruct::HP, y
-        bne @Fim
+@CheckStart:
+        rep #$20
+        .a16
+        lda JOYTRIGGER1
+        bit #START_BUTTON
+        sep #$20
+        .a8
+        beq @DrawMenuSprites
 
-        ; --- 3. SORTEIA O LADO DO EIXO X (ESQUERDA OU DIREITA) ---
-        jsr rand                        ; Retorna byte aleatório em A (.a8)
-        and #$01                        ; Isola apenas o bit 0 (0 ou 1)
-        beq @NasceEsquerda
+        ; --- START PRESSIONADO: INICIA A FASE ESCOLHIDA! ---
+        stz NMITIMEN                    ; ◄ Desliga NMI para não interromper o load da VRAM!
+        lda #$8F
+        sta INIDISP                     ; Desliga a tela antes de recarregar VRAM/CGRAM
+        jsr ClearVRAM
+        jsr ClearOAMRAM
+        jsr InitDemo                    ; Carrega a fase baseada em Current_Stage!
+        lda #GAME_STATE_PLAYING
+        sta Game_State
+        LDA #$81
+        sta NMITIMEN                    ; ◄ Religa NMI + Auto-joypad!
+        rts
 
-@NasceDireita:
-        lda #$F0                        ; X = 240 (Borda direita)
-        bra @SalvaX
+@DrawMenuSprites:
+        ; Limpa OAMMIRROR antes de desenhar
+        ldx #0
+@ClearOAM:
+        inx
+        lda #$E0
+        sta OAMMIRROR, x
+        inx
+        inx
+        inx
+        cpx #512
+        bcc @ClearOAM
 
-@NasceEsquerda:
-        lda #$08                        ; X = 8 (Borda esquerda)
+        ; Desenha 1 ícone para Fase 1 (Y = 80) e 2 ícones para Fase 2 (Y = 120)
+        ldx #0
+        ; Ícone Fase 1 (X = 110, Y = 80)
+        lda #110
+        sta OAMMIRROR, x
+        inx
+        lda #80
+        sta OAMMIRROR, x
+        inx
+        lda #$0E                        ; Tile do indicador (ex: bola/HP)
+        sta OAMMIRROR, x
+        inx
+        lda #$31
+        sta OAMMIRROR, x
+        inx
 
-@SalvaX:
-        sta a:MeleeCrabStruct::X_Pos, y
+        ; Ícone Fase 2 - Primeiro (X = 110, Y = 120)
+        lda #110
+        sta OAMMIRROR, x
+        inx
+        lda #120
+        sta OAMMIRROR, x
+        inx
+        lda #$0E
+        sta OAMMIRROR, x
+        inx
+        lda #$31
+        sta OAMMIRROR, x
+        inx
 
-        ; --- 4. SORTEIA A ALTURA DO CHÃO (EIXO Y) ---
-        jsr rand                        ; Pega um novo byte aleatório em A
-        and #$3F                        ; Limita o valor entre 0 e 63 ($00 a $3F)
-        clc
-        adc #(SCREEN_BOTTOM - 64)       ; Soma com o teto do chão (Ex: 224 - 64 = 160)
-        sta a:MeleeCrabStruct::Y_Pos, y
+        ; Ícone Fase 2 - Segundo (X = 126, Y = 120)
+        lda #126
+        sta OAMMIRROR, x
+        inx
+        lda #120
+        sta OAMMIRROR, x
+        inx
+        lda #$0E
+        sta OAMMIRROR, x
+        inx
+        lda #$31
+        sta OAMMIRROR, x
+        inx
 
-        ; --- 5. RESETA OS STATUS PADRÃO ---
-        tyx                             ; Transfere ponteiro Y -> X
-        jsr SetupDefaultMeleeStats
-
-@Fim:
+        ; Cursor seletor (X = 88, Y = 80 se Fase 1, ou Y = 120 se Fase 2)
+        lda #88
+        sta OAMMIRROR, x
+        inx
+        lda Current_Stage
+        bne @CursorStage2
+        lda #80
+        bra @WriteCursorY
+@CursorStage2:
+        lda #120
+@WriteCursorY:
+        sta OAMMIRROR, x
+        inx
+        lda #$84                        ; Tile da bala/seta apontando para a fase
+        sta OAMMIRROR, x
+        inx
+        lda #$31
+        sta OAMMIRROR, x
+        inx
         rts
 .endproc
+
+
+
+; ;-------------------------------------------------------------------------------
+; ;   RespawnEnemy
+; ;   Entrada via Pilha (3,s): Endereço 16-bit da struct do inimigo
+; ;   Comportamento:
+; ;     - Verifica se o inimigo morreu (HP == 0)
+; ;     - Usa a sua rotina 'rand' para sortear o lado (esquerda/direita) e altura Y
+; ;     - Reseta todos os status via SetupDefaultMeleeStats
+; ;-------------------------------------------------------------------------------
+; .proc   RespawnEnemy
+;         ; 1. Pega o endereço do inimigo seguindo o seu padrão exato (3,s)
+;         rep #$20
+;         .a16
+;         lda 3, s                        ; Lê ponteiro da struct do inimigo
+;         tay                             ; Guarda em Y
+;         sep #$20
+;         .a8
+
+;         ; 2. Só faz respawn se o inimigo estiver morto (HP == 0)
+;         lda a:MeleeCrabStruct::HP, y
+;         bne @Fim
+
+;         ; --- 3. SORTEIA O LADO DO EIXO X (ESQUERDA OU DIREITA) ---
+;         jsr rand                        ; Retorna byte aleatório em A (.a8)
+;         and #$01                        ; Isola apenas o bit 0 (0 ou 1)
+;         beq @NasceEsquerda
+
+; @NasceDireita:
+;         lda #$F0                        ; X = 240 (Borda direita)
+;         bra @SalvaX
+
+; @NasceEsquerda:
+;         lda #$08                        ; X = 8 (Borda esquerda)
+
+; @SalvaX:
+;         sta a:MeleeCrabStruct::X_Pos, y
+
+;         ; --- 4. SORTEIA A ALTURA DO CHÃO (EIXO Y) ---
+;         jsr rand                        ; Pega um novo byte aleatório em A
+;         and #$3F                        ; Limita o valor entre 0 e 63 ($00 a $3F)
+;         clc
+;         adc #(SCREEN_BOTTOM - 64)       ; Soma com o teto do chão (Ex: 224 - 64 = 160)
+;         sta a:MeleeCrabStruct::Y_Pos, y
+
+;         ; --- 5. RESETA OS STATUS PADRÃO ---
+;         tyx                             ; Transfere ponteiro Y -> X
+;         jsr SetupDefaultMeleeStats
+
+; @Fim:
+;         rts
+; .endproc
 
 
 ; O temporal ja passou. podemos deletar isso
@@ -1693,5 +1888,12 @@ Camera_X: .res 2        ; Posição horizontal da câmera (16-bit: 0 a 65535)
 
 Stage_Script_Ptr: .res 2  ;1. onde estamos no roteiro da fase
 .export Stage_Script_Ptr
+
+
+Game_State:      .res 1                 ; 0 = Menu, 1 = Jogando
+.export Game_State
+
+Current_Stage:   .res 1                 ; 0 = Fase 1, 1 = Fase 2
+.export Current_Stage
 
 

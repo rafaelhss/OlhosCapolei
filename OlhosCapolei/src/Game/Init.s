@@ -3,11 +3,14 @@
 ;   Description: Holds subroutines to initialize the demo
 ; -----------------------------------------------------------------------------
 
+
 ;----- Export ------------------------------------------------------------------
 .export     InitDemo
 .export SetupDefaultMeleeStats
 .export SetupPreSpawnMeleeStats
+.export SetupWeaponStats
 ;-------------------------------------------------------------------------------
+
 
 ;----- Assembler Directives ----------------------------------------------------
 .p816                           
@@ -31,63 +34,16 @@
 .import Bullet2
 .import InitRNG
 .import Camera_X
+.import Current_Stage
+.import Stage_Scripts_Table
+.import Stage2_Sky_Color
 .import Stage_Script_Ptr
-.import Stage1_Script
+
+.import Weapon_Data_Table
 
 
 .segment "RODATA"
 
-; =============================================================================
-; TABELA LINEAR DE BOOT DE ITENS (7 BYTES ÚTEIS POR ARMA)
-; Formato: Active (1), Weapon_ID (1), Tile_ID (1), Tile_Size (1), X_Pos (2), Y_Pos (1)
-; =============================================================================
-Table_Init_Weapons:
-    ; WeaponA (Pedra - ID 4)
-    .byte WEAPON_STATE_GROUND, WEAPON_ID_ROCK,   $6D, $01
-    .word $00AA
-    .byte (SCREEN_BOTTOM - 50)
-
-    ; WeaponB (Martelo - ID 7)
-    .byte WEAPON_STATE_GROUND, WEAPON_ID_HAMMER, $0E, $01
-    .word $0180                         ; Exemplo: já nasce lá na frente em X = 384!
-    .byte (SCREEN_BOTTOM - 50)
-
-    ; WeaponC (Madeira - ID 3)
-    .byte WEAPON_STATE_GROUND, WEAPON_ID_WOOD,   $06, $04
-    .word $0030
-    .byte (SCREEN_BOTTOM - 50)
-
-    ; WeaponD (Pistola - ID 5)
-    .byte WEAPON_STATE_GROUND, WEAPON_ID_PISTOL, $06, $04
-    .word $0290                         ; Exemplo: nasce em X = 656
-    .byte (SCREEN_BOTTOM - 50)
-
-    ; WeaponE (Corrente - ID 6)
-    .byte WEAPON_STATE_GROUND, WEAPON_ID_CHAIN,  $06, $04
-    .word $0010
-    .byte (SCREEN_BOTTOM - 50)
-
-; =============================================================================
-; TABELA DE BOOT DOS INIMIGOS MELEE (7 BYTES POR INIMIGO)
-; Formato: Endereço WRAM (2), X_Pos (2), Y_Pos (1), Enemy_Type (1), Attack_Sector (1)
-; =============================================================================
-Table_Init_MeleeCrabs:
-    ; VaderCrab
-    .word .loword(VaderCrab)
-    .word $00F0
-    .byte (SCREEN_BOTTOM - 40 ), ENEMY_TYPE_VADER, $00
-
-    ; DengueCrab
-    .word .loword(DengueCrab)
-    .word $01C8                         ; Exemplo: nasce em X = 456
-    .byte (SCREEN_BOTTOM / 2), ENEMY_TYPE_DENGUE, $01
-
-    ; RapaNuiCrab
-    .word .loword(RapaNuiCrab)
-    .word $0008
-    .byte (SCREEN_BOTTOM - 20), ENEMY_TYPE_RAPA, $02
-
-Table_Init_MeleeCrabs_End:
 
 
 .segment "CODE"
@@ -176,63 +132,14 @@ Table_Init_MeleeCrabs_End:
         bcc @LoadSpritePalLoop
 
 
-        ; --- 4. INICIALIZAÇÃO DAS STRUCTS (8-BIT PURO E SEGURO) ---
-; =============================================================================
-; INICIALIZAÇÃO DATA-DRIVEN BLINDADA (ÍNDICES INTEGRALMENTE EM 16-BIT)
-; =============================================================================
-        rep #$30                        ; .a16, .i16 (A/X/Y travados em 16-bit)
-        .a16
-        .i16
 
-        ; 1. LIMPEZA INICIAL AUTOMATIZADA DA RAM DAS ARMAS
-        lda #0
-        ldx #.loword(WeaponA)
-@ClearRAMLoop:
-        sta a:0, x                      ; Zera de 2 em 2 bytes na WRAM
-        inx
-        inx
-        cpx #(.loword(WeaponE) + .sizeof(WeaponStruct))
-        bcc @ClearRAMLoop
 
-        ; 2. LOOP DE CÓPIA DE ESTRUTURAS (ROM -> WRAM)
-        ldy #0                          ; Y = Indexador de bytes lidos da ROM
-        ldx #.loword(WeaponA)           ; X = Ponteiro de escrita na WRAM
+        ; --- 4. INICIALIZAÇÃO DAS ARMAS ---
+        JSR InitAllWeapons
 
-@CopyWeaponsLoop:
-        ; Como estamos em 16-bit, lemos e escrevemos de 2 em 2 bytes respeitando os offsets
-        lda a:Table_Init_Weapons + 0, y  ; Lê Active (Byte) e Weapon_ID (Byte)
-        sta a:WeaponStruct::Active, x
+        
 
-        lda a:Table_Init_Weapons + 2, y  ; Lê Tile_ID (Byte) e Tile_Size (Byte)
-        sta a:WeaponStruct::Tile_ID, x
 
-        ; Lê X_Pos (Word completo de 16-bit!)
-        lda a:Table_Init_Weapons + 4, y
-        sta a:WeaponStruct::X_Pos, x
-
-        ; Lê Y_Pos (Byte único - voltamos A para 8-bit rapidinho)
-        sep #$20
-        .a8
-        lda a:Table_Init_Weapons + 6, y
-        sta a:WeaponStruct::Y_Pos, x
-        rep #$20
-        .a16
-
-        ; Avança Y em 7 bytes (tamanho exato dos dados úteis de cada arma na tabela da ROM)
-        tya
-        clc
-        adc #7
-        tay
-
-        ; Avança X para a próxima estrutura WeaponStruct inteira na WRAM
-        txa
-        clc
-        adc #.sizeof(WeaponStruct)
-        tax
-
-        ; Checa se já inicializou todas as 5 armas do pool
-        cpx #(.loword(WeaponE) + .sizeof(WeaponStruct))
-        bcc @CopyWeaponsLoop
 
         ; 3. RESTAURAÇÃO DE MODO PARA O RESTANTE DO INIT.S
         sep #$20                        ; Retorna Acumulador para 8-bit (.a8)
@@ -241,13 +148,18 @@ Table_Init_MeleeCrabs_End:
 
 
 
-        ; No InitDemo, aponte Stage_Script_Ptr para o início da fase
+        ; Aponta Stage_Script_Ptr conforme a fase escolhida (0 = Fase 1, 1 = Fase 2)
         rep #$20
         .a16
-        lda #.loword(Stage1_Script)
+        lda Current_Stage
+        and #$00FF
+        asl                             ; Multiplica por 2 (cada ponteiro tem 2 bytes)
+        tax
+        lda f:Stage_Scripts_Table, x
         sta Stage_Script_Ptr
         sep #$20
         .a8
+
 
 
         ; --- INICIALIZAÇÃO DOS INIMIGOS MELEE ---
@@ -366,6 +278,19 @@ Table_Init_MeleeCrabs_End:
         sep #$20                ; Garante A em 8-bit!
         .a8
 
+
+        ; Zera scroll inicial de BG1 e BG2 (write-twice)
+        stz BG1HOFS
+        stz BG1HOFS
+        stz BG1VOFS
+        stz BG1VOFS
+
+        stz BG2HOFS
+        stz BG2HOFS
+        stz BG2VOFS
+        stz BG2VOFS
+
+
         ; Libera o blackout, coloca o brilho no máximo
         lda #$0f
         sta INIDISP
@@ -393,6 +318,19 @@ Table_Init_MeleeCrabs_End:
         inx
         cpx #64                         ; 64 bytes (Paleta 0 e Paleta 1)
         bcc @LoadPalLoop
+
+        ; Se Current_Stage == 1 (Fase 2), pinta o céu (Cor $00) com cor de anoitecer
+        lda Current_Stage
+        cmp #1
+        bne @SkipNightSky
+        stz CGADD
+        lda f:Stage2_Sky_Color
+        sta CGDATA
+        lda f:Stage2_Sky_Color + 1
+        sta CGDATA
+@SkipNightSky:
+
+
 
         ; --- 2. CARGA DIRETA DOS TILES DE BG PARA VRAM ($2000) ---
         lda #$80
@@ -445,57 +383,24 @@ Table_Init_MeleeCrabs_End:
         plp
         rts
 .endproc
-;-------------------------------------------------------------------------------
-;   InitAllMeleeCrabs
-;   Lê a Table_Init_MeleeCrabs e configura todos os inimigos automaticamente
-;-------------------------------------------------------------------------------
-.proc   InitAllMeleeCrabs
-        php                             ; Salva flags atuais do processador
-        sep #$20                        ; Garante Acumulador 8-bit (.a8)
-        rep #$10                        ; Garante Índices 16-bit (.i16)
+
+.proc InitAllMeleeCrabs
+        php
+        sep #$20
+        rep #$10
         .a8
         .i16
 
-        ldy #0                          ; Y = Offset de leitura na tabeInitAllMeleeCrabsla da ROM
-
-@Loop:
-        ; 1. Carrega o endereço WRAM do inimigo para o registrador X (16-bit)
-        rep #$20                        ; Muda A para 16-bit temporariamente
-        .a16
-        lda a:Table_Init_MeleeCrabs + 0, y
-        tax                             ; X agora aponta para a struct (ex: VaderCrab)
-        LDA a:Table_Init_MeleeCrabs + 2, y
-        sta a:MeleeCrabStruct::X_Pos, x ; Grava X_Pos de 16-bit!
-        sep #$20
-        .a8
-
-        ; 2. Lê os dados exclusivos da tabela
-        lda a:Table_Init_MeleeCrabs + 4, y
-        sta a:MeleeCrabStruct::Y_Pos, x
-
-        lda a:Table_Init_MeleeCrabs + 5, y
-        sta a:MeleeCrabStruct::Enemy_Type, x
-
-        lda a:Table_Init_MeleeCrabs + 6, y
-        sta a:MeleeCrabStruct::Attack_Sector, x
-
-        ; 3. Preenche os valores padrão compartilhados por todos os MeleeCrabs
+        ldx #.loword(VaderCrab)
         jsr SetupDefaultMeleeStats
 
-        ; 4. Avança Y em 7 bytes e verifica se chegou ao fim da tabela
-        rep #$20
-        .a16
-        tya
-        clc
-        adc #7
-        tay
-        sep #$20
-        .a8
+        ldx #.loword(DengueCrab)
+        jsr SetupDefaultMeleeStats
 
-        cpy #(Table_Init_MeleeCrabs_End - Table_Init_MeleeCrabs)
-        bcc @Loop
+        ldx #.loword(RapaNuiCrab)
+        jsr SetupDefaultMeleeStats
 
-        plp                             ; Restaura estado original do processador
+        plp
         rts
 .endproc
 
@@ -571,6 +476,58 @@ Table_Init_MeleeCrabs_End:
 
         lda #04
         sta a:MeleeCrabStruct::HP, x
+
+        rts
+.endproc
+.proc InitAllWeapons
+        php
+        rep #$30                        ; .a16, .i16
+        .a16
+        .i16
+
+        ; 1. Zera toda a WRAM dos 5 slots (WeaponA até WeaponE)
+        lda #0
+        ldx #.loword(WeaponA)
+@ClearLoop:
+        sta a:0, x
+        inx
+        inx
+        cpx #(.loword(WeaponE) + .sizeof(WeaponStruct))
+        bcc @ClearLoop
+
+        ; 2. Marca todos os slots como INACTIVE (3), e NÃO 0 (EQUIPPED)!
+        sep #$20
+        .a8
+        lda #WEAPON_STATE_INACTIVE
+        sta WeaponA + WeaponStruct::Active
+        sta WeaponB + WeaponStruct::Active
+        sta WeaponC + WeaponStruct::Active
+        sta WeaponD + WeaponStruct::Active
+        sta WeaponE + WeaponStruct::Active
+
+        plp
+        rts
+.endproc
+
+; -----------------------------------------------------------------------------
+; SetupWeaponStats
+; Entrada: Y = Ponteiro 16-bit do slot (WeaponA..WeaponD) já com ID, Tile_ID e Tile_Size
+; -----------------------------------------------------------------------------
+.proc SetupWeaponStats
+        .a8
+        .i16
+
+        lda #0
+        sta a:WeaponStruct::Speed_X, y
+        sta a:WeaponStruct::Speed_Y, y
+        sta a:WeaponStruct::Target_Y, y
+        sta a:WeaponStruct::Melee_Timer, y
+        sta a:WeaponStruct::Melee_Frame, y
+        sta a:WeaponStruct::Anim_Variation, y
+        sta a:WeaponStruct::Hitbox_Active, y
+
+        lda #WEAPON_STATE_GROUND
+        sta a:WeaponStruct::Active, y
 
         rts
 .endproc

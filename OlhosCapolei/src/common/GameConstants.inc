@@ -12,6 +12,13 @@ SCREEN_RIGHT    = $ff   ; Limite direito da tela = 255
 SCREEN_TOP      = $00   ; Limite superior da tela = 0
 SCREEN_BOTTOM   = $df   ; Limite inferior da tela = 223
 
+; --- Estados Globais do Jogo (Menu vs Gameplay) ---
+GAME_STATE_MENU    = 0
+GAME_STATE_PLAYING = 1
+
+
+
+
 ; --- Máquina de Estados Geral ---
 STATE_WALKING   = 0
 STATE_PREPARING = 1
@@ -42,6 +49,17 @@ WEAPON_STATE_GROUND   = 1  ; Esperando no chão para ser coletada
 WEAPON_STATE_THROWN   = 2  ; Voando pelo ar em parábola
 WEAPON_STATE_INACTIVE = 3
 
+
+
+;- tipos de inimigo
+ENEMY_TYPE_VADER  = 0 ; dhart VaderCrab
+ENEMY_TYPE_RAPA   = 1 ; Rapa nui crab
+ENEMY_TYPE_DENGUE = 2 ; Dengue crab
+
+; --- Flags de Tipo de Evento do Stage Director (Byte 5) ---
+SPAWN_KIND_WEAPON = $80
+
+
 ; --- Configurações de Sprites e Velocidade ---
 SPRITE_SIZE     = $08   ; Sprites base são 8x8 pixels
 SPRITE_SPEED    = $01   ; Velocidade base do herói
@@ -63,6 +81,8 @@ LEFT_BUTTON     = $0200
 RIGHT_BUTTON    = $0100
 A_BUTTON        = $0080
 X_BUTTON        = $0040 ; Centralizado para coleta e ações de herói
+; --- Botão Start (16-bit Auto-polling) ---
+START_BUTTON       = $1000
 
 ; =============================================================================
 ; MAPA CENTRALIZADO DE ALOCAÇÃO DA DIRECT PAGE (DP MEMORY LAYOUT)
@@ -135,10 +155,7 @@ WEAPON_ID_PISTOL       = 5
 WEAPON_ID_CHAIN      = 6
 WEAPON_ID_HAMMER       = 7
 
-;- tipos de inimigo
-ENEMY_TYPE_VADER = 0 ; dhart VaderCrab
-ENEMY_TYPE_RAPA  = 1 ; Rapa nui crab
-ENEMY_TYPE_DENGUE = 2 ; Dengue crab
+
 
 
 
